@@ -1,0 +1,66 @@
+services:
+  # ============================================================
+  # Backend: RepForge Flask API (Python Web Service)
+  # ============================================================
+  - type: web
+    name: repforge-api
+    runtime: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn -w 4 -k sync -b 0.0.0.0:$PORT "backend.app:create_app()"
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: SESSION_COOKIE_SAMESITE
+        value: None
+      - key: DATABASE_URL
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: GEMINI_TIMEOUT_SECONDS
+        value: 20
+      - key: FRONTEND_URL
+        fromService:
+          type: web
+          name: repforge-web
+          property: host
+      - key: CORS_ORIGINS
+        fromService:
+          type: web
+          name: repforge-web
+          property: host
+
+  # ============================================================
+  # Frontend: RepForge React SPA (Static Site)
+  # ============================================================
+  - type: web
+    name: repforge-web
+    runtime: static
+    region: oregon
+    plan: free
+    buildCommand: npm --prefix frontend install && npm --prefix frontend run build
+    staticPublishPath: ./frontend/dist
+    autoDeploy: true
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: repforge-api
+          property: host

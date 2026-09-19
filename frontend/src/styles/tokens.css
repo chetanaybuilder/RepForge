@@ -1,0 +1,48 @@
+:root {
+  /* --- Surfaces --- */
+  --rf-bg: #07070b;
+  --rf-bg-elevated: #0c0c13;
+  --rf-surface: #12121b;
+  --rf-surface-2: #191925;
+  --rf-glass: rgba(255, 255, 255, 0.045);
+  --rf-glass-border: rgba(255, 255, 255, 0.09);
+  --rf-border: rgba(255, 255, 255, 0.08);
+  --rf-border-strong: rgba(255, 255, 255, 0.16);
+
+  /* --- Text --- */
+  --rf-text: #f4f3f7;
+  --rf-text-dim: #9c99ab;
+  --rf-text-faint: #6b6878;
+
+  /* --- Accents: Plasma Violet -> Ion Cyan is the signature gradient;
+     Forge Ember marks achievement/PR moments. --- */
+  --rf-violet: #8a5cf6;
+  --rf-violet-dim: #6d47c7;
+  --rf-cyan: #22d3ee;
+  --rf-ember: #ff6b45;
+  --rf-ember-2: #ff3d68;
+  --rf-success: #34d399;
+  --rf-danger: #f9575d;
+  --rf-warning: #fbbf24;
+
+  --rf-gradient-primary: linear-gradient(135deg, #8a5cf6 0%, #22d3ee 100%);
+  --rf-gradient-ember: linear-gradient(135deg, #ff6b45 0%, #ff3d68 100%);
+
+  /* --- Type --- */
+  --rf-font-display: "Space Grotesk", "Big Shoulders Display", "Arial Narrow", sans-serif;
+  --rf-font-body: "Inter", "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  /* --- Shape / elevation --- */
+  --rf-radius-sm: 8px;
+  --rf-radius-md: 14px;
+  --rf-radius-lg: 22px;
+  --rf-shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.35);
+  --rf-shadow-lift: 0 20px 60px rgba(0, 0, 0, 0.5);
+  --rf-shadow-glow-violet: 0 0 0 1px rgba(138, 92, 246, 0.4), 0 8px 30px rgba(138, 92, 246, 0.25);
+
+  --rf-sidebar-width: 248px;
+}
+
+/* This product is designed dark-only by brief; light-scheme viewers
+   still get the same intentional dark palette rather than an inverted
+   theme, since a luxury cinematic gym app is not meant to go light. */

@@ -1,0 +1,12 @@
+{
+  "name": "repforge",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "frontend": "npm --prefix frontend run dev",
+    "backend": "python -m backend.app",
+    "build": "npm --prefix frontend run build",
+    "install:all": "npm --prefix frontend install"
+  }
+}
