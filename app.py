@@ -106,9 +106,10 @@ def create_app(config_class=Config):
     return app
 
 
+app = create_app()
+
 if __name__ == "__main__":
     import os
 
-    flask_app = create_app()
     port = int(os.environ.get("PORT", 5000))
-    flask_app.run(host="0.0.0.0", port=port, debug=not Config.IS_PRODUCTION)
+    app.run(host="0.0.0.0", port=port, debug=not Config.IS_PRODUCTION)
