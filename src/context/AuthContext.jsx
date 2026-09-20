@@ -32,7 +32,7 @@ export function AuthProvider({ children }) {
   const loginWithGoogle = useCallback(() => {
     // Full navigation, not fetch — this needs to be a real browser redirect
     // so Google's consent screen and cookies work normally.
-    window.location.href = `${API_URL}/auth/google`;
+    window.location.href = "/auth/google";
   }, []);
 
   const logout = useCallback(async () => {

@@ -1,4 +1,5 @@
-const API_URL = import.meta.env.VITE_API_URL || "";
+// Force relative paths in production so a bad VITE_API_URL doesn't break the app
+const API_URL = import.meta.env.PROD ? "" : (import.meta.env.VITE_API_URL || "");
 
 // The CSRF token lives only in memory (set once /api/me returns it after
 // login) — never in localStorage/sessionStorage. A full page reload fetches

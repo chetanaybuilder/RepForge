@@ -64,17 +64,17 @@ def google_callback():
     cfg = current_app.config
     error = request.args.get("error")
     if error:
-        return redirect(f"{cfg['FRONTEND_URL']}/login?error=access_denied")
+        return redirect("/login?error=access_denied")
 
     state = request.args.get("state", "")
     code = request.args.get("code", "")
 
     if not consume_state(state):
         logger.warning("OAuth callback with invalid/expired state")
-        return redirect(f"{cfg['FRONTEND_URL']}/login?error=invalid_state")
+        return redirect("/login?error=invalid_state")
 
     if not code:
-        return redirect(f"{cfg['FRONTEND_URL']}/login?error=missing_code")
+        return redirect("/login?error=missing_code")
 
     try:
         identity = get_identity_from_google(
@@ -86,7 +86,7 @@ def google_callback():
         )
     except OAuthError as exc:
         logger.warning("OAuth identity verification failed: %s", exc)
-        return redirect(f"{cfg['FRONTEND_URL']}/login?error=auth_failed")
+        return redirect("/login?error=auth_failed")
 
     # This is the ONLY place a Google identity turns into an application
     # user — everywhere else in the app deals only with our internal UUID.
@@ -104,7 +104,7 @@ def google_callback():
         ip_address=request.remote_addr or "",
     )
 
-    response = redirect(f"{cfg['FRONTEND_URL']}/dashboard")
+    response = redirect("/dashboard")
     _set_session_cookie(response, session_row["id"], cfg["PERMANENT_SESSION_LIFETIME_SECONDS"])
     return response
 
