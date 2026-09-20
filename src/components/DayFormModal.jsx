@@ -56,6 +56,33 @@ export function DayFormModal({ open, onSave, onClose }) {
     setField("exercises", newExs);
   };
 
+  const moveExercise = (fromIdx, toIdx) => {
+    if (toIdx < 0 || toIdx >= form.exercises.length) return;
+    const newExs = [...form.exercises];
+    const [moved] = newExs.splice(fromIdx, 1);
+    newExs.splice(toIdx, 0, moved);
+    setField("exercises", newExs);
+  };
+
+  const addExercise = () => {
+    const lastWorkoutType = form.exercises[form.exercises.length - 1]?.workout_type || "push";
+    setField("exercises", [
+      ...form.exercises,
+      {
+        workout_type: lastWorkoutType,
+        exercise_name: "",
+        notes: "",
+        sets: [{ ...EMPTY_SET }],
+      },
+    ]);
+  };
+
+  const removeExercise = (eIdx) => {
+    if (form.exercises.length <= 1) return;
+    const newExs = form.exercises.filter((_, i) => i !== eIdx);
+    setField("exercises", newExs);
+  };
+
   const updateSet = (eIdx, sIdx, field, value) => {
     const newExs = [...form.exercises];
     const newSets = [...newExs[eIdx].sets];
@@ -64,33 +91,19 @@ export function DayFormModal({ open, onSave, onClose }) {
     setField("exercises", newExs);
   };
 
-  const adjustSetNumeric = (eIdx, sIdx, field, delta) => {
-    const current = form.exercises[eIdx].sets[sIdx][field] || 0;
-    const next = Math.max(0, Math.round((current + delta) * 10) / 10);
-    updateSet(eIdx, sIdx, field, next);
-  };
-
-  const addExercise = () => {
-    setField("exercises", [
-      ...form.exercises,
-      { ...EMPTY_EXERCISE, sets: [{ ...EMPTY_SET }] },
-    ]);
-  };
-
-  const removeExercise = (eIdx) => {
-    const newExs = form.exercises.filter((_, i) => i !== eIdx);
-    setField("exercises", newExs);
-  };
-
   const addSet = (eIdx) => {
     const newExs = [...form.exercises];
     const lastSet = newExs[eIdx].sets[newExs[eIdx].sets.length - 1] || EMPTY_SET;
-    newExs[eIdx].sets = [...newExs[eIdx].sets, { ...lastSet }];
+    newExs[eIdx].sets = [
+      ...newExs[eIdx].sets,
+      { weight: lastSet.weight, reps: lastSet.reps, completed: true },
+    ];
     setField("exercises", newExs);
   };
 
   const removeSet = (eIdx, sIdx) => {
     const newExs = [...form.exercises];
+    if (newExs[eIdx].sets.length <= 1) return;
     newExs[eIdx].sets = newExs[eIdx].sets.filter((_, i) => i !== sIdx);
     setField("exercises", newExs);
   };
@@ -159,7 +172,7 @@ export function DayFormModal({ open, onSave, onClose }) {
             <div className="rf-telemetry-tag" style={{ marginBottom: 2 }}>
               TRAINING SESSION PROTOCOL
             </div>
-            <h3 className="rf-modal-title">Log Workout Day</h3>
+            <h3 className="rf-modal-title">Log Workout Session</h3>
           </div>
           <button type="button" className="rf-icon-btn" onClick={onClose} aria-label="Close">
             ✕
@@ -169,13 +182,13 @@ export function DayFormModal({ open, onSave, onClose }) {
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
           <div className="rf-modal-body">
             {errors.general && (
-              <div className="rf-field-error" style={{ marginBottom: 16 }}>
+              <div className="rf-field-error" style={{ marginBottom: 14 }}>
                 {errors.general}
               </div>
             )}
 
             {/* Session Metadata Grid */}
-            <div className="rf-form-grid rf-form-grid--2" style={{ marginBottom: 20 }}>
+            <div className="rf-form-grid rf-form-grid--2" style={{ gap: 12, marginBottom: 16 }}>
               <div className="rf-field">
                 <label className="rf-label" htmlFor="wf-date">
                   Execution Date
@@ -183,7 +196,7 @@ export function DayFormModal({ open, onSave, onClose }) {
                 <input
                   id="wf-date"
                   type="date"
-                  className="rf-input"
+                  className="rf-input rf-input--compact"
                   value={form.date}
                   onChange={(e) => setField("date", e.target.value)}
                   required
@@ -198,7 +211,7 @@ export function DayFormModal({ open, onSave, onClose }) {
                 <input
                   id="wf-day"
                   type="text"
-                  className="rf-input"
+                  className="rf-input rf-input--compact"
                   placeholder="e.g. Heavy Push Focus"
                   value={form.day}
                   onChange={(e) => setField("day", e.target.value)}
@@ -207,40 +220,73 @@ export function DayFormModal({ open, onSave, onClose }) {
               </div>
             </div>
 
-            {/* Exercises List */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+            {/* Exercises Section */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {form.exercises.map((ex, eIdx) => (
                 <div
                   key={eIdx}
                   className="rf-pod"
                   style={{
-                    background: "rgba(16, 16, 30, 0.8)",
+                    background: "rgba(14, 14, 26, 0.85)",
                     border: "1px solid var(--rf-border-laser)",
+                    padding: "14px 14px",
                     position: "relative",
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-                    <div className="rf-telemetry-tag" style={{ color: "var(--rf-cyan)" }}>
-                      MOVEMENT #{String(eIdx + 1).padStart(2, "0")}
+                  {/* Exercise Header with Reorder and Delete Controls */}
+                  <div className="rf-exercise-card-header">
+                    <div className="rf-exercise-card-title-group">
+                      <span className="rf-telemetry-tag" style={{ color: "var(--rf-cyan)", fontSize: "0.68rem" }}>
+                        MOVEMENT #{String(eIdx + 1).padStart(2, "0")}
+                      </span>
+                      {ex.exercise_name && (
+                        <span className="rf-exercise-card-name-preview">
+                          · {ex.exercise_name}
+                        </span>
+                      )}
                     </div>
-                    {form.exercises.length > 1 && (
+
+                    <div className="rf-exercise-card-actions">
                       <button
                         type="button"
-                        className="rf-icon-btn"
-                        style={{ color: "var(--rf-ember)" }}
-                        onClick={() => removeExercise(eIdx)}
-                        aria-label="Remove Movement"
+                        className="rf-icon-btn rf-icon-btn--xs"
+                        disabled={eIdx === 0}
+                        onClick={() => moveExercise(eIdx, eIdx - 1)}
+                        title="Move movement up"
+                        aria-label="Move exercise up"
                       >
-                        ✕
+                        ▲
                       </button>
-                    )}
+                      <button
+                        type="button"
+                        className="rf-icon-btn rf-icon-btn--xs"
+                        disabled={eIdx === form.exercises.length - 1}
+                        onClick={() => moveExercise(eIdx, eIdx + 1)}
+                        title="Move movement down"
+                        aria-label="Move exercise down"
+                      >
+                        ▼
+                      </button>
+                      {form.exercises.length > 1 && (
+                        <button
+                          type="button"
+                          className="rf-icon-btn rf-icon-btn--xs rf-icon-btn--danger"
+                          onClick={() => removeExercise(eIdx)}
+                          title="Remove movement"
+                          aria-label="Remove exercise"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="rf-form-grid rf-form-grid--2">
+                  {/* Split and Exercise Name Grid */}
+                  <div className="rf-form-grid rf-form-grid--2" style={{ gap: 10, marginBottom: 8 }}>
                     <div className="rf-field">
-                      <label className="rf-label">Target Split</label>
+                      <label className="rf-label" style={{ fontSize: "0.72rem" }}>Target Split</label>
                       <select
-                        className="rf-select"
+                        className="rf-select rf-select--compact"
                         value={ex.workout_type}
                         onChange={(e) => updateExercise(eIdx, "workout_type", e.target.value)}
                       >
@@ -253,10 +299,10 @@ export function DayFormModal({ open, onSave, onClose }) {
                     </div>
 
                     <div className="rf-field">
-                      <label className="rf-label">Exercise Name</label>
+                      <label className="rf-label" style={{ fontSize: "0.72rem" }}>Exercise Name</label>
                       <input
                         type="text"
-                        className="rf-input"
+                        className="rf-input rf-input--compact"
                         placeholder="e.g. Barbell Incline Press"
                         value={ex.exercise_name}
                         onChange={(e) => updateExercise(eIdx, "exercise_name", e.target.value)}
@@ -268,156 +314,116 @@ export function DayFormModal({ open, onSave, onClose }) {
                     </div>
                   </div>
 
-                  <div className="rf-field" style={{ marginTop: 12 }}>
-                    <label className="rf-label">Biomechanical / Tempo Notes (Optional)</label>
+                  {/* Optional Biomechanical Cue */}
+                  <div className="rf-field" style={{ marginBottom: 12 }}>
                     <input
                       type="text"
-                      className="rf-input"
-                      placeholder="e.g. 3s eccentric, paused at chest"
+                      className="rf-input rf-input--subtle"
+                      placeholder="Execution / Tempo Notes (e.g. 3s eccentric, paused) — optional"
                       value={ex.notes}
                       onChange={(e) => updateExercise(eIdx, "notes", e.target.value)}
                     />
                   </div>
 
-                  {/* Set Cards (Mobile-first Thumb Controls) */}
-                  <div style={{ marginTop: 16 }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                      <span className="rf-label">Sets Telemetry</span>
-                      <span style={{ fontSize: "0.74rem", color: "var(--rf-text-faint)", fontFamily: "var(--rf-font-mono)" }}>
-                        {ex.sets.length} SETS PLANNED
-                      </span>
+                  {/* Clean Set Table Architecture */}
+                  <div className="rf-set-table">
+                    <div className="rf-set-table-head">
+                      <span className="rf-set-th rf-set-th--idx">SET</span>
+                      <span className="rf-set-th rf-set-th--prev">PREV</span>
+                      <span className="rf-set-th rf-set-th--weight">KG</span>
+                      <span className="rf-set-th rf-set-th--reps">REPS</span>
+                      <span className="rf-set-th rf-set-th--check">✓</span>
+                      <span className="rf-set-th rf-set-th--action"></span>
                     </div>
 
-                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                      {ex.sets.map((set, sIdx) => (
-                        <div
-                          key={sIdx}
-                          style={{
-                            background: set.completed ? "rgba(0, 245, 160, 0.04)" : "rgba(10, 10, 20, 0.6)",
-                            border: set.completed ? "1px solid rgba(0, 245, 160, 0.3)" : "1px solid var(--rf-border-subtle)",
-                            borderRadius: "var(--rf-radius-md)",
-                            padding: "10px 12px",
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: 10,
-                          }}
-                        >
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                              <span
-                                style={{
-                                  fontFamily: "var(--rf-font-mono)",
-                                  fontWeight: 800,
-                                  fontSize: "0.85rem",
-                                  color: "var(--rf-text-faint)",
-                                }}
-                              >
-                                S{sIdx + 1}
-                              </span>
-                              <button
-                                type="button"
-                                className={`rf-check-pill ${set.completed ? "rf-check-pill--checked" : ""}`}
-                                onClick={() => updateSet(eIdx, sIdx, "completed", !set.completed)}
-                                title="Toggle set completion"
-                              >
-                                {set.completed ? "✓" : "○"}
-                              </button>
-                              <span style={{ fontSize: "0.78rem", color: set.completed ? "var(--rf-emerald)" : "var(--rf-text-faint)", fontWeight: 600 }}>
-                                {set.completed ? "Completed" : "Pending"}
-                              </span>
-                            </div>
-
-                            {ex.sets.length > 1 && (
-                              <button
-                                type="button"
-                                className="rf-icon-btn"
-                                style={{ color: "var(--rf-ember)", width: 32, height: 32 }}
-                                onClick={() => removeSet(eIdx, sIdx)}
-                                aria-label="Remove Set"
-                              >
-                                ✕
-                              </button>
-                            )}
-                          </div>
-
-                          {/* Steppers for KG and Reps */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      {ex.sets.map((set, sIdx) => {
+                        const prevRef = sIdx > 0 ? `${ex.sets[sIdx - 1].weight} × ${ex.sets[sIdx - 1].reps}` : "—";
+                        return (
                           <div
-                            style={{
-                              display: "grid",
-                              gridTemplateColumns: "1fr 1fr",
-                              gap: 10,
-                            }}
+                            key={sIdx}
+                            className={`rf-set-row ${set.completed ? "rf-set-row--done" : ""}`}
                           >
-                            {/* Weight Stepper */}
-                            <div>
-                              <div style={{ fontSize: "0.72rem", color: "var(--rf-text-sub)", textTransform: "uppercase", marginBottom: 4 }}>
-                                Weight (kg)
-                              </div>
-                              <div className="rf-stepper-control">
-                                <button
-                                  type="button"
-                                  className="rf-stepper-btn"
-                                  onClick={() => adjustSetNumeric(eIdx, sIdx, "weight", -2.5)}
-                                >
-                                  -
-                                </button>
-                                <input
-                                  type="number"
-                                  step="0.5"
-                                  min="0"
-                                  className="rf-stepper-value"
-                                  value={set.weight}
-                                  onChange={(e) => updateSet(eIdx, sIdx, "weight", e.target.valueAsNumber || 0)}
-                                />
-                                <button
-                                  type="button"
-                                  className="rf-stepper-btn"
-                                  onClick={() => adjustSetNumeric(eIdx, sIdx, "weight", 2.5)}
-                                >
-                                  +
-                                </button>
-                              </div>
+                            {/* Lightweight Set Index */}
+                            <div className="rf-set-cell rf-set-cell--idx">
+                              <span className="rf-set-num">{sIdx + 1}</span>
                             </div>
 
-                            {/* Reps Stepper */}
-                            <div>
-                              <div style={{ fontSize: "0.72rem", color: "var(--rf-text-sub)", textTransform: "uppercase", marginBottom: 4 }}>
-                                Reps
-                              </div>
-                              <div className="rf-stepper-control">
+                            {/* Previous / Target Reference */}
+                            <div className="rf-set-cell rf-set-cell--prev">
+                              <span className="rf-set-prev-label">{prevRef}</span>
+                            </div>
+
+                            {/* Minimal Weight Input */}
+                            <div className="rf-set-cell rf-set-cell--weight">
+                              <input
+                                type="number"
+                                step="0.5"
+                                min="0"
+                                className="rf-set-input"
+                                value={set.weight === 0 ? "" : set.weight}
+                                placeholder="0"
+                                onChange={(e) =>
+                                  updateSet(eIdx, sIdx, "weight", e.target.value === "" ? 0 : Number(e.target.value))
+                                }
+                                aria-label={`Set ${sIdx + 1} weight (kg)`}
+                              />
+                            </div>
+
+                            {/* Minimal Reps Input */}
+                            <div className="rf-set-cell rf-set-cell--reps">
+                              <input
+                                type="number"
+                                step="1"
+                                min="1"
+                                className="rf-set-input"
+                                value={set.reps === 0 ? "" : set.reps}
+                                placeholder="0"
+                                onChange={(e) =>
+                                  updateSet(eIdx, sIdx, "reps", e.target.value === "" ? 0 : Number(e.target.value))
+                                }
+                                aria-label={`Set ${sIdx + 1} reps`}
+                              />
+                            </div>
+
+                            {/* Low-profile Checkmark */}
+                            <div className="rf-set-cell rf-set-cell--check">
+                              <button
+                                type="button"
+                                className={`rf-set-check-btn ${set.completed ? "rf-set-check-btn--active" : ""}`}
+                                onClick={() => updateSet(eIdx, sIdx, "completed", !set.completed)}
+                                title={set.completed ? "Mark set incomplete" : "Mark set completed"}
+                                aria-label={`Toggle set ${sIdx + 1} completion`}
+                              >
+                                ✓
+                              </button>
+                            </div>
+
+                            {/* Delete Set */}
+                            <div className="rf-set-cell rf-set-cell--action">
+                              {ex.sets.length > 1 ? (
                                 <button
                                   type="button"
-                                  className="rf-stepper-btn"
-                                  onClick={() => adjustSetNumeric(eIdx, sIdx, "reps", -1)}
+                                  className="rf-set-delete-btn"
+                                  onClick={() => removeSet(eIdx, sIdx)}
+                                  title="Remove set"
+                                  aria-label={`Remove set ${sIdx + 1}`}
                                 >
-                                  -
+                                  ✕
                                 </button>
-                                <input
-                                  type="number"
-                                  step="1"
-                                  min="1"
-                                  className="rf-stepper-value"
-                                  value={set.reps}
-                                  onChange={(e) => updateSet(eIdx, sIdx, "reps", e.target.valueAsNumber || 0)}
-                                />
-                                <button
-                                  type="button"
-                                  className="rf-stepper-btn"
-                                  onClick={() => adjustSetNumeric(eIdx, sIdx, "reps", 1)}
-                                >
-                                  +
-                                </button>
-                              </div>
+                              ) : (
+                                <span style={{ width: 26 }} />
+                              )}
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
 
+                    {/* + Add Set Action Button */}
                     <button
                       type="button"
-                      className="rf-btn rf-btn--ghost rf-btn--sm"
-                      style={{ marginTop: 10, width: "100%" }}
+                      className="rf-btn rf-btn--ghost rf-add-set-btn"
                       onClick={() => addSet(eIdx)}
                     >
                       + Add Set
@@ -426,13 +432,13 @@ export function DayFormModal({ open, onSave, onClose }) {
                 </div>
               ))}
 
+              {/* Explicit + Add Exercise Button */}
               <button
                 type="button"
-                className="rf-btn rf-btn--ghost"
-                style={{ width: "100%", borderStyle: "dashed" }}
+                className="rf-btn rf-btn--ghost rf-add-exercise-btn"
                 onClick={addExercise}
               >
-                + Add Another Movement
+                + Add Exercise
               </button>
             </div>
           </div>
@@ -447,7 +453,7 @@ export function DayFormModal({ open, onSave, onClose }) {
               Cancel
             </button>
             <PrimaryButton type="submit" disabled={saving}>
-              {saving ? "Synthesizing Session…" : "Log Session"}
+              {saving ? "Recording Session…" : "Log Workout Session"}
             </PrimaryButton>
           </div>
         </form>

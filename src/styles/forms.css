@@ -216,55 +216,305 @@
   color: var(--rf-cyan);
 }
 
-/* Mobile Set Row Item */
-.rf-set-row {
-  display: grid;
-  grid-template-columns: 36px 1fr 1fr 44px 36px;
+/* Compact Tactical Inputs */
+.rf-input--compact,
+.rf-select--compact {
+  height: 40px;
+  font-size: 0.88rem;
+  padding: 0 12px;
+}
+
+.rf-input--subtle {
+  height: 36px;
+  font-size: 0.82rem;
+  background: rgba(10, 10, 20, 0.5);
+  border-color: rgba(255, 255, 255, 0.06);
+  padding: 0 12px;
+}
+
+.rf-input--subtle:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(14, 14, 28, 0.7);
+}
+
+.rf-input--subtle:focus {
+  border-color: var(--rf-cyan);
+  background: rgba(16, 16, 32, 0.9);
+}
+
+/* Exercise Card Header with Reordering */
+.rf-exercise-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  gap: 8px;
+}
+
+.rf-exercise-card-title-group {
+  display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(14, 14, 26, 0.6);
-  border: 1px solid var(--rf-border-subtle);
-  border-radius: var(--rf-radius-md);
-  padding: 8px 10px;
-  transition: border-color var(--rf-transition-fast);
+  min-width: 0;
+  overflow: hidden;
 }
 
-.rf-set-row--completed {
-  border-color: rgba(0, 245, 160, 0.3);
-  background: rgba(0, 245, 160, 0.03);
+.rf-exercise-card-name-preview {
+  font-size: 0.82rem;
+  color: var(--rf-text-bright);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.rf-set-index {
+.rf-exercise-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* ==========================================================================
+   CLEAN INLINE SET ARCHITECTURE (TABLE / COMPACT ROW)
+   ========================================================================== */
+
+.rf-set-table {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.rf-set-table-head {
+  display: grid;
+  grid-template-columns: 32px 58px 1fr 1fr 32px 26px;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+}
+
+.rf-set-th {
   font-family: var(--rf-font-mono);
+  font-size: 0.65rem;
   font-weight: 700;
-  font-size: 0.8rem;
+  letter-spacing: 0.08em;
   color: var(--rf-text-faint);
+  text-transform: uppercase;
+}
+
+.rf-set-th--idx {
   text-align: center;
 }
 
-/* Toggle Completion Checkbox Pill */
-.rf-check-pill {
-  width: 38px;
-  height: 38px;
+.rf-set-th--prev {
+  text-align: center;
+}
+
+.rf-set-th--weight,
+.rf-set-th--reps {
+  text-align: center;
+}
+
+.rf-set-th--check {
+  text-align: center;
+}
+
+/* Compact Set Row */
+.rf-set-row {
+  display: grid;
+  grid-template-columns: 32px 58px 1fr 1fr 32px 26px;
+  align-items: center;
+  gap: 6px;
+  background: rgba(12, 12, 24, 0.7);
+  border: 1px solid var(--rf-border-subtle);
   border-radius: var(--rf-radius-sm);
+  padding: 6px 8px;
+  transition: all var(--rf-transition-fast);
+}
+
+.rf-set-row:hover {
+  background: rgba(18, 18, 34, 0.85);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.rf-set-row--done {
+  background: rgba(0, 245, 160, 0.03);
+  border-color: rgba(0, 245, 160, 0.28);
+}
+
+.rf-set-cell {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.rf-set-cell--idx {
+  justify-content: center;
+}
+
+.rf-set-num {
+  font-family: var(--rf-font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--rf-text-sub);
+}
+
+.rf-set-row--done .rf-set-num {
+  color: var(--rf-emerald);
+}
+
+.rf-set-cell--prev {
+  justify-content: center;
+}
+
+.rf-set-prev-label {
+  font-family: var(--rf-font-mono);
+  font-size: 0.68rem;
+  color: var(--rf-text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+
+/* Minimal Numeric Set Input */
+.rf-set-input {
+  width: 100%;
+  height: 38px;
+  background: rgba(8, 8, 16, 0.85);
+  border: 1px solid var(--rf-border-subtle);
+  border-radius: var(--rf-radius-xs);
+  color: var(--rf-text-pure);
+  font-family: var(--rf-font-mono);
+  font-weight: 700;
+  font-size: 0.92rem;
+  text-align: center;
+  padding: 0 4px;
+  transition: all var(--rf-transition-fast);
+  -moz-appearance: textfield;
+}
+
+.rf-set-input::-webkit-outer-spin-button,
+.rf-set-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.rf-set-input:hover {
+  border-color: rgba(0, 242, 254, 0.35);
+  background: rgba(14, 14, 28, 0.95);
+}
+
+.rf-set-input:focus {
+  border-color: var(--rf-cyan);
+  background: rgba(16, 16, 32, 1);
+  box-shadow: 0 0 10px -2px rgba(0, 242, 254, 0.35);
+  outline: none;
+}
+
+/* Low-Profile Checkmark Button */
+.rf-set-check-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--rf-radius-xs);
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--rf-border-subtle);
-  color: var(--rf-text-stealth);
-  font-size: 1rem;
+  color: var(--rf-text-faint);
+  font-size: 0.85rem;
+  cursor: pointer;
   transition: all var(--rf-transition-fast);
   touch-action: manipulation;
 }
 
-.rf-check-pill--checked {
-  background: var(--rf-emerald);
+.rf-set-check-btn:hover {
   border-color: var(--rf-emerald);
-  color: #020205;
-  box-shadow: 0 0 14px -2px rgba(0, 245, 160, 0.5);
+  color: var(--rf-emerald);
+  background: rgba(0, 245, 160, 0.08);
+}
+
+.rf-set-check-btn--active {
+  background: rgba(0, 245, 160, 0.15);
+  border-color: var(--rf-emerald);
+  color: var(--rf-emerald);
+  box-shadow: 0 0 10px -2px rgba(0, 245, 160, 0.35);
   font-weight: 800;
+}
+
+/* Delete Set Button */
+.rf-set-delete-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--rf-radius-xs);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--rf-text-faint);
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: all var(--rf-transition-fast);
+  touch-action: manipulation;
+}
+
+.rf-set-delete-btn:hover {
+  background: rgba(255, 51, 102, 0.12);
+  border-color: rgba(255, 51, 102, 0.3);
+  color: var(--rf-ember);
+}
+
+/* + Add Set Button */
+.rf-add-set-btn {
+  width: 100%;
+  margin-top: 8px;
+  border: 1px dashed var(--rf-border-subtle);
+  background: rgba(255, 255, 255, 0.02);
+  font-size: 0.82rem;
+  height: 34px;
+}
+
+.rf-add-set-btn:hover {
+  border-color: var(--rf-cyan);
+  background: rgba(0, 242, 254, 0.06);
+  color: var(--rf-cyan);
+}
+
+/* + Add Exercise Button */
+.rf-add-exercise-btn {
+  width: 100%;
+  height: 44px;
+  border: 1px dashed rgba(0, 242, 254, 0.35);
+  background: rgba(0, 242, 254, 0.03);
+  color: var(--rf-cyan);
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.02em;
+}
+
+.rf-add-exercise-btn:hover {
+  background: rgba(0, 242, 254, 0.08);
+  border-color: var(--rf-cyan);
+  color: #fff;
+}
+
+/* Extra small icon buttons for reordering & deleting */
+.rf-icon-btn--xs {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  font-size: 0.7rem;
+  border-radius: var(--rf-radius-xs);
+}
+
+.rf-icon-btn--danger:hover {
+  background: rgba(255, 51, 102, 0.15);
+  border-color: var(--rf-ember);
+  color: var(--rf-ember);
 }
 
 /* Tactical Buttons System */

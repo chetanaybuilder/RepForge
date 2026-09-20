@@ -42,18 +42,16 @@ export function ExerciseEditModal({ open, initialValue, onSave, onClose }) {
     setField("sets", newSets);
   };
 
-  const adjustSetNumeric = (sIdx, field, delta) => {
-    const current = form.sets[sIdx][field] || 0;
-    const next = Math.max(0, Math.round((current + delta) * 10) / 10);
-    updateSet(sIdx, field, next);
-  };
-
   const addSet = () => {
     const lastSet = form.sets[form.sets.length - 1] || EMPTY_SET;
-    setField("sets", [...form.sets, { ...lastSet }]);
+    setField("sets", [
+      ...form.sets,
+      { weight: lastSet.weight, reps: lastSet.reps, completed: true },
+    ]);
   };
 
   const removeSet = (sIdx) => {
+    if (form.sets.length <= 1) return;
     setField(
       "sets",
       form.sets.filter((_, i) => i !== sIdx)
@@ -124,16 +122,16 @@ export function ExerciseEditModal({ open, initialValue, onSave, onClose }) {
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
           <div className="rf-modal-body">
             {errors.general && (
-              <div className="rf-field-error" style={{ marginBottom: 16 }}>
+              <div className="rf-field-error" style={{ marginBottom: 14 }}>
                 {errors.general}
               </div>
             )}
 
-            <div className="rf-form-grid rf-form-grid--2">
+            <div className="rf-form-grid rf-form-grid--2" style={{ gap: 10, marginBottom: 8 }}>
               <div className="rf-field">
-                <label className="rf-label">Target Split</label>
+                <label className="rf-label" style={{ fontSize: "0.72rem" }}>Target Split</label>
                 <select
-                  className="rf-select"
+                  className="rf-select rf-select--compact"
                   value={form.workout_type}
                   onChange={(e) => setField("workout_type", e.target.value)}
                 >
@@ -146,10 +144,10 @@ export function ExerciseEditModal({ open, initialValue, onSave, onClose }) {
               </div>
 
               <div className="rf-field">
-                <label className="rf-label">Exercise Name</label>
+                <label className="rf-label" style={{ fontSize: "0.72rem" }}>Exercise Name</label>
                 <input
                   type="text"
-                  className="rf-input"
+                  className="rf-input rf-input--compact"
                   value={form.exercise_name}
                   onChange={(e) => setField("exercise_name", e.target.value)}
                   required
@@ -160,147 +158,115 @@ export function ExerciseEditModal({ open, initialValue, onSave, onClose }) {
               </div>
             </div>
 
-            <div className="rf-field" style={{ marginTop: 14 }}>
-              <label className="rf-label">Notes & Execution Cues</label>
+            <div className="rf-field" style={{ marginBottom: 14 }}>
               <input
                 type="text"
-                className="rf-input"
-                placeholder="Optional movement cues"
+                className="rf-input rf-input--subtle"
+                placeholder="Execution / Tempo Notes (e.g. 3s eccentric, paused) — optional"
                 value={form.notes}
                 onChange={(e) => setField("notes", e.target.value)}
               />
             </div>
 
-            {/* Set Steppers */}
-            <div style={{ marginTop: 20 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                <span className="rf-label">Recorded Sets</span>
-                <span style={{ fontSize: "0.74rem", color: "var(--rf-text-faint)", fontFamily: "var(--rf-font-mono)" }}>
-                  {form.sets.length} SETS TOTAL
-                </span>
+            {/* Clean Set Table Architecture */}
+            <div className="rf-set-table">
+              <div className="rf-set-table-head">
+                <span className="rf-set-th rf-set-th--idx">SET</span>
+                <span className="rf-set-th rf-set-th--prev">PREV</span>
+                <span className="rf-set-th rf-set-th--weight">KG</span>
+                <span className="rf-set-th rf-set-th--reps">REPS</span>
+                <span className="rf-set-th rf-set-th--check">✓</span>
+                <span className="rf-set-th rf-set-th--action"></span>
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {form.sets.map((set, sIdx) => (
-                  <div
-                    key={sIdx}
-                    style={{
-                      background: set.completed ? "rgba(0, 245, 160, 0.04)" : "rgba(10, 10, 20, 0.6)",
-                      border: set.completed ? "1px solid rgba(0, 245, 160, 0.3)" : "1px solid var(--rf-border-subtle)",
-                      borderRadius: "var(--rf-radius-md)",
-                      padding: "10px 12px",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 10,
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span
-                          style={{
-                            fontFamily: "var(--rf-font-mono)",
-                            fontWeight: 800,
-                            fontSize: "0.85rem",
-                            color: "var(--rf-text-faint)",
-                          }}
-                        >
-                          S{sIdx + 1}
-                        </span>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {form.sets.map((set, sIdx) => {
+                  const prevRef = sIdx > 0 ? `${form.sets[sIdx - 1].weight} × ${form.sets[sIdx - 1].reps}` : "—";
+                  return (
+                    <div
+                      key={sIdx}
+                      className={`rf-set-row ${set.completed ? "rf-set-row--done" : ""}`}
+                    >
+                      {/* Lightweight Set Index */}
+                      <div className="rf-set-cell rf-set-cell--idx">
+                        <span className="rf-set-num">{sIdx + 1}</span>
+                      </div>
+
+                      {/* Previous / Target Reference */}
+                      <div className="rf-set-cell rf-set-cell--prev">
+                        <span className="rf-set-prev-label">{prevRef}</span>
+                      </div>
+
+                      {/* Minimal Weight Input */}
+                      <div className="rf-set-cell rf-set-cell--weight">
+                        <input
+                          type="number"
+                          step="0.5"
+                          min="0"
+                          className="rf-set-input"
+                          value={set.weight === 0 ? "" : set.weight}
+                          placeholder="0"
+                          onChange={(e) =>
+                            updateSet(sIdx, "weight", e.target.value === "" ? 0 : Number(e.target.value))
+                          }
+                          aria-label={`Set ${sIdx + 1} weight (kg)`}
+                        />
+                      </div>
+
+                      {/* Minimal Reps Input */}
+                      <div className="rf-set-cell rf-set-cell--reps">
+                        <input
+                          type="number"
+                          step="1"
+                          min="1"
+                          className="rf-set-input"
+                          value={set.reps === 0 ? "" : set.reps}
+                          placeholder="0"
+                          onChange={(e) =>
+                            updateSet(sIdx, "reps", e.target.value === "" ? 0 : Number(e.target.value))
+                          }
+                          aria-label={`Set ${sIdx + 1} reps`}
+                        />
+                      </div>
+
+                      {/* Low-profile Checkmark */}
+                      <div className="rf-set-cell rf-set-cell--check">
                         <button
                           type="button"
-                          className={`rf-check-pill ${set.completed ? "rf-check-pill--checked" : ""}`}
+                          className={`rf-set-check-btn ${set.completed ? "rf-set-check-btn--active" : ""}`}
                           onClick={() => updateSet(sIdx, "completed", !set.completed)}
-                          title="Toggle set completion"
+                          title={set.completed ? "Mark set incomplete" : "Mark set completed"}
+                          aria-label={`Toggle set ${sIdx + 1} completion`}
                         >
-                          {set.completed ? "✓" : "○"}
+                          ✓
                         </button>
-                        <span style={{ fontSize: "0.78rem", color: set.completed ? "var(--rf-emerald)" : "var(--rf-text-faint)", fontWeight: 600 }}>
-                          {set.completed ? "Completed" : "Pending"}
-                        </span>
                       </div>
 
-                      {form.sets.length > 1 && (
-                        <button
-                          type="button"
-                          className="rf-icon-btn"
-                          style={{ color: "var(--rf-ember)", width: 32, height: 32 }}
-                          onClick={() => removeSet(sIdx)}
-                          aria-label="Remove Set"
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </div>
-
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                      <div>
-                        <div style={{ fontSize: "0.72rem", color: "var(--rf-text-sub)", textTransform: "uppercase", marginBottom: 4 }}>
-                          Weight (kg)
-                        </div>
-                        <div className="rf-stepper-control">
+                      {/* Delete Set */}
+                      <div className="rf-set-cell rf-set-cell--action">
+                        {form.sets.length > 1 ? (
                           <button
                             type="button"
-                            className="rf-stepper-btn"
-                            onClick={() => adjustSetNumeric(sIdx, "weight", -2.5)}
+                            className="rf-set-delete-btn"
+                            onClick={() => removeSet(sIdx)}
+                            title="Remove set"
+                            aria-label={`Remove set ${sIdx + 1}`}
                           >
-                            -
+                            ✕
                           </button>
-                          <input
-                            type="number"
-                            step="0.5"
-                            min="0"
-                            className="rf-stepper-value"
-                            value={set.weight}
-                            onChange={(e) => updateSet(sIdx, "weight", e.target.valueAsNumber || 0)}
-                          />
-                          <button
-                            type="button"
-                            className="rf-stepper-btn"
-                            onClick={() => adjustSetNumeric(sIdx, "weight", 2.5)}
-                          >
-                            +
-                          </button>
-                        </div>
-                      </div>
-
-                      <div>
-                        <div style={{ fontSize: "0.72rem", color: "var(--rf-text-sub)", textTransform: "uppercase", marginBottom: 4 }}>
-                          Reps
-                        </div>
-                        <div className="rf-stepper-control">
-                          <button
-                            type="button"
-                            className="rf-stepper-btn"
-                            onClick={() => adjustSetNumeric(sIdx, "reps", -1)}
-                          >
-                            -
-                          </button>
-                          <input
-                            type="number"
-                            step="1"
-                            min="1"
-                            className="rf-stepper-value"
-                            value={set.reps}
-                            onChange={(e) => updateSet(sIdx, "reps", e.target.valueAsNumber || 0)}
-                          />
-                          <button
-                            type="button"
-                            className="rf-stepper-btn"
-                            onClick={() => adjustSetNumeric(sIdx, "reps", 1)}
-                          >
-                            +
-                          </button>
-                        </div>
+                        ) : (
+                          <span style={{ width: 26 }} />
+                        )}
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
+              {/* + Add Set Action Button */}
               <button
                 type="button"
-                className="rf-btn rf-btn--ghost rf-btn--sm"
-                style={{ marginTop: 10, width: "100%" }}
+                className="rf-btn rf-btn--ghost rf-add-set-btn"
                 onClick={addSet}
               >
                 + Add Set
