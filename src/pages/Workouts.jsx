@@ -3,11 +3,12 @@ import { useWorkouts } from "../hooks/useWorkouts";
 import { useToast } from "../context/ToastContext";
 import { ErrorState, EmptyState } from "../components/StateViews";
 import { SkeletonGrid } from "../components/Skeleton";
-import { DayFormModal, DAY_WORKOUT_TYPES } from "../components/DayFormModal";
+import { DayFormModal } from "../components/DayFormModal";
 import { ExerciseEditModal } from "../components/ExerciseEditModal";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { api } from "../services/api";
+import { motion, AnimatePresence } from "framer-motion";
 
 export function Workouts() {
   const [search, setSearch] = useState("");
@@ -17,7 +18,7 @@ export function Workouts() {
     [search]
   );
 
-  const { workouts, status, error, reload, createWorkout, updateWorkout, deleteWorkout } = useWorkouts(filters);
+  const { workouts, status, error, reload, createWorkout } = useWorkouts(filters);
   const toast = useToast();
 
   const [dayModalOpen, setDayModalOpen] = useState(false);
@@ -25,197 +26,326 @@ export function Workouts() {
   const [editingExercise, setEditingExercise] = useState(null);
   const [pendingDelete, setPendingDelete] = useState(null);
   const [expandedDayId, setExpandedDayId] = useState(null);
-  
+
   const [aiLoading, setAiLoading] = useState({});
   const [aiResults, setAiResults] = useState({});
 
   const openCreateDay = () => setDayModalOpen(true);
-  const openEditExercise = (ex) => { setEditingExercise(ex); setEditExerciseModalOpen(true); };
+  const openEditExercise = (ex) => {
+    setEditingExercise(ex);
+    setEditExerciseModalOpen(true);
+  };
 
   const handleSaveDay = async (payload) => {
     try {
       await createWorkout(payload);
-      toast.success("Workout day logged.");
+      toast.success("Workout session recorded.");
       setDayModalOpen(false);
       reload();
     } catch (err) {
-      toast.error(err.message || "Could not save this workout day.");
+      toast.error(err.message || "Could not save workout session.");
     }
   };
 
   const handleSaveExercise = async (payload) => {
     try {
       await api.put(`/api/workouts/exercises/${editingExercise.id}`, payload);
-      toast.success("Exercise updated.");
+      toast.success("Exercise telemetry updated.");
       setEditExerciseModalOpen(false);
       reload();
     } catch (err) {
-      toast.error(err.message || "Could not update this exercise.");
+      toast.error(err.message || "Could not update exercise.");
     }
   };
 
   const confirmDeleteExercise = async () => {
     try {
       await api.delete(`/api/workouts/exercises/${pendingDelete.id}`);
-      toast.success("Exercise deleted.");
+      toast.success("Exercise removed.");
       reload();
     } catch (err) {
-      toast.error(err.message || "Could not delete this exercise.");
+      toast.error(err.message || "Could not delete exercise.");
     } finally {
       setPendingDelete(null);
     }
   };
 
   const runAiAnalysis = async (dayId) => {
-    setAiLoading(prev => ({ ...prev, [dayId]: true }));
+    setAiLoading((prev) => ({ ...prev, [dayId]: true }));
     try {
       const data = await api.post(`/api/ai/insights/${dayId}`);
-      setAiResults(prev => ({ ...prev, [dayId]: data.insights }));
+      setAiResults((prev) => ({ ...prev, [dayId]: data.insights }));
+      toast.success("Session analysis synthesized.");
     } catch (err) {
-      toast.error(err.message || "AI Analysis failed.");
+      toast.error(err.message || "AI Analysis unavailable.");
     } finally {
-      setAiLoading(prev => ({ ...prev, [dayId]: false }));
+      setAiLoading((prev) => ({ ...prev, [dayId]: false }));
     }
   };
 
   return (
     <div>
+      {/* ====================================================================
+          PAGE HEADER & CALL TO ACTION
+          ==================================================================== */}
       <div className="rf-page-header">
         <div>
-          <h1 className="rf-page-title">Workouts</h1>
-          <p className="rf-page-subtitle">Every set you've logged, searchable and sortable.</p>
+          <div className="rf-telemetry-tag" style={{ marginBottom: 6 }}>
+            TRAINING LOG ARCHIVE
+          </div>
+          <h1 className="rf-page-title">Workouts & Protocols</h1>
+          <p className="rf-page-subtitle">
+            Every set and rep logged with verified biometric accuracy.
+          </p>
         </div>
-        <PrimaryButton className="rf-btn--sm" onClick={openCreateDay}>+ Log a day</PrimaryButton>
+        <PrimaryButton className="rf-btn--sm" onClick={openCreateDay}>
+          + Log Session
+        </PrimaryButton>
       </div>
 
-      <div className="rf-filter-bar">
-        <input
-          type="search"
-          className="rf-input rf-search"
-          placeholder="Search day, exercise, notes…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+      {/* Search Bar */}
+      <div style={{ marginBottom: 24 }}>
+        <div className="rf-search-wrapper">
+          <span className="rf-search-icon">🔍</span>
+          <input
+            type="search"
+            className="rf-input rf-search-input"
+            placeholder="Search movements, muscle split, or notes…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
       </div>
 
-      {status === "loading" && <div style={{ marginTop: 24 }}><SkeletonGrid count={3} height="100px" /></div>}
-      {status === "error" && <ErrorState message={error?.message} onRetry={reload} />}
+      {status === "loading" && <SkeletonGrid count={3} height="120px" />}
+      {status === "error" && (
+        <ErrorState message={error?.message} onRetry={reload} />
+      )}
 
       {status === "success" && workouts.length === 0 && (
         <EmptyState
-          title={search ? "No workouts match your filters" : "No workouts yet"}
-          description={search ? "Try clearing your search or filters." : "Log your first session to get started."}
-          action={<PrimaryButton className="rf-btn--sm" onClick={openCreateDay}>Log a day</PrimaryButton>}
+          title={search ? "No training data matched query" : "No workouts recorded yet"}
+          description={
+            search
+              ? "Try broadening your movement search or clear filters."
+              : "Initiate your training program by logging your first workout day."
+          }
+          action={
+            <PrimaryButton className="rf-btn--sm" onClick={openCreateDay}>
+              Log First Session
+            </PrimaryButton>
+          }
         />
       )}
 
       {status === "success" && workouts.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {workouts.map((day) => {
             const isExpanded = expandedDayId === day.id;
-            const primaryTypes = [...new Set(day.exercises.map(ex => ex.workout_type.replace("_", " ")))].join(", ");
+            const primaryTypes = [
+              ...new Set(day.exercises.map((ex) => ex.workout_type.replace("_", " "))),
+            ].join(" · ");
+            const totalSets = day.exercises.reduce((acc, ex) => acc + ex.sets.length, 0);
 
             return (
-            <div key={day.id} style={{ background: '#1e1e1e', borderRadius: '12px', border: '1px solid #333', overflow: 'hidden' }}>
-              <div 
-                onClick={() => setExpandedDayId(isExpanded ? null : day.id)}
-                style={{ 
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
-                  padding: '24px', cursor: 'pointer',
-                  borderBottom: isExpanded ? '1px solid #333' : 'none',
-                  transition: 'background 0.2s'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.background = '#252525'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              <div
+                key={day.id}
+                className={`rf-workout-card${isExpanded ? " rf-workout-card--expanded" : ""}`}
               >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-                    <h3 style={{ margin: 0, color: '#fff' }}>Day {day.day_number}</h3>
-                    <span style={{ color: '#888', fontSize: '0.9rem' }}>{formatDate(day.date)}</span>
-                  </div>
-                  <div style={{ color: '#888', fontSize: '0.9rem', marginTop: '4px' }}>
-                    {day.exercises.length} exercises {primaryTypes ? `• ${primaryTypes}` : ''}
-                  </div>
-                </div>
-                <div style={{ color: '#888', transition: 'transform 0.3s', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="6 9 12 15 18 9"></polyline>
-                  </svg>
-                </div>
-              </div>
-              
-              {isExpanded && (
-                <div style={{ padding: '24px', paddingTop: '16px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
-                    <button 
-                      className="rf-btn rf-btn--ghost rf-btn--sm" 
-                      onClick={(e) => { e.stopPropagation(); runAiAnalysis(day.id); }}
-                      disabled={aiLoading[day.id]}
+                {/* Header Bar */}
+                <div
+                  className="rf-workout-header"
+                  onClick={() => setExpandedDayId(isExpanded ? null : day.id)}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                    <div
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: "var(--rf-radius-sm)",
+                        background: isExpanded ? "rgba(0, 242, 254, 0.15)" : "rgba(255, 255, 255, 0.04)",
+                        border: isExpanded ? "1px solid rgba(0, 242, 254, 0.4)" : "1px solid var(--rf-border-subtle)",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontFamily: "var(--rf-font-mono)",
+                        fontWeight: 700,
+                        fontSize: "0.85rem",
+                        color: isExpanded ? "var(--rf-cyan)" : "var(--rf-text-bright)",
+                        transition: "all var(--rf-transition-fast)",
+                      }}
                     >
-                      {aiLoading[day.id] ? "Analyzing..." : "✨ AI Analyze Day"}
-                    </button>
+                      <span>D{day.day_number}</span>
+                    </div>
+
+                    <div className="rf-workout-title-group">
+                      <div className="rf-workout-day-badge">
+                        <span>{day.day ? day.day : `Session #${day.day_number}`}</span>
+                        <span className="rf-badge rf-badge--cyan">
+                          {formatDate(day.date)}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: "0.82rem", color: "var(--rf-text-sub)", textTransform: "capitalize" }}>
+                        {day.exercises.length} Movements · {totalSets} sets {primaryTypes ? `(${primaryTypes})` : ""}
+                      </div>
+                    </div>
                   </div>
 
-                  {/* AI Results Inline Rendering */}
-                  {aiResults[day.id] && (
-                    <div style={{ marginBottom: 24, padding: 16, background: '#2c2c2c', borderRadius: 8, borderLeft: '4px solid #4a90e2' }}>
-                      <h4 style={{ margin: '0 0 12px 0', color: '#4a90e2' }}>AI Session Analysis</h4>
-                      <p style={{ margin: '0 0 12px 0', fontSize: '0.95rem' }}>{aiResults[day.id].deep_review}</p>
-                      {aiResults[day.id].good_points?.length > 0 && (
-                        <div style={{ marginTop: 12 }}>
-                          <strong style={{ color: '#48bb78', fontSize: '0.9rem' }}>↗ Good Points</strong>
-                          <ul style={{ margin: 0, paddingLeft: 20, fontSize: '0.9rem', color: '#bbb' }}>
-                            {aiResults[day.id].good_points.map((r, i) => <li key={i}>{r}</li>)}
-                          </ul>
-                        </div>
-                      )}
-                      {aiResults[day.id].critical_points?.length > 0 && (
-                        <div style={{ marginTop: 12 }}>
-                          <strong style={{ color: '#f56565', fontSize: '0.9rem' }}>⚠ Critical Points</strong>
-                          <ul style={{ margin: 0, paddingLeft: 20, fontSize: '0.9rem', color: '#bbb' }}>
-                            {aiResults[day.id].critical_points.map((r, i) => <li key={i}>{r}</li>)}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    {day.exercises.map((ex, i) => (
-                      <div key={ex.id} className="rf-workout-row" style={{ padding: '16px', background: '#141414', borderRadius: '8px' }}>
-                        <span className="rf-workout-index">{String(i + 1).padStart(2, "0")}</span>
-                        <div className="rf-workout-main" style={{ flex: 1 }}>
-                          <span className="rf-workout-tag">{ex.workout_type.replace("_", " ")}</span>
-                          <div className="rf-workout-exercise">{ex.exercise_name}</div>
-                          <div className="rf-workout-meta">
-                            {ex.sets.length} sets • {ex.sets.reduce((acc, s) => acc + s.reps, 0)} total reps
-                          </div>
-                          {ex.notes && <div className="rf-workout-notes">"{ex.notes}"</div>}
-                          
-                          <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                            {ex.sets.map((set, sIdx) => (
-                              <div key={set.id || sIdx} style={{ padding: '4px 8px', background: set.completed ? '#2d3748' : '#2d374880', borderRadius: '4px', fontSize: '0.85rem', color: set.completed ? '#fff' : '#888', border: set.completed ? '1px solid #4a5568' : '1px dashed #4a5568' }}>
-                                {set.weight}kg × {set.reps}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                        
-                        <div className="rf-workout-actions">
-                          <button className="rf-btn rf-btn--ghost rf-btn--sm" onClick={(e) => { e.stopPropagation(); openEditExercise(ex); }}>Edit</button>
-                          <button className="rf-btn rf-btn--danger rf-btn--sm" onClick={(e) => { e.stopPropagation(); setPendingDelete(ex); }}>Delete</button>
-                        </div>
-                      </div>
-                    ))}
+                  <div
+                    style={{
+                      color: "var(--rf-text-faint)",
+                      transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                      transition: "transform 0.3s var(--rf-ease-spring)",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    ▼
                   </div>
                 </div>
-              )}
-            </div>
+
+                {/* Expanded Session Details */}
+                <AnimatePresence>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ type: "spring", stiffness: 300, damping: 26 }}
+                      className="rf-workout-body"
+                    >
+                      {/* AI Session Trigger */}
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          padding: "14px 0",
+                          borderBottom: "1px solid var(--rf-border-subtle)",
+                        }}
+                      >
+                        <span className="rf-telemetry-tag" style={{ color: "var(--rf-text-sub)" }}>
+                          SESSION BREAKDOWN
+                        </span>
+                        <button
+                          type="button"
+                          className="rf-btn rf-btn--violet rf-btn--sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            runAiAnalysis(day.id);
+                          }}
+                          disabled={aiLoading[day.id]}
+                        >
+                          {aiLoading[day.id] ? "Synthesizing Neural Review…" : "◈ AI Session Diagnostics"}
+                        </button>
+                      </div>
+
+                      {/* In-line AI Diagnostic Results */}
+                      {aiResults[day.id] && (
+                        <div
+                          className="rf-pod rf-pod--violet"
+                          style={{ margin: "16px 0", padding: 18 }}
+                        >
+                          <div className="rf-badge rf-badge--violet" style={{ marginBottom: 10 }}>
+                            ◈ Neural Biomechanical Assessment
+                          </div>
+                          <p style={{ margin: "0 0 12px 0", fontSize: "0.92rem", lineHeight: 1.6, color: "var(--rf-text-bright)" }}>
+                            {aiResults[day.id].deep_review}
+                          </p>
+
+                          {aiResults[day.id].good_points?.length > 0 && (
+                            <div className="rf-insight-card rf-insight-card--success">
+                              <span className="rf-insight-tag" style={{ color: "var(--rf-emerald)" }}>
+                                ↗ Biomechanical Strengths
+                              </span>
+                              <ul style={{ margin: 0, paddingLeft: 18, fontSize: "0.86rem", color: "var(--rf-text-bright)" }}>
+                                {aiResults[day.id].good_points.map((p, pIdx) => (
+                                  <li key={pIdx}>{p}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {aiResults[day.id].critical_points?.length > 0 && (
+                            <div className="rf-insight-card rf-insight-card--warning">
+                              <span className="rf-insight-tag" style={{ color: "var(--rf-ember)" }}>
+                                ⚠ Fatigue / Overload Alerts
+                              </span>
+                              <ul style={{ margin: 0, paddingLeft: 18, fontSize: "0.86rem", color: "var(--rf-text-bright)" }}>
+                                {aiResults[day.id].critical_points.map((p, pIdx) => (
+                                  <li key={pIdx}>{p}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Exercise Cards */}
+                      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                        {day.exercises.map((ex, i) => (
+                          <div key={ex.id} className="rf-exercise-pod">
+                            <div className="rf-exercise-head">
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                <span className="rf-badge rf-badge--cyan">
+                                  {ex.workout_type.replace("_", " ")}
+                                </span>
+                                <span className="rf-exercise-name">{ex.exercise_name}</span>
+                              </div>
+
+                              <div style={{ display: "flex", gap: 8 }}>
+                                <button
+                                  type="button"
+                                  className="rf-btn rf-btn--ghost rf-btn--sm"
+                                  onClick={() => openEditExercise(ex)}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  className="rf-btn rf-btn--danger rf-btn--sm"
+                                  onClick={() => setPendingDelete(ex)}
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+
+                            {ex.notes && (
+                              <p style={{ margin: "4px 0 10px 0", fontSize: "0.82rem", color: "var(--rf-text-sub)", fontStyle: "italic" }}>
+                                "{ex.notes}"
+                              </p>
+                            )}
+
+                            {/* Sets Chips */}
+                            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+                              {ex.sets.map((set, sIdx) => (
+                                <div
+                                  key={set.id || sIdx}
+                                  className={`rf-set-chip ${set.completed ? "rf-set-chip--done" : ""}`}
+                                >
+                                  <span>S{sIdx + 1}:</span>
+                                  <strong>{set.weight} kg</strong>
+                                  <span>×</span>
+                                  <strong>{set.reps} reps</strong>
+                                  {set.completed && <span style={{ color: "var(--rf-emerald)" }}>✓</span>}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             );
           })}
         </div>
       )}
 
+      {/* Modals */}
       <DayFormModal
         open={dayModalOpen}
         onSave={handleSaveDay}
@@ -231,9 +361,13 @@ export function Workouts() {
 
       <ConfirmDialog
         open={!!pendingDelete}
-        title="Delete this exercise?"
-        message={pendingDelete ? `This will permanently remove ${pendingDelete.exercise_name} and its sets. If this is the last exercise, the Day will also be removed.` : ""}
-        confirmLabel="Delete"
+        title="Delete this Movement?"
+        message={
+          pendingDelete
+            ? `Permanently remove ${pendingDelete.exercise_name} and all its recorded sets. If this is the last exercise, the Day session will also be pruned.`
+            : ""
+        }
+        confirmLabel="Confirm Delete"
         onConfirm={confirmDeleteExercise}
         onCancel={() => setPendingDelete(null)}
       />
@@ -242,5 +376,10 @@ export function Workouts() {
 }
 
 function formatDate(iso) {
-  return new Date(iso + "T00:00:00").toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  if (!iso) return "";
+  return new Date(iso + "T00:00:00").toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }

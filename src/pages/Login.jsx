@@ -2,12 +2,13 @@ import { useEffect } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
+import { motion } from "framer-motion";
 
 const ERROR_MESSAGES = {
-  access_denied: "Google sign-in was cancelled.",
-  invalid_state: "Your sign-in attempt expired. Please try again.",
-  missing_code: "Google didn't return a valid response. Please try again.",
-  auth_failed: "We couldn't verify your Google account. Please try again.",
+  access_denied: "Authentication request cancelled by user.",
+  invalid_state: "Security handshake expired. Please re-authenticate.",
+  missing_code: "OAuth provider response incomplete.",
+  auth_failed: "Biometric identity verification unsuccessful.",
 };
 
 export function Login() {
@@ -23,45 +24,83 @@ export function Login() {
   useEffect(() => {
     const error = params.get("error");
     if (error) {
-      toast.error(ERROR_MESSAGES[error] || "Something went wrong signing in.");
+      toast.error(ERROR_MESSAGES[error] || "Authentication handshake error.");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params]);
+  }, [params, toast]);
 
   return (
     <div className="rf-auth-page">
-      <div className="rf-auth-glow" aria-hidden="true" />
-      <div className="rf-auth-card">
-        <Link to="/" className="rf-sidebar-brand" style={{ padding: 0, marginBottom: 32 }}>
-          <span className="rf-brand-mark">RF</span>
-          <span className="rf-brand-word">RepForge</span>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.94, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 300, damping: 24 }}
+        className="rf-auth-card"
+      >
+        <Link to="/" style={{ display: "inline-flex", alignItems: "center", gap: 10, marginBottom: 24 }}>
+          <div className="rf-brand-glyph" style={{ width: 38, height: 38, fontSize: "1rem" }}>
+            RF
+          </div>
+          <span className="rf-brand-text" style={{ fontSize: "1.3rem" }}>
+            RepForge
+          </span>
         </Link>
 
-        <h1 className="rf-auth-title">Welcome back</h1>
-        <p className="rf-auth-subtitle">Sign in to keep tracking your training.</p>
+        <div className="rf-telemetry-tag" style={{ marginBottom: 8, justifyContent: "center" }}>
+          BIOMETRIC AUTHENTICATION TERMINAL
+        </div>
 
-        <button className="rf-btn rf-btn--primary rf-btn--full rf-google-btn" onClick={loginWithGoogle}>
+        <h1 style={{ fontSize: "1.6rem", marginBottom: 8, color: "var(--rf-text-pure)" }}>
+          Access Your Telemetry
+        </h1>
+        <p style={{ color: "var(--rf-text-sub)", fontSize: "0.88rem", marginBottom: 24 }}>
+          Connect securely via Google to synchronize your workout logs, PR milestones, and AI models.
+        </p>
+
+        <button
+          type="button"
+          className="rf-google-btn"
+          onClick={loginWithGoogle}
+        >
           <GoogleIcon />
-          Continue with Google
+          <span>Authenticate with Google</span>
         </button>
 
-        <p className="rf-auth-fineprint">
-          By continuing you agree to let RepForge store your workout data securely.
-          We only ever use your Google account to verify who you are — never to post
-          or access anything else on your behalf.
-        </p>
-      </div>
+        <div
+          style={{
+            marginTop: 28,
+            paddingTop: 18,
+            borderTop: "1px solid var(--rf-border-subtle)",
+            fontSize: "0.74rem",
+            color: "var(--rf-text-faint)",
+            lineHeight: 1.5,
+          }}
+        >
+          RepForge utilizes verified OAuth identity protocols. Your credentials and training logs are encrypted in isolation.
+        </div>
+      </motion.div>
     </div>
   );
 }
 
 function GoogleIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
-      <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84c-.21 1.13-.85 2.09-1.8 2.73v2.27h2.92c1.7-1.57 2.68-3.88 2.68-6.64z"/>
-      <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.27c-.81.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.71H.96v2.33C2.44 15.98 5.48 18 9 18z"/>
-      <path fill="#FBBC05" d="M3.97 10.7c-.18-.54-.28-1.11-.28-1.7s.1-1.16.28-1.7V4.97H.96C.35 6.17 0 7.55 0 9s.35 2.83.96 4.03l3.01-2.33z"/>
-      <path fill="#EA4335" d="M9 3.58c1.32 0 2.51.45 3.44 1.35l2.59-2.59C13.46.89 11.43 0 9 0 5.48 0 2.44 2.02.96 4.97l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/>
+    <svg width="20" height="20" viewBox="0 0 18 18" aria-hidden="true">
+      <path
+        fill="#4285F4"
+        d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84c-.21 1.13-.85 2.09-1.8 2.73v2.27h2.92c1.7-1.57 2.68-3.88 2.68-6.64z"
+      />
+      <path
+        fill="#34A853"
+        d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.27c-.81.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.71H.96v2.33C2.44 15.98 5.48 18 9 18z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M3.97 10.7c-.18-.54-.28-1.11-.28-1.7s.1-1.16.28-1.7V4.97H.96C.35 6.17 0 7.55 0 9s.35 2.83.96 4.03l3.01-2.33z"
+      />
+      <path
+        fill="#EA4335"
+        d="M9 3.58c1.32 0 2.51.45 3.44 1.35l2.59-2.59C13.46.89 11.43 0 9 0 5.48 0 2.44 2.02.96 4.97l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"
+      />
     </svg>
   );
 }

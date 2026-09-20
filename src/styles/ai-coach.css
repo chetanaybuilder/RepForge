@@ -1,0 +1,222 @@
+/**
+ * RepForge 2040 AI Neural Coach & Biomechanical Intelligence
+ * Command center terminal, waveform animations, structured diagnostic hierarchy
+ */
+
+/* AI Command Center Container */
+.rf-ai-command-center {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - var(--rf-topbar-height) - var(--rf-dock-height) - 40px);
+  height: calc(100dvh - var(--rf-topbar-height) - var(--rf-dock-height) - 40px);
+  min-height: 520px;
+  background: var(--rf-surface-card);
+  border: 1px solid var(--rf-border-subtle);
+  border-radius: var(--rf-radius-xl);
+  overflow: hidden;
+  box-shadow: var(--rf-shadow-modal), 0 0 40px -10px rgba(138, 92, 246, 0.15);
+  position: relative;
+}
+
+@media (min-width: 768px) {
+  .rf-ai-command-center {
+    height: calc(100vh - 120px);
+    height: calc(100dvh - 120px);
+  }
+}
+
+/* Neural Telemetry Header */
+.rf-ai-header {
+  padding: 16px 20px;
+  background: rgba(10, 10, 20, 0.9);
+  border-bottom: 1px solid var(--rf-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: 2;
+}
+
+.rf-ai-identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.rf-ai-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+.rf-ai-title {
+  font-family: var(--rf-font-display);
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--rf-text-pure);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rf-ai-status-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--rf-font-mono);
+  font-size: 0.72rem;
+  color: var(--rf-text-faint);
+}
+
+/* Chat Message Stream */
+.rf-ai-stream {
+  flex: 1;
+  overflow-y: auto;
+  padding: clamp(16px, 3.5vw, 24px);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  scroll-behavior: smooth;
+}
+
+/* Message Bubble - User */
+.rf-msg-user {
+  align-self: flex-end;
+  max-width: min(85%, 600px);
+  background: linear-gradient(135deg, rgba(0, 242, 254, 0.18) 0%, rgba(138, 92, 246, 0.18) 100%);
+  border: 1px solid rgba(0, 242, 254, 0.35);
+  border-radius: var(--rf-radius-lg);
+  border-bottom-right-radius: 4px;
+  padding: 14px 18px;
+  color: var(--rf-text-pure);
+  font-size: 0.94rem;
+  line-height: 1.55;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* Message Bubble - AI Intelligence Layer */
+.rf-msg-ai {
+  align-self: flex-start;
+  max-width: min(92%, 780px);
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.rf-msg-ai-content {
+  flex: 1;
+  background: rgba(14, 14, 28, 0.85);
+  border: 1px solid var(--rf-border-laser);
+  border-radius: var(--rf-radius-lg);
+  border-bottom-left-radius: 4px;
+  padding: clamp(14px, 3vw, 20px);
+  color: var(--rf-text-bright);
+  font-size: 0.94rem;
+  line-height: 1.65;
+  box-shadow: 0 10px 30px -4px rgba(0, 0, 0, 0.6), 0 0 24px -6px rgba(138, 92, 246, 0.15);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Structured Output Diagnostic Cards */
+.rf-insight-card {
+  background: rgba(18, 18, 34, 0.7);
+  border-left: 3px solid var(--rf-cyan);
+  border-radius: var(--rf-radius-sm);
+  padding: 14px 16px;
+  margin: 12px 0;
+}
+
+.rf-insight-card--warning {
+  border-left-color: var(--rf-ember);
+  background: rgba(255, 51, 102, 0.05);
+}
+
+.rf-insight-card--success {
+  border-left-color: var(--rf-emerald);
+  background: rgba(0, 245, 160, 0.05);
+}
+
+.rf-insight-tag {
+  font-family: var(--rf-font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  display: block;
+}
+
+/* Waveform Neural Pulse (when AI is thinking) */
+.rf-wave-loader {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 4px;
+}
+
+.rf-wave-bar {
+  width: 3px;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--rf-gradient-cyan-violet);
+  animation: rf-wave-bounce 1.2s infinite ease-in-out;
+}
+
+.rf-wave-bar:nth-child(2) { animation-delay: 0.15s; }
+.rf-wave-bar:nth-child(3) { animation-delay: 0.3s; }
+.rf-wave-bar:nth-child(4) { animation-delay: 0.45s; }
+.rf-wave-bar:nth-child(5) { animation-delay: 0.6s; }
+
+@keyframes rf-wave-bounce {
+  0%, 100% { transform: scaleY(0.25); opacity: 0.4; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+
+/* Quick Prompt Suggestions Bar */
+.rf-prompt-chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 8px 16px;
+  background: rgba(8, 8, 16, 0.5);
+  border-top: 1px solid var(--rf-border-subtle);
+  scrollbar-width: none;
+}
+
+.rf-prompt-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.rf-prompt-chip {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  border-radius: var(--rf-radius-pill);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--rf-border-subtle);
+  color: var(--rf-text-sub);
+  font-size: 0.82rem;
+  transition: all var(--rf-transition-fast);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.rf-prompt-chip:hover, .rf-prompt-chip:active {
+  background: rgba(0, 242, 254, 0.1);
+  border-color: rgba(0, 242, 254, 0.35);
+  color: var(--rf-cyan);
+}
+
+/* AI Command Input Bar */
+.rf-ai-input-bar {
+  padding: 14px clamp(14px, 3.5vw, 24px);
+  background: rgba(8, 8, 16, 0.95);
+  border-top: 1px solid var(--rf-border-subtle);
+}
+
+.rf-ai-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}

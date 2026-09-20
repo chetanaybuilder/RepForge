@@ -3,72 +3,99 @@ import { PrimaryButton } from "./PrimaryButton";
 
 function ErrorFallback({ error, resetErrorBoundary }) {
   return (
-    <div className="rf-state rf-state--error" style={{
-      minHeight: "60vh",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: "16px",
-      padding: "32px",
-      textAlign: "center",
-    }}>
-      <div className="rf-state-icon" style={{ fontSize: "2.4rem" }}>⚠</div>
-      <h2 style={{ margin: 0, color: "var(--rf-text, #fff)", fontSize: "1.6rem" }}>Something went wrong</h2>
-      <p style={{ color: "var(--rf-text-dim, #9c99ab)", maxWidth: "460px", lineHeight: 1.5 }}>
-        An unexpected error occurred. This has been logged for debugging.
+    <div
+      style={{
+        minHeight: "65vh",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: "16px",
+        padding: "32px 20px",
+        textAlign: "center",
+      }}
+    >
+      <div className="rf-confirm-icon" style={{ fontSize: "1.6rem" }}>
+        ⚠
+      </div>
+      <div className="rf-telemetry-tag" style={{ color: "var(--rf-ember)" }}>
+        SUBSYSTEM EXCEPTION DETECTED
+      </div>
+      <h2 style={{ margin: 0, color: "var(--rf-text-pure)", fontSize: "1.6rem" }}>
+        Neural Anomaly Interruption
+      </h2>
+      <p style={{ color: "var(--rf-text-sub)", maxWidth: "460px", lineHeight: 1.6, fontSize: "0.9rem" }}>
+        An unexpected execution exception occurred in the presentation layer. Telemetry state has been recorded for diagnostics.
       </p>
 
-      <details open style={{
-        color: "var(--rf-text-dim, #9c99ab)",
-        fontSize: "0.85rem",
-        maxWidth: "600px",
-        width: "100%",
-        textAlign: "left",
-        background: "rgba(0,0,0,0.4)",
-        padding: "16px",
-        borderRadius: "10px",
-        border: "1px solid rgba(249,87,93,0.3)",
-      }}>
-        <summary style={{ cursor: "pointer", marginBottom: "10px", fontWeight: 600, color: "var(--rf-danger, #f9575d)" }}>
-          Error details
+      <details
+        style={{
+          color: "var(--rf-text-sub)",
+          fontSize: "0.82rem",
+          maxWidth: "600px",
+          width: "100%",
+          textAlign: "left",
+          background: "rgba(10,10,20,0.8)",
+          padding: "16px",
+          borderRadius: "var(--rf-radius-md)",
+          border: "1px solid rgba(255,51,102,0.3)",
+          marginTop: 10,
+        }}
+      >
+        <summary
+          style={{
+            cursor: "pointer",
+            marginBottom: "10px",
+            fontWeight: 700,
+            color: "var(--rf-ember)",
+            fontFamily: "var(--rf-font-mono)",
+          }}
+        >
+          ► Expand Crash Stack Trace
         </summary>
-        <div style={{
-          color: "var(--rf-danger, #f9575d)",
-          fontWeight: 600,
-          fontFamily: "monospace",
-          marginBottom: "8px",
-          wordBreak: "break-word",
-        }}>
-          {error?.message || String(error) || "Unknown error"}
+        <div
+          style={{
+            color: "var(--rf-ember)",
+            fontWeight: 600,
+            fontFamily: "var(--rf-font-mono)",
+            marginBottom: "8px",
+            wordBreak: "break-word",
+          }}
+        >
+          {error?.message || String(error) || "Unidentified anomaly"}
         </div>
         {error?.stack && (
-          <pre style={{
-            whiteSpace: "pre-wrap",
-            wordBreak: "break-word",
-            margin: 0,
-            fontSize: "0.75rem",
-            color: "var(--rf-text-faint, #6b6878)",
-            maxHeight: "180px",
-            overflowY: "auto",
-            padding: "8px",
-            background: "rgba(0,0,0,0.3)",
-            borderRadius: "6px",
-          }}>
+          <pre
+            style={{
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-word",
+              margin: 0,
+              fontSize: "0.75rem",
+              color: "var(--rf-text-faint)",
+              maxHeight: "180px",
+              overflowY: "auto",
+              padding: "10px",
+              background: "rgba(0,0,0,0.5)",
+              borderRadius: "6px",
+              fontFamily: "var(--rf-font-mono)",
+            }}
+          >
             {error.stack}
           </pre>
         )}
       </details>
 
-      <div style={{ display: "flex", gap: "12px", marginTop: "8px" }}>
-        <PrimaryButton onClick={resetErrorBoundary}>Try again</PrimaryButton>
+      <div style={{ display: "flex", gap: "12px", marginTop: "14px" }}>
+        <PrimaryButton onClick={resetErrorBoundary}>
+          Re-initialize Subsystem
+        </PrimaryButton>
         <button
           className="rf-btn rf-btn--ghost"
           onClick={() => {
             window.location.href = "/";
           }}
         >
-          Return Home
+          Return to Deck
         </button>
       </div>
     </div>
@@ -76,8 +103,8 @@ function ErrorFallback({ error, resetErrorBoundary }) {
 }
 
 function logErrorToConsole(error, info) {
-  console.error("[RepForge ErrorBoundary] Caught rendering error:", error);
-  console.error("[RepForge ErrorBoundary] Component stack:", info?.componentStack);
+  console.error("[RepForge 2040 ErrorBoundary] Caught rendering error:", error);
+  console.error("[RepForge 2040 ErrorBoundary] Component stack:", info?.componentStack);
 }
 
 export function AppErrorBoundary({ children }) {
@@ -94,10 +121,6 @@ export function AppErrorBoundary({ children }) {
   );
 }
 
-/**
- * Page-level error boundary — wraps individual pages so a crash
- * in one page doesn't take down the whole app shell.
- */
 export function PageErrorBoundary({ children }) {
   return (
     <ErrorBoundary

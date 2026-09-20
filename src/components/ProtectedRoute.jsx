@@ -7,8 +7,16 @@ export function ProtectedRoute({ children }) {
 
   if (status === "checking") {
     return (
-      <div className="rf-full-page-loading">
-        <LoadingState label="Restoring your session…" />
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "var(--rf-void)",
+        }}
+      >
+        <LoadingState label="Verifying biometric cryptographic session…" />
       </div>
     );
   }

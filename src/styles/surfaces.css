@@ -1,0 +1,166 @@
+/**
+ * RepForge 2040 Surfaces & Holographic Optics
+ * Obsidian glass, biometric edge illumination, laser borders
+ */
+
+/* Base Glassmorphic Obsidian Surface */
+.rf-surface {
+  background: var(--rf-surface-obsidian);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border: 1px solid var(--rf-border-subtle);
+  border-radius: var(--rf-radius-lg);
+  box-shadow: var(--rf-shadow-card);
+  position: relative;
+  transition: border-color var(--rf-transition-base), box-shadow var(--rf-transition-base), transform var(--rf-transition-base);
+}
+
+.rf-surface--interactive:hover {
+  border-color: var(--rf-border-laser);
+  box-shadow: 0 12px 40px -4px rgba(0, 0, 0, 0.8), 0 0 20px -2px rgba(0, 242, 254, 0.15);
+}
+
+/* Subtle laser highlight on top edge */
+.rf-surface::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 24px;
+  right: 24px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+  pointer-events: none;
+}
+
+/* Biometric Command Pod */
+.rf-pod {
+  background: linear-gradient(145deg, rgba(14, 14, 26, 0.9) 0%, rgba(8, 8, 16, 0.95) 100%);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--rf-border-subtle);
+  border-radius: var(--rf-radius-md);
+  padding: clamp(16px, 3.5vw, 24px);
+  position: relative;
+  overflow: hidden;
+}
+
+.rf-pod--active {
+  border-color: rgba(0, 242, 254, 0.4);
+  box-shadow: var(--rf-glow-cyan);
+}
+
+.rf-pod--ember {
+  border-color: rgba(255, 51, 102, 0.35);
+  box-shadow: var(--rf-glow-ember);
+}
+
+.rf-pod--violet {
+  border-color: rgba(138, 92, 246, 0.35);
+  box-shadow: var(--rf-glow-violet);
+}
+
+/* Holographic Edge Glows */
+.rf-glow-cyan-hover:hover {
+  border-color: rgba(0, 242, 254, 0.5) !important;
+  box-shadow: 0 0 30px -4px rgba(0, 242, 254, 0.3) !important;
+}
+
+.rf-glow-ember-hover:hover {
+  border-color: rgba(255, 51, 102, 0.5) !important;
+  box-shadow: 0 0 30px -4px rgba(255, 51, 102, 0.3) !important;
+}
+
+/* Cybernetic Scanline Texture (subtle) */
+.rf-scanline {
+  position: relative;
+}
+
+.rf-scanline::after {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+  background-size: 100% 4px;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0.3;
+}
+
+/* Laser Grid Background overlay */
+.rf-cyber-grid {
+  background-size: 32px 32px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}
+
+/* Badges & Telemetry Pills */
+.rf-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--rf-radius-pill);
+  font-family: var(--rf-font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--rf-border-subtle);
+  color: var(--rf-text-sub);
+  white-space: nowrap;
+}
+
+.rf-badge--cyan {
+  background: rgba(0, 242, 254, 0.08);
+  border-color: rgba(0, 242, 254, 0.3);
+  color: var(--rf-cyan);
+  box-shadow: 0 0 12px -2px rgba(0, 242, 254, 0.25);
+}
+
+.rf-badge--violet {
+  background: rgba(138, 92, 246, 0.08);
+  border-color: rgba(138, 92, 246, 0.3);
+  color: var(--rf-violet);
+  box-shadow: 0 0 12px -2px rgba(138, 92, 246, 0.25);
+}
+
+.rf-badge--ember {
+  background: rgba(255, 51, 102, 0.08);
+  border-color: rgba(255, 51, 102, 0.3);
+  color: var(--rf-ember);
+  box-shadow: 0 0 14px -2px rgba(255, 51, 102, 0.3);
+}
+
+.rf-badge--emerald {
+  background: rgba(0, 245, 160, 0.08);
+  border-color: rgba(0, 245, 160, 0.3);
+  color: var(--rf-emerald);
+  box-shadow: 0 0 12px -2px rgba(0, 245, 160, 0.25);
+}
+
+.rf-badge--amber {
+  background: rgba(255, 184, 0, 0.08);
+  border-color: rgba(255, 184, 0, 0.3);
+  color: var(--rf-amber);
+}
+
+/* Stat Value Hero Numerals */
+.rf-metric-value {
+  font-family: var(--rf-font-display);
+  font-weight: 700;
+  font-size: var(--rf-text-2xl);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--rf-text-pure);
+}
+
+.rf-metric-label {
+  font-size: var(--rf-text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--rf-text-sub);
+  margin-bottom: 4px;
+}

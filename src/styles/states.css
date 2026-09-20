@@ -1,0 +1,181 @@
+/**
+ * RepForge 2040 Diagnostic States & Toast Feedback
+ * Skeletons, empty telemetry views, error shields, floating holographic toasts
+ */
+
+/* ==========================================================================
+   SKELETON LOADERS
+   ========================================================================== */
+
+.rf-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.03) 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.03) 100%
+  );
+  background-size: 200% 100%;
+  animation: rf-shimmer 1.8s infinite ease-in-out;
+  border-radius: var(--rf-radius-sm);
+}
+
+.rf-skeleton-card {
+  min-height: 110px;
+  border-radius: var(--rf-radius-md);
+  border: 1px solid var(--rf-border-faint);
+}
+
+/* ==========================================================================
+   STATE VIEWS: LOADING, EMPTY, ERROR
+   ========================================================================== */
+
+.rf-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: clamp(32px, 8vw, 64px) 20px;
+  border-radius: var(--rf-radius-lg);
+  background: rgba(10, 10, 20, 0.5);
+  border: 1px dashed var(--rf-border-subtle);
+  margin: var(--rf-space-6) 0;
+}
+
+/* Holographic Radar Scanner Loading */
+.rf-state-radar {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 242, 254, 0.2);
+  border-top-color: var(--rf-cyan);
+  animation: rf-spin-radar 1s linear infinite;
+  margin-bottom: 16px;
+  box-shadow: 0 0 20px -2px rgba(0, 242, 254, 0.4);
+}
+
+.rf-state-title {
+  font-family: var(--rf-font-display);
+  font-size: 1.15rem;
+  color: var(--rf-text-pure);
+  margin-bottom: 8px;
+}
+
+.rf-state-desc {
+  max-width: 440px;
+  font-size: 0.88rem;
+  color: var(--rf-text-sub);
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+/* Empty State Glyph */
+.rf-state-glyph {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--rf-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: var(--rf-cyan);
+  margin-bottom: 16px;
+  box-shadow: 0 0 24px -4px rgba(0, 242, 254, 0.2);
+}
+
+/* Error State Shield */
+.rf-state--error {
+  border-color: rgba(255, 51, 102, 0.3);
+  background: rgba(255, 51, 102, 0.03);
+}
+
+.rf-state-glyph--error {
+  background: rgba(255, 51, 102, 0.1);
+  border-color: rgba(255, 51, 102, 0.4);
+  color: var(--rf-ember);
+  box-shadow: 0 0 24px -4px rgba(255, 51, 102, 0.3);
+}
+
+/* ==========================================================================
+   HOLOGRAPHIC TOAST STACK
+   ========================================================================== */
+
+.rf-toast-stack {
+  position: fixed;
+  top: clamp(16px, 4vw, 28px);
+  right: clamp(16px, 4vw, 28px);
+  z-index: var(--rf-z-toast);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+  max-width: min(calc(100% - 32px), 380px);
+}
+
+@media (max-width: 600px) {
+  .rf-toast-stack {
+    left: 16px;
+    right: 16px;
+    max-width: 100%;
+    top: 16px;
+  }
+}
+
+.rf-toast {
+  pointer-events: auto;
+  background: rgba(12, 12, 24, 0.95);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--rf-border-subtle);
+  border-radius: var(--rf-radius-md);
+  padding: 14px 18px;
+  font-size: 0.88rem;
+  color: var(--rf-text-pure);
+  box-shadow: 0 12px 36px -4px rgba(0, 0, 0, 0.8), 0 0 20px -4px rgba(0, 242, 254, 0.15);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: rf-slide-up 0.3s var(--rf-ease-spring);
+  cursor: pointer;
+  transition: transform var(--rf-transition-fast), opacity var(--rf-transition-fast);
+}
+
+.rf-toast:hover {
+  transform: translateY(-2px);
+}
+
+.rf-toast--success {
+  border-color: rgba(0, 245, 160, 0.4);
+  box-shadow: 0 12px 36px -4px rgba(0, 0, 0, 0.8), 0 0 20px -4px rgba(0, 245, 160, 0.25);
+}
+
+.rf-toast--success::before {
+  content: "✓";
+  color: var(--rf-emerald);
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.rf-toast--error {
+  border-color: rgba(255, 51, 102, 0.4);
+  box-shadow: 0 12px 36px -4px rgba(0, 0, 0, 0.8), 0 0 20px -4px rgba(255, 51, 102, 0.25);
+}
+
+.rf-toast--error::before {
+  content: "⚠";
+  color: var(--rf-ember);
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.rf-toast--info {
+  border-color: rgba(0, 242, 254, 0.4);
+}
+
+.rf-toast--info::before {
+  content: "◈";
+  color: var(--rf-cyan);
+  font-size: 1rem;
+}

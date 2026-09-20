@@ -1,9 +1,7 @@
-import React from 'react';
-
-export function Skeleton({ width = '100%', height = '20px', borderRadius = '8px', className = '', style = {} }) {
+export function Skeleton({ width = "100%", height = "20px", borderRadius = "8px", className = "", style = {} }) {
   return (
-    <div 
-      className={`rf-skeleton ${className}`} 
+    <div
+      className={`rf-skeleton ${className}`}
       style={{ width, height, borderRadius, ...style }}
     />
   );
@@ -11,7 +9,10 @@ export function Skeleton({ width = '100%', height = '20px', borderRadius = '8px'
 
 export function SkeletonCard({ height = "120px" }) {
   return (
-    <Skeleton height={height} borderRadius="14px" />
+    <div
+      className="rf-skeleton rf-skeleton-card"
+      style={{ height, width: "100%" }}
+    />
   );
 }
 

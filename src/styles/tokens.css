@@ -1,48 +1,142 @@
+/**
+ * RepForge 2040 Design System - Core Tokens
+ * Biomechanics × Spatial Computing × AI Intelligence
+ */
+
 :root {
-  /* --- Surfaces --- */
-  --rf-bg: #07070b;
-  --rf-bg-elevated: #0c0c13;
-  --rf-surface: #12121b;
-  --rf-surface-2: #191925;
-  --rf-glass: rgba(255, 255, 255, 0.045);
-  --rf-glass-border: rgba(255, 255, 255, 0.09);
-  --rf-border: rgba(255, 255, 255, 0.08);
-  --rf-border-strong: rgba(255, 255, 255, 0.16);
+  /* --- Void & Obsidian Layers --- */
+  --rf-void: #020205;
+  --rf-bg: #05050a;
+  --rf-bg-elevated: #090912;
+  --rf-surface-obsidian: rgba(10, 10, 18, 0.78);
+  --rf-surface-glass: rgba(16, 16, 28, 0.65);
+  --rf-surface-card: rgba(14, 14, 24, 0.85);
+  --rf-surface-subtle: rgba(255, 255, 255, 0.03);
+  --rf-surface-hover: rgba(255, 255, 255, 0.06);
+  --rf-surface-active: rgba(255, 255, 255, 0.09);
 
-  /* --- Text --- */
-  --rf-text: #f4f3f7;
-  --rf-text-dim: #9c99ab;
-  --rf-text-faint: #6b6878;
+  /* --- Edge Borders & Laser Tracing --- */
+  --rf-border-faint: rgba(255, 255, 255, 0.05);
+  --rf-border-subtle: rgba(255, 255, 255, 0.09);
+  --rf-border-laser: rgba(255, 255, 255, 0.16);
+  --rf-border-highlight: rgba(255, 255, 255, 0.35);
 
-  /* --- Accents: Plasma Violet -> Ion Cyan is the signature gradient;
-     Forge Ember marks achievement/PR moments. --- */
+  /* --- Quantum Accents & Telemetry Colors --- */
+  --rf-cyan: #00f2fe;
+  --rf-cyan-dim: #0284c7;
+  --rf-cyan-glow: rgba(0, 242, 254, 0.35);
+  
   --rf-violet: #8a5cf6;
-  --rf-violet-dim: #6d47c7;
-  --rf-cyan: #22d3ee;
-  --rf-ember: #ff6b45;
-  --rf-ember-2: #ff3d68;
-  --rf-success: #34d399;
-  --rf-danger: #f9575d;
-  --rf-warning: #fbbf24;
+  --rf-violet-dim: #6d28d9;
+  --rf-violet-glow: rgba(138, 92, 246, 0.35);
+  
+  --rf-ember: #ff3366;
+  --rf-ember-hot: #ff0055;
+  --rf-ember-glow: rgba(255, 51, 102, 0.4);
+  
+  --rf-emerald: #00f5a0;
+  --rf-emerald-dim: #059669;
+  --rf-emerald-glow: rgba(0, 245, 160, 0.3);
 
-  --rf-gradient-primary: linear-gradient(135deg, #8a5cf6 0%, #22d3ee 100%);
-  --rf-gradient-ember: linear-gradient(135deg, #ff6b45 0%, #ff3d68 100%);
+  --rf-amber: #ffb800;
+  --rf-amber-dim: #d97706;
+  --rf-amber-glow: rgba(255, 184, 0, 0.3);
 
-  /* --- Type --- */
-  --rf-font-display: "Space Grotesk", "Big Shoulders Display", "Arial Narrow", sans-serif;
-  --rf-font-body: "Inter", "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* Functional Mappings */
+  --rf-primary: var(--rf-cyan);
+  --rf-secondary: var(--rf-violet);
+  --rf-accent-pr: var(--rf-ember);
+  --rf-success: var(--rf-emerald);
+  --rf-warning: var(--rf-amber);
+  --rf-danger: #ff4757;
 
-  /* --- Shape / elevation --- */
-  --rf-radius-sm: 8px;
+  /* --- Gradients --- */
+  --rf-gradient-neural: linear-gradient(135deg, #00f2fe 0%, #8a5cf6 50%, #ff3366 100%);
+  --rf-gradient-cyan-violet: linear-gradient(135deg, #00f2fe 0%, #8a5cf6 100%);
+  --rf-gradient-pr: linear-gradient(135deg, #ff3366 0%, #ff8a00 100%);
+  --rf-gradient-emerald: linear-gradient(135deg, #00f5a0 0%, #00d2ff 100%);
+  --rf-gradient-surface: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+  --rf-gradient-card: linear-gradient(135deg, rgba(16, 16, 30, 0.8) 0%, rgba(8, 8, 16, 0.9) 100%);
+
+  /* --- Telemetry Typography --- */
+  --rf-font-display: "Space Grotesk", "Big Shoulders Display", -apple-system, BlinkMacSystemFont, sans-serif;
+  --rf-font-body: "Inter", "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --rf-font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Source Code Pro", Menlo, monospace;
+
+  /* Fluid Type Scale (clamp for mobile -> desktop) */
+  --rf-text-xs: clamp(0.7rem, 0.65rem + 0.25vw, 0.78rem);
+  --rf-text-sm: clamp(0.8rem, 0.75rem + 0.3vw, 0.875rem);
+  --rf-text-base: clamp(0.9rem, 0.85rem + 0.35vw, 1rem);
+  --rf-text-md: clamp(1rem, 0.95rem + 0.4vw, 1.125rem);
+  --rf-text-lg: clamp(1.15rem, 1.05rem + 0.6vw, 1.35rem);
+  --rf-text-xl: clamp(1.35rem, 1.2rem + 0.9vw, 1.75rem);
+  --rf-text-2xl: clamp(1.75rem, 1.5rem + 1.4vw, 2.35rem);
+  --rf-text-3xl: clamp(2.2rem, 1.8rem + 2.2vw, 3.25rem);
+  --rf-text-hero: clamp(2.75rem, 2.2rem + 3.2vw, 4.5rem);
+
+  /* Text Colors */
+  --rf-text-pure: #ffffff;
+  --rf-text-bright: #f1f3f9;
+  --rf-text-sub: #a2a5b8;
+  --rf-text-faint: #60637a;
+  --rf-text-stealth: #383a4c;
+
+  /* --- Spacing System --- */
+  --rf-space-1: 4px;
+  --rf-space-2: 8px;
+  --rf-space-3: 12px;
+  --rf-space-4: 16px;
+  --rf-space-5: 20px;
+  --rf-space-6: 24px;
+  --rf-space-8: 32px;
+  --rf-space-10: 40px;
+  --rf-space-12: 48px;
+  --rf-space-16: 64px;
+
+  /* Touch Targets */
+  --rf-touch-target: 48px;
+  --rf-touch-target-sm: 40px;
+
+  /* Radii */
+  --rf-radius-xs: 6px;
+  --rf-radius-sm: 10px;
   --rf-radius-md: 14px;
-  --rf-radius-lg: 22px;
-  --rf-shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.35);
-  --rf-shadow-lift: 0 20px 60px rgba(0, 0, 0, 0.5);
-  --rf-shadow-glow-violet: 0 0 0 1px rgba(138, 92, 246, 0.4), 0 8px 30px rgba(138, 92, 246, 0.25);
+  --rf-radius-lg: 20px;
+  --rf-radius-xl: 28px;
+  --rf-radius-pill: 9999px;
 
-  --rf-sidebar-width: 248px;
+  /* Spatial Shadows & Lighting */
+  --rf-shadow-subtle: 0 4px 20px rgba(0, 0, 0, 0.5);
+  --rf-shadow-card: 0 8px 32px -4px rgba(0, 0, 0, 0.7);
+  --rf-shadow-modal: 0 24px 60px -10px rgba(0, 0, 0, 0.9);
+  --rf-glow-cyan: 0 0 24px -2px rgba(0, 242, 254, 0.45);
+  --rf-glow-violet: 0 0 28px -2px rgba(138, 92, 246, 0.45);
+  --rf-glow-ember: 0 0 28px -2px rgba(255, 51, 102, 0.45);
+  --rf-glow-matrix: 0 0 24px -2px rgba(0, 245, 160, 0.4);
+
+  /* Layout Constants */
+  --rf-sidebar-w: 260px;
+  --rf-sidebar-collapsed-w: 76px;
+  --rf-dock-height: 72px;
+  --rf-topbar-height: 60px;
+  --rf-header-height: 64px;
+  --rf-container-max: 1320px;
+
+  /* Transitions */
+  --rf-ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --rf-ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --rf-transition-fast: 0.18s var(--rf-ease-smooth);
+  --rf-transition-base: 0.28s var(--rf-ease-spring);
+  --rf-transition-slow: 0.45s var(--rf-ease-spring);
+
+  /* Z-Index Hierarchy */
+  --rf-z-bg: 0;
+  --rf-z-ambient-3d: 1;
+  --rf-z-content: 10;
+  --rf-z-sticky: 20;
+  --rf-z-topbar: 30;
+  --rf-z-dock: 40;
+  --rf-z-modal-backdrop: 50;
+  --rf-z-modal: 60;
+  --rf-z-toast: 100;
 }
-
-/* This product is designed dark-only by brief; light-scheme viewers
-   still get the same intentional dark palette rather than an inverted
-   theme, since a luxury cinematic gym app is not meant to go light. */

@@ -1,11 +1,16 @@
 import { useState, useEffect, useRef } from "react";
 import { api } from "../services/api";
 import { useAuth } from "../context/AuthContext";
-
 import { AnimatePresence, motion } from "framer-motion";
 import { CoachAvatar3D } from "../components/3d/CoachAvatar3D";
-import { TypingIndicator3D } from "../components/3d/TypingIndicator3D";
 import { PrimaryButton } from "../components/PrimaryButton";
+
+const QUICK_PROMPTS = [
+  "Analyze volume & fatigue trends",
+  "Where are my plateaus?",
+  "Recommend next progressive overload",
+  "Review my Push vs Pull split",
+];
 
 export function AIAnalysis() {
   const { user } = useAuth();
@@ -14,8 +19,6 @@ export function AIAnalysis() {
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState(null);
   const scrollRef = useRef(null);
-
-
 
   // Load from local storage on mount
   useEffect(() => {
@@ -26,14 +29,12 @@ export function AIAnalysis() {
         const parsed = JSON.parse(saved);
         if (parsed && parsed.length > 0) {
           setChatHistory(parsed);
-          return; // Skip initial check-in if we loaded history
+          return;
         }
-      } catch (e) {
-        // ignore JSON parse error
+      } catch {
+        // ignore parse error
       }
     }
-    
-    // If no history, trigger initial check-in immediately
     triggerInitialCheckin();
   }, [user?.id]);
 
@@ -43,7 +44,7 @@ export function AIAnalysis() {
     localStorage.setItem(`rf_chat_${user.id}`, JSON.stringify(chatHistory));
   }, [chatHistory, user?.id]);
 
-  // Scroll to bottom when history or loading state changes
+  // Scroll to bottom when history updates
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -56,48 +57,52 @@ export function AIAnalysis() {
     try {
       const data = await api.post("/api/ai/chat", {
         message: "_INIT_CHECKIN_",
-        history: []
+        history: [],
       });
-      const replyText = typeof data?.reply === "string" ? data.reply : (data?.message || "Ready to train.");
+      const replyText =
+        typeof data?.reply === "string"
+          ? data.reply
+          : data?.message || "Biomechanical neural model ready.";
       setChatHistory([{ role: "model", text: replyText }]);
-    } catch (err) {
-      setChatError("Failed to initialize chat. Please try again.");
+    } catch {
+      setChatError("Neural diagnostic service offline or rate-limited. Tap to retry.");
     } finally {
       setChatLoading(false);
     }
   };
 
-  const handleSendMessage = async (e) => {
-    e?.preventDefault();
-    if (!chatInput.trim() || chatLoading) return;
+  const handleSendMessage = async (msgOverride) => {
+    const textToSend = (msgOverride || chatInput).trim();
+    if (!textToSend || chatLoading) return;
 
-    const newMessage = chatInput.trim();
     setChatInput("");
     setChatError(null);
     setChatLoading(true);
 
-    const updatedHistory = [...chatHistory, { role: "user", text: newMessage }];
+    const updatedHistory = [...chatHistory, { role: "user", text: textToSend }];
     setChatHistory(updatedHistory);
 
     try {
       const data = await api.post("/api/ai/chat", {
-        message: newMessage,
-        history: chatHistory // Send previous history (excluding new message)
+        message: textToSend,
+        history: chatHistory,
       });
-      const replyText = typeof data?.reply === "string" ? data.reply : (data?.message || "Received response.");
+      const replyText =
+        typeof data?.reply === "string"
+          ? data.reply
+          : data?.message || "Telemetry received and synthesized.";
       setChatHistory([...updatedHistory, { role: "model", text: replyText }]);
     } catch (err) {
-      setChatError(err.message || "Failed to send message");
-      // Remove optimistic message on fail so user can re-try
+      setChatError(err.message || "Failed to communicate with neural coach.");
       setChatHistory(chatHistory);
-      setChatInput(newMessage);
+      setChatInput(textToSend);
     } finally {
       setChatLoading(false);
     }
   };
 
   const startNewCheckin = () => {
-    if (window.confirm("Start a new check-in? This will clear the current conversation.")) {
+    if (window.confirm("Purge active conversation memory and initiate a fresh biomechanical scan?")) {
       setChatHistory([]);
       if (user?.id) {
         localStorage.removeItem(`rf_chat_${user.id}`);
@@ -107,137 +112,226 @@ export function AIAnalysis() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: '600px', maxHeight: 'calc(100vh - 132px)' }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      {/* Page Header */}
       <div className="rf-page-header" style={{ marginBottom: 16 }}>
         <div>
-
-          <h1 className="rf-page-title">AI Trainer</h1>
-          <p className="rf-page-subtitle">Your personal strength coach, ready to analyze your progress.</p>
+          <div className="rf-telemetry-tag" style={{ marginBottom: 4 }}>
+            NEURAL BIOMECHANICAL INTELLIGENCE LAYER
+          </div>
+          <h1 className="rf-page-title">
+            <span className="rf-gradient-text">AI Coach</span> Telemetry
+          </h1>
+          <p className="rf-page-subtitle">
+            Gemini parses your real training history to identify fatigue, momentum, and overload directives.
+          </p>
         </div>
-        <button className="rf-btn rf-btn--ghost rf-btn--sm" onClick={startNewCheckin} disabled={chatLoading}>
-          Start New Check-in
+        <button
+          type="button"
+          className="rf-btn rf-btn--ghost rf-btn--sm"
+          onClick={startNewCheckin}
+          disabled={chatLoading}
+        >
+          ↺ Reset Conversation
         </button>
       </div>
 
-      <div 
-        className="rf-panel" 
-        style={{ 
-          flex: 1, 
-          display: 'flex', 
-          flexDirection: 'column', 
-          overflow: 'hidden',
-          padding: 0
-        }}
-      >
-        <div 
-          ref={scrollRef}
-          className="rf-scrollbar"
-          style={{ 
-            flex: 1, 
-            overflowY: 'auto', 
-            padding: 24,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 16
-          }}
-        >
+      {/* AI Command Center Box */}
+      <div className="rf-ai-command-center">
+        {/* Telemetry Header */}
+        <div className="rf-ai-header">
+          <div className="rf-ai-identity">
+            <CoachAvatar3D size={42} />
+            <div className="rf-ai-meta">
+              <div className="rf-ai-title">
+                <span>RepForge Neural Core</span>
+                <span className="rf-badge rf-badge--cyan" style={{ padding: "2px 8px", fontSize: "0.68rem" }}>
+                  Active
+                </span>
+              </div>
+              <div className="rf-ai-status-row">
+                <span>LATENCY: 12ms</span>
+                <span>·</span>
+                <span>PRECISION: MAX</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="rf-status-beacon" title="Model operational" />
+        </div>
+
+        {/* Message Stream */}
+        <div ref={scrollRef} className="rf-ai-stream">
           {chatHistory.length === 0 && !chatLoading && !chatError && (
-            <div style={{ textAlign: 'center', color: 'var(--rf-text-faint)', marginTop: '2rem' }}>
-              Initializing chat...
+            <div style={{ textAlign: "center", color: "var(--rf-text-faint)", marginTop: "3rem" }}>
+              <div className="rf-state-radar" style={{ margin: "0 auto 16px" }} />
+              <div>Initializing Neural Feedback Subsystem…</div>
             </div>
           )}
 
           <AnimatePresence initial={false}>
             {chatHistory.map((msg, i) => (
-              <motion.div 
-                key={i} 
+              <motion.div
+                key={i}
                 layout
-                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                initial={{ opacity: 0, y: 14, scale: 0.98 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                style={{
-                  alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                  display: 'flex',
-                  gap: '12px',
-                  alignItems: 'flex-start',
-                  maxWidth: '85%'
-                }}
+                transition={{ type: "spring", stiffness: 300, damping: 24 }}
+                className={msg.role === "user" ? "rf-msg-user" : "rf-msg-ai"}
               >
-                {msg.role === 'model' && <CoachAvatar3D size={40} />}
-                
-                <div style={{
-                  background: msg.role === 'user' ? 'linear-gradient(135deg, rgba(138,92,246,0.3), rgba(34,211,238,0.2))' : 'var(--rf-surface-2)',
-                  border: msg.role === 'user' ? '1px solid rgba(138,92,246,0.5)' : '1px solid var(--rf-border-strong)',
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05)',
-                  color: 'var(--rf-text)',
-                  padding: '14px 18px',
-                  borderRadius: '16px',
-                  borderBottomRightRadius: msg.role === 'user' ? '4px' : '16px',
-                  borderBottomLeftRadius: msg.role === 'model' ? '4px' : '16px',
-                  lineHeight: 1.6,
-                  whiteSpace: 'pre-wrap'
-                }}>
-                  {typeof msg.text === "string" ? msg.text : (msg.text?.reply || msg.reply || JSON.stringify(msg.text || ""))}
+                {msg.role === "model" && <CoachAvatar3D size={36} />}
+                <div className={msg.role === "model" ? "rf-msg-ai-content" : ""}>
+                  {formatCoachReply(msg.text)}
                 </div>
               </motion.div>
             ))}
 
             {chatLoading && (
-              <motion.div 
+              <motion.div
                 layout
-                initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.15 } }}
-                transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                style={{ 
-                  alignSelf: 'flex-start', 
-                  display: 'flex',
-                  gap: '12px',
-                  alignItems: 'center',
-                }}
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="rf-msg-ai"
               >
-                <CoachAvatar3D size={40} />
-                <div style={{ 
-                  background: 'var(--rf-surface-2)', 
-                  border: '1px solid var(--rf-border-strong)',
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
-                  padding: '8px 12px', 
-                  borderRadius: '16px',
-                  borderBottomLeftRadius: '4px',
-                }}>
-                  <TypingIndicator3D />
+                <CoachAvatar3D size={36} />
+                <div
+                  className="rf-msg-ai-content"
+                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 18px" }}
+                >
+                  <div className="rf-wave-loader">
+                    <div className="rf-wave-bar" />
+                    <div className="rf-wave-bar" />
+                    <div className="rf-wave-bar" />
+                    <div className="rf-wave-bar" />
+                    <div className="rf-wave-bar" />
+                  </div>
+                  <span
+                    style={{
+                      fontFamily: "var(--rf-font-mono)",
+                      fontSize: "0.82rem",
+                      color: "var(--rf-cyan)",
+                    }}
+                  >
+                    SYNTHESIZING TRAINING TELEMETRY…
+                  </span>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
 
           {chatError && (
-            <div style={{ alignSelf: 'center', color: 'var(--rf-danger)', fontSize: '0.9rem', background: 'rgba(249,87,93,0.1)', padding: '8px 16px', borderRadius: '999px', border: '1px solid rgba(249,87,93,0.2)' }}>
+            <div
+              style={{
+                alignSelf: "center",
+                color: "var(--rf-ember)",
+                fontSize: "0.84rem",
+                background: "rgba(255, 51, 102, 0.08)",
+                padding: "8px 16px",
+                borderRadius: "var(--rf-radius-pill)",
+                border: "1px solid rgba(255, 51, 102, 0.3)",
+                cursor: "pointer",
+              }}
+              onClick={triggerInitialCheckin}
+            >
               {chatError}
             </div>
           )}
         </div>
 
-        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--rf-border-strong)', background: 'rgba(0,0,0,0.2)' }}>
-          <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: 12 }}>
+        {/* Quick Suggestion Chips */}
+        <div className="rf-prompt-chips">
+          {QUICK_PROMPTS.map((prompt) => (
+            <button
+              key={prompt}
+              type="button"
+              className="rf-prompt-chip"
+              onClick={() => handleSendMessage(prompt)}
+              disabled={chatLoading}
+            >
+              ◈ {prompt}
+            </button>
+          ))}
+        </div>
+
+        {/* Tactical Input Bar */}
+        <div className="rf-ai-input-bar">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSendMessage();
+            }}
+            className="rf-ai-input-wrapper"
+          >
             <input
               type="text"
               className="rf-input"
-              style={{ flex: 1, background: 'var(--rf-surface-2)', borderRadius: '999px', padding: '14px 20px' }}
-              placeholder="Ask your coach anything..."
+              style={{ borderRadius: "var(--rf-radius-pill)" }}
+              placeholder="Query coach on intensity, progression, fatigue…"
               value={chatInput}
-              onChange={e => setChatInput(e.target.value)}
+              onChange={(e) => setChatInput(e.target.value)}
               disabled={chatLoading}
             />
-            <PrimaryButton 
-              type="submit" 
+            <PrimaryButton
+              type="submit"
               disabled={!chatInput.trim() || chatLoading}
+              style={{ borderRadius: "var(--rf-radius-pill)" }}
             >
-              Send
+              Execute
             </PrimaryButton>
           </form>
         </div>
       </div>
     </div>
   );
+}
+
+/**
+ * Format coach response with structured telemetry styling
+ */
+function formatCoachReply(text) {
+  if (typeof text !== "string") {
+    text = text?.reply || text?.message || JSON.stringify(text || "");
+  }
+
+  return (
+    <div style={{ lineHeight: 1.65 }}>
+      {text.split("\n\n").map((paragraph, pIdx) => {
+        // Detect bullet points or structured advice
+        if (paragraph.startsWith("- ") || paragraph.startsWith("* ")) {
+          const items = paragraph.split("\n").filter(Boolean);
+          return (
+            <ul key={pIdx} style={{ margin: "8px 0", paddingLeft: 20 }}>
+              {items.map((item, iIdx) => (
+                <li key={iIdx} style={{ marginBottom: 6 }}>
+                  {renderFormattedInline(item.replace(/^[-*]\s+/, ""))}
+                </li>
+              ))}
+            </ul>
+          );
+        }
+
+        return (
+          <p key={pIdx} style={{ margin: "0 0 10px 0", color: "inherit", fontSize: "inherit" }}>
+            {renderFormattedInline(paragraph)}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
+function renderFormattedInline(str) {
+  // Simple bold highlighting for key takeaways
+  const parts = str.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return (
+        <strong key={i} style={{ color: "var(--rf-cyan)", fontWeight: 700 }}>
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    return part;
+  });
 }
