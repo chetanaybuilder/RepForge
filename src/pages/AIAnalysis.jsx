@@ -118,7 +118,7 @@ export function AIAnalysis() {
         flex: 1,
         display: "flex",
         flexDirection: "column",
-        minHeight: "calc(100dvh - var(--rf-topbar-height) - 40px)",
+        minHeight: 0,
       }}
     >
       {/* Header */}

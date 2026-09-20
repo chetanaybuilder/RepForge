@@ -178,33 +178,28 @@ export function AppShell() {
       </aside>
 
       {/* ====================================================================
-          MOBILE TOP BAR (< 1024px)
+          MOBILE TOP BAR (< 768px)
           Includes Three-Line Hamburger Menu Button (☰)
           ==================================================================== */}
       <header className="rf-topbar">
         <div className="rf-brand-group">
           <div className="rf-brand-glyph">RF</div>
-          <div>
-            <div className="rf-brand-text" style={{ fontSize: "1.05rem" }}>
-              RepForge
-            </div>
-            <div className="rf-telemetry-tag" style={{ fontSize: "0.62rem" }}>
+          <div className="rf-brand-info">
+            <div className="rf-brand-text">RepForge</div>
+            <div className="rf-brand-breadcrumb">
               {activeSection.number} · {activeSection.label}
             </div>
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div className="rf-status-beacon" />
-          <button
-            type="button"
-            className="rf-hamburger-btn"
-            onClick={() => setMenuOpen(true)}
-            aria-label="Open Navigation Menu"
-          >
-            ☰
-          </button>
-        </div>
+        <button
+          type="button"
+          className="rf-hamburger-btn"
+          onClick={() => setMenuOpen(true)}
+          aria-label="Open Navigation Menu"
+        >
+          ☰
+        </button>
       </header>
 
       {/* ====================================================================
