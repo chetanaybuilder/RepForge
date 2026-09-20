@@ -31,7 +31,10 @@ def register_error_handlers(app):
 
     @app.errorhandler(404)
     def handle_404(_err):
-        return error_response("The requested resource was not found.", 404, "not_found")
+        from flask import request, current_app
+        if request.path.startswith("/api/") or request.path.startswith("/auth/"):
+            return error_response("The requested resource was not found.", 404, "not_found")
+        return current_app.send_static_file("index.html")
 
     @app.errorhandler(405)
     def handle_405(_err):

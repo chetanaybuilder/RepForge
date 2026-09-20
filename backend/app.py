@@ -39,7 +39,7 @@ def create_app(config_class=Config):
 
     config_class.validate()
 
-    app = Flask(__name__)
+    app = Flask(__name__, static_folder="../frontend/dist", static_url_path="/")
     app.config.from_object(config_class)
 
     # --- Database ---
@@ -82,7 +82,7 @@ def create_app(config_class=Config):
 
     @app.route("/", methods=["GET"])
     def root():
-        return jsonify({"status": "ok", "service": "repforge-api"}), 200
+        return app.send_static_file("index.html")
 
     @app.route("/health", methods=["GET"])
     def health():
