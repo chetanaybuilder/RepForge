@@ -80,6 +80,10 @@ def create_app(config_class=Config):
     app.register_blueprint(ai_bp)
     app.register_blueprint(misc_bp)
 
+    @app.route("/", methods=["GET"])
+    def root():
+        return jsonify({"status": "ok", "service": "repforge-api"}), 200
+
     @app.route("/health", methods=["GET"])
     def health():
         return app.view_functions["misc.health"]()

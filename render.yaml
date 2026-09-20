@@ -33,15 +33,9 @@ services:
       - key: GEMINI_TIMEOUT_SECONDS
         value: 20
       - key: FRONTEND_URL
-        fromService:
-          type: web
-          name: repforge-web
-          property: host
+        sync: false  # Set manually in Render Dashboard to https://repforge-web.onrender.com
       - key: CORS_ORIGINS
-        fromService:
-          type: web
-          name: repforge-web
-          property: host
+        sync: false  # Set manually in Render Dashboard to https://repforge-web.onrender.com
 
   # ============================================================
   # Frontend: RepForge React SPA (Static Site)
@@ -60,7 +54,4 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_API_URL
-        fromService:
-          type: web
-          name: repforge-api
-          property: host
+        sync: false  # Set manually in Render Dashboard to https://repforge-api.onrender.com (MUST be set before build)
