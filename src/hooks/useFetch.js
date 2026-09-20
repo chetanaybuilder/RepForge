@@ -7,10 +7,10 @@ const globalCache = new Map();
  * `emptyCheck` decides whether a successful-but-empty result should render
  * the empty state instead of the data state.
  */
-export function useFetch(fetcher, deps = [], emptyCheck = () => false, cacheKey = null) {
+export function useFetch(fetcher, deps = [], emptyCheck = () => false, cacheKey = null, initialData = null) {
   const key = cacheKey || JSON.stringify(deps);
   
-  const [data, setData] = useState(globalCache.get(key) || null);
+  const [data, setData] = useState(globalCache.get(key) || initialData);
   const [status, setStatus] = useState(globalCache.has(key) ? (emptyCheck(globalCache.get(key)) ? "empty" : "success") : "loading");
   const [error, setError] = useState(null);
 

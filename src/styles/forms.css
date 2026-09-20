@@ -20,6 +20,7 @@
   .rf-form-grid--2 {
     grid-template-columns: repeat(2, 1fr);
   }
+
   .rf-form-grid--3 {
     grid-template-columns: repeat(3, 1fr);
   }
@@ -210,7 +211,8 @@
   transition: all var(--rf-transition-fast);
 }
 
-.rf-chip-btn:hover, .rf-chip-btn:active {
+.rf-chip-btn:hover,
+.rf-chip-btn:active {
   background: rgba(0, 242, 254, 0.12);
   border-color: rgba(0, 242, 254, 0.35);
   color: var(--rf-cyan);
@@ -392,7 +394,7 @@
   text-align: center;
   padding: 0 4px;
   transition: all var(--rf-transition-fast);
-  -moz-appearance: textfield;
+  --moz-appearance: textfield;
 }
 
 .rf-set-input::-webkit-outer-spin-button,
