@@ -1,5 +1,7 @@
 {
   "rewrites": [
+    { "source": "/api/:path*", "destination": "https://repforge-w7dh.onrender.com/api/:path*" },
+    { "source": "/auth/:path*", "destination": "https://repforge-w7dh.onrender.com/auth/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

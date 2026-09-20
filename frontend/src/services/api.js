@@ -1,7 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL;
-if (!API_URL) {
-  console.error("FATAL: VITE_API_URL environment variable is not set. Set it in your .env file (local dev) or in Vercel/Render environment variables (production). The app cannot make API calls without it.");
-}
+const API_URL = import.meta.env.VITE_API_URL || "";
 
 // The CSRF token lives only in memory (set once /api/me returns it after
 // login) — never in localStorage/sessionStorage. A full page reload fetches
