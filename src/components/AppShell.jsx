@@ -66,12 +66,9 @@ export function AppShell() {
           className="rf-icon-btn"
           aria-label="Open menu"
           onClick={() => setMenuOpen((v) => !v)}
+          style={{ fontSize: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
-          {user?.avatar_url ? (
-            <img src={user.avatar_url} alt="" className="rf-avatar rf-avatar--sm" referrerPolicy="no-referrer" />
-          ) : (
-            <div className="rf-avatar rf-avatar--placeholder rf-avatar--sm">{user?.name?.[0] || "?"}</div>
-          )}
+          ☰
         </button>
       </div>
 
@@ -92,7 +89,21 @@ export function AppShell() {
               className="rf-mobile-menu-panel" 
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="rf-user-chip">
+              <nav className="rf-sidebar-nav" style={{ flex: 1, marginTop: '20px' }}>
+                {NAV_ITEMS.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    onClick={() => setMenuOpen(false)}
+                    className={({ isActive }) => `rf-nav-link${isActive ? " rf-nav-link--active" : ""}`}
+                  >
+                    <span className="rf-nav-icon">{item.icon}</span>
+                    {item.label}
+                  </NavLink>
+                ))}
+              </nav>
+
+              <div className="rf-user-chip" style={{ marginTop: 'auto' }}>
                 {user?.avatar_url ? (
                   <img src={user.avatar_url} alt="" className="rf-avatar" referrerPolicy="no-referrer" />
                 ) : (
@@ -126,18 +137,6 @@ export function AppShell() {
         </AnimatePresence>
       </main>
 
-      <nav className="rf-mobile-nav">
-        {NAV_ITEMS.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            className={({ isActive }) => `rf-mobile-nav-link${isActive ? " rf-mobile-nav-link--active" : ""}`}
-          >
-            <span className="rf-nav-icon">{item.icon}</span>
-            <span className="rf-mobile-nav-label">{item.label}</span>
-          </NavLink>
-        ))}
-      </nav>
     </div>
   );
 }

@@ -430,6 +430,10 @@ p {
 }
 
 @media (max-width: 900px) {
+  .rf-shell {
+    flex-direction: column;
+  }
+  
   .rf-sidebar {
     display: none !important;
   }
@@ -667,6 +671,8 @@ p {
 @media (max-width: 900px) {
   .rf-main {
     padding: 20px 16px 100px;
+    width: 100%;
+    margin: 0;
   }
 }
 
