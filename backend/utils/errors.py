@@ -31,9 +31,15 @@ def register_error_handlers(app):
 
     @app.errorhandler(404)
     def handle_404(_err):
+        import os
         from flask import request, current_app
         if request.path.startswith("/api/") or request.path.startswith("/auth/"):
             return error_response("The requested resource was not found.", 404, "not_found")
+        
+        index_path = os.path.join(current_app.static_folder, "index.html")
+        if not os.path.exists(index_path):
+            return error_response("Frontend build missing (index.html not found).", 500, "frontend_missing")
+            
         return current_app.send_static_file("index.html")
 
     @app.errorhandler(405)
