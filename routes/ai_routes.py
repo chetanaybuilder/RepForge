@@ -68,7 +68,14 @@ def chat():
 
     # Initial load trigger handling
     if raw_message == "_INIT_CHECKIN_":
-        message = "Give me my initial check-in: a proactive deep analysis of my FULL training history. Summarize my training frequency, volume trends, and Push/Pull/Legs balance. Call out my good points and critical points, and give progressive overload suggestions per exercise where you have enough data. Write this conversationally, like a coach texting me, not bullet-point headers like a corporate report."
+        message = (
+            "Provide a tactical, high-impact performance check-in based on my logged telemetry. "
+            "Keep it concise, actionable, and minimal:\n"
+            "1. Volume Trend & Workload (brief status based on weekly load)\n"
+            "2. Progressive Overload Target (specific weight/rep target for key lifts)\n"
+            "3. Recovery & Split Cue (frequency & balance observation)\n"
+            "Keep it direct, professional, and tactical without filler."
+        )
 
     try:
         reply = chat_with_coach(

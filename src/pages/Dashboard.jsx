@@ -18,21 +18,47 @@ import {
   Tooltip,
 } from "recharts";
 
+const DEFAULT_STATS_SCHEMA = {
+  stats: {
+    total_volume: 0,
+    total_workouts: 0,
+    workouts_completed: 0,
+    training_days: 0,
+    current_streak: 0,
+    longest_streak: 0,
+    personal_records_count: 0,
+    unique_exercises: 0,
+  },
+  recent_prs: [],
+  recent_workouts: [],
+};
+
 export function Dashboard() {
   const { user } = useAuth();
   const { data, status, error, reload } = useFetch(
     () => api.get("/api/workouts/stats"),
-    []
+    [],
+    () => false,
+    null,
+    DEFAULT_STATS_SCHEMA
   );
   const { data: analyticsData } = useFetch(
     () => api.get("/api/workouts/analytics"),
-    []
+    [],
+    () => false,
+    null,
+    { volume_trend: [] }
   );
 
   const firstName = user?.name?.split(" ")[0] || "Lifter";
+  const stats = data?.stats || DEFAULT_STATS_SCHEMA.stats;
+  const recentPrs = Array.isArray(data?.recent_prs) ? data.recent_prs : [];
+  const recentWorkouts = Array.isArray(data?.recent_workouts) ? data.recent_workouts : [];
   const volumeTrend = Array.isArray(analyticsData?.volume_trend)
     ? analyticsData.volume_trend
     : [];
+
+  const isLoading = status === "loading" || (!data?.stats && status !== "error");
 
   return (
     <div style={{ width: "100%", flex: 1, display: "flex", flexDirection: "column" }}>
@@ -56,12 +82,12 @@ export function Dashboard() {
         </Link>
       </div>
 
-      {status === "loading" && <SkeletonGrid count={6} />}
+      {isLoading && <SkeletonGrid count={6} />}
       {status === "error" && (
         <ErrorState message={error?.message} onRetry={reload} />
       )}
 
-      {status === "success" && (
+      {!isLoading && status !== "error" && (
         <motion.div
           initial="hidden"
           animate="visible"
@@ -103,7 +129,7 @@ export function Dashboard() {
                     letterSpacing: "-0.03em",
                   }}
                 >
-                  <AnimatedNumber value={data.stats.total_volume} format={formatNumber} />
+                  <AnimatedNumber value={stats?.total_volume ?? 0} format={formatNumber} />
                   <span
                     style={{
                       fontSize: "clamp(1.1rem, 0.9rem + 0.6vw, 1.5rem)",
@@ -145,14 +171,14 @@ export function Dashboard() {
                       lineHeight: 1,
                     }}
                   >
-                    <AnimatedNumber value={data.stats.current_streak} />
+                    <AnimatedNumber value={stats?.current_streak ?? 0} />
                   </div>
                   <span style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--rf-ember)" }}>
                     DAYS STREAK
                   </span>
                 </div>
                 <div className="rf-stat-sub" style={{ marginTop: 6 }}>
-                  Longest recorded: {data.stats.longest_streak} consecutive days
+                  Longest recorded: {stats?.longest_streak ?? 0} consecutive days
                 </div>
               </div>
             </div>
@@ -219,25 +245,25 @@ export function Dashboard() {
           <div className="rf-stat-grid">
             <StatPod
               label="Total Workouts"
-              value={data.stats.total_workouts}
+              value={stats?.total_workouts ?? stats?.workouts_completed ?? 0}
               sub="Sessions completed"
               glow="cyan"
             />
             <StatPod
               label="Active Training Days"
-              value={data.stats.training_days}
+              value={stats?.training_days ?? 0}
               sub="Unique gym days"
               glow="violet"
             />
             <StatPod
               label="Personal Records"
-              value={data.stats.personal_records_count}
+              value={stats?.personal_records_count ?? 0}
               sub="Historical peak lifts"
               glow="ember"
             />
             <StatPod
               label="Movements Logged"
-              value={data.stats.unique_exercises}
+              value={stats?.unique_exercises ?? 0}
               sub="Tracked exercises"
               glow="cyan"
             />
@@ -253,7 +279,7 @@ export function Dashboard() {
               </h2>
             </div>
 
-            {data.recent_prs.length === 0 ? (
+            {recentPrs.length === 0 ? (
               <div className="rf-pod" style={{ textAlign: "center", padding: "28px 16px" }}>
                 <p style={{ margin: 0, color: "var(--rf-text-sub)", fontSize: "0.88rem" }}>
                   No personal records in the last 30 days. Log your upcoming sessions to register new peak loads.
@@ -267,10 +293,10 @@ export function Dashboard() {
                   gap: 16,
                 }}
               >
-                {data.recent_prs.map((pr) => (
-                  <div key={pr.exercise_name} className="rf-pr-card">
+                {recentPrs.map((pr) => (
+                  <div key={pr?.exercise_name || Math.random()} className="rf-pr-card">
                     <div className="rf-badge rf-badge--ember">
-                      PR · {formatDate(pr.date)}
+                      PR · {formatDate(pr?.date)}
                     </div>
                     <div
                       style={{
@@ -281,13 +307,13 @@ export function Dashboard() {
                         margin: "12px 0 4px",
                       }}
                     >
-                      {pr.weight} <span style={{ fontSize: "1rem", color: "var(--rf-text-sub)" }}>kg</span>
+                      {pr?.weight ?? 0} <span style={{ fontSize: "1rem", color: "var(--rf-text-sub)" }}>kg</span>
                     </div>
                     <div style={{ color: "var(--rf-text-bright)", fontWeight: 600, fontSize: "0.95rem" }}>
-                      {pr.exercise_name}
+                      {pr?.exercise_name || "Exercise"}
                     </div>
                     <div className="rf-stat-sub">
-                      {pr.sets} sets × {pr.reps} reps
+                      {pr?.sets ?? 1} sets × {pr?.reps ?? 0} reps
                     </div>
                   </div>
                 ))}
@@ -308,7 +334,7 @@ export function Dashboard() {
               </Link>
             </div>
 
-            {data.recent_workouts.length === 0 ? (
+            {recentWorkouts.length === 0 ? (
               <EmptyState
                 title="No logged sessions found"
                 description="Begin tracking by logging your first workout session."
@@ -320,22 +346,23 @@ export function Dashboard() {
               />
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {data.recent_workouts.map((day, i) => {
-                  const totalSets = day.exercises.reduce(
-                    (acc, ex) => acc + ex.sets.length,
+                {recentWorkouts.map((day, i) => {
+                  const exercises = Array.isArray(day?.exercises) ? day.exercises : [];
+                  const totalSets = exercises.reduce(
+                    (acc, ex) => acc + (Array.isArray(ex?.sets) ? ex.sets.length : (Number(ex?.sets) || 1)),
                     0
                   );
                   const uniqueTypes = [
                     ...new Set(
-                      day.exercises.map((ex) =>
-                        ex.workout_type.replace("_", " ")
+                      exercises.map((ex) =>
+                        (ex?.workout_type || "workout").replace("_", " ")
                       )
                     ),
                   ].join(" · ");
 
                   return (
                     <div
-                      key={day.id}
+                      key={day?.id || i}
                       className="rf-pod"
                       style={{
                         padding: "16px 20px",
@@ -376,10 +403,10 @@ export function Dashboard() {
                                 color: "var(--rf-text-pure)",
                               }}
                             >
-                              Day {day.day_number}
+                              Day {day?.day_number ?? (i + 1)}
                             </span>
                             <span className="rf-badge rf-badge--cyan">
-                              {day.exercises.length} Exercises
+                              {exercises.length} Exercises
                             </span>
                             {uniqueTypes && (
                               <span style={{ fontSize: "0.76rem", color: "var(--rf-text-faint)", textTransform: "capitalize" }}>
@@ -395,7 +422,7 @@ export function Dashboard() {
 
                       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                         <div className="rf-telemetry-tag" style={{ color: "var(--rf-text-faint)", fontSize: "0.75rem" }}>
-                          {formatDate(day.date)}
+                          {formatDate(day?.date)}
                         </div>
                         <Link to="/workouts">
                           <button className="rf-icon-btn" aria-label="View in workouts">
@@ -430,14 +457,20 @@ function StatPod({ label, value, sub, glow = "cyan" }) {
 }
 
 function formatNumber(n) {
-  return new Intl.NumberFormat().format(Math.round(n));
+  const val = Number(n);
+  if (isNaN(val)) return "0";
+  return new Intl.NumberFormat().format(Math.round(val));
 }
 
 function formatDate(iso) {
   if (!iso) return "";
-  return new Date(iso + "T00:00:00").toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  try {
+    return new Date(iso + "T00:00:00").toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  } catch {
+    return String(iso);
+  }
 }
