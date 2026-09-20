@@ -24,11 +24,17 @@ const CHART_COLORS = ["#00f2fe", "#8a5cf6", "#ff3366", "#00f5a0", "#ffb800", "#3
 export function Progress() {
   const { data: analytics, status, error, reload } = useFetch(
     () => api.get("/api/workouts/analytics"),
-    []
+    [],
+    () => false,
+    null,
+    { dashboard_stats: {}, volume_trend: [], frequency_by_type: [], plateaus: [] }
   );
   const { data: exercisesData } = useFetch(
     () => api.get("/api/workouts/exercises"),
-    []
+    [],
+    () => false,
+    null,
+    { exercises: [] }
   );
 
   const [selectedExercise, setSelectedExercise] = useState("");
@@ -329,5 +335,7 @@ export function Progress() {
 }
 
 function formatNumber(n) {
-  return new Intl.NumberFormat().format(Math.round(n));
+  const val = Number(n);
+  if (isNaN(val)) return "0";
+  return new Intl.NumberFormat().format(Math.round(val));
 }

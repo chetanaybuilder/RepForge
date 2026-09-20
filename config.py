@@ -45,8 +45,10 @@ class Config:
         os.environ.get("SESSION_LIFETIME_SECONDS", 60 * 60 * 24 * 7)  # 7 days
     )
 
-    # --- Database (Supabase Postgres — connection only, NOT Supabase Auth) ---
+    # --- Database (Supabase / Neon Postgres — connection pool only) ---
     DATABASE_URL = os.environ.get("DATABASE_URL", "")
+    DB_MIN_CONNECTIONS = int(os.environ.get("DB_MIN_CONNECTIONS", 4))
+    DB_MAX_CONNECTIONS = int(os.environ.get("DB_MAX_CONNECTIONS", 50))
 
     # --- Google OAuth ---
     GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")

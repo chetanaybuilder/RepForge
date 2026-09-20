@@ -8,6 +8,7 @@ see backend/database/queries_workouts.py for why that matters (IDOR).
 """
 
 import functools
+import hmac
 
 from flask import request, g, current_app
 
@@ -54,12 +55,10 @@ def login_required(view_func):
 
 def csrf_protect(view_func):
     """
-    Double-submit-style CSRF check for state-changing requests: the CSRF
-    token issued at login must be echoed back in the X-CSRF-Token header.
-    A cross-site form post or fetch from another origin cannot read that
-    token (it's not in a cookie the browser auto-attaches, and CORS blocks
-    reading the /auth/me response cross-origin), so it can't forge this
-    header. Must be applied AFTER login_required so g.session exists.
+    Cryptographic constant-time CSRF validation for mutating endpoints:
+    The client must echo the session's CSRF token in the X-CSRF-Token header.
+    Prevents cross-site request forgery and timing side-channel attacks.
+    Must be applied AFTER login_required so g.session is populated.
     """
 
     @functools.wraps(view_func)
@@ -67,8 +66,14 @@ def csrf_protect(view_func):
         if request.method in ("POST", "PUT", "PATCH", "DELETE"):
             header_token = request.headers.get("X-CSRF-Token", "")
             session_token = getattr(g, "session", {}).get("csrf_token") if hasattr(g, "session") else None
-            if not header_token or not session_token or header_token != session_token:
-                raise ApiError("Invalid or missing CSRF token.", 403, "csrf_failed")
+
+            if not header_token or not session_token:
+                raise ApiError("Missing required CSRF token.", 403, "csrf_missing")
+
+            # Cryptographic constant-time comparison to prevent timing attacks
+            if not hmac.compare_digest(str(header_token), str(session_token)):
+                raise ApiError("Invalid or expired CSRF token.", 403, "csrf_failed")
+
         return view_func(*args, **kwargs)
 
     return wrapped

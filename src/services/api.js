@@ -1,27 +1,65 @@
+/**
+ * RepForge Production API Client
+ *
+ * Handles HTTP transport, automatic CSRF double-submit token injection,
+ * credential management, URL normalization, and structured error responses.
+ */
+
 // Force relative paths in production so a bad VITE_API_URL doesn't break the app
 const API_URL = import.meta.env.PROD ? "" : (import.meta.env.VITE_API_URL || "");
 
-// The CSRF token lives only in memory (set once /api/me returns it after
-// login) — never in localStorage/sessionStorage. A full page reload fetches
-// it again from /api/me, which is why AuthContext always calls that first.
+/**
+ * Memory-only CSRF Token Storage.
+ * The CSRF token is deliberately never written to localStorage or sessionStorage
+ * to protect against persistent XSS exfiltration. Re-authenticated sessions
+ * hydrate this token into memory on app boot.
+ */
 let csrfToken = null;
 
+/**
+ * Sets the active anti-CSRF token in memory.
+ * @param {string|null} token
+ */
 export function setCsrfToken(token) {
   csrfToken = token;
 }
 
+/**
+ * Retrieves the active anti-CSRF token from memory.
+ * @returns {string|null}
+ */
 export function getCsrfToken() {
   return csrfToken;
 }
 
+/**
+ * Structured API Error containing HTTP status and application error codes.
+ */
 class ApiError extends Error {
+  /**
+   * @param {string} message Human-readable error description
+   * @param {number} status HTTP response code
+   * @param {string} code Application-specific error code
+   */
   constructor(message, status, code) {
     super(message);
+    this.name = "ApiError";
     this.status = status;
     this.code = code;
   }
 }
 
+/**
+ * Core HTTP dispatch wrapper around native fetch with interceptors.
+ *
+ * @param {string} path Endpoint path (e.g. "/api/workouts")
+ * @param {Object} options Request configuration
+ * @param {string} [options.method="GET"] HTTP verb
+ * @param {Object} [options.body] Request payload to be JSON-serialized
+ * @param {Object} [options.params] URL query parameters
+ * @returns {Promise<any>} Parsed response data
+ * @throws {ApiError} Structured API exception on failure
+ */
 async function request(path, { method = "GET", body, params } = {}) {
   let url = `${API_URL}${path}`;
   if (params) {
@@ -32,7 +70,11 @@ async function request(path, { method = "GET", body, params } = {}) {
   }
 
   const headers = {};
-  if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (body !== undefined) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  // Mutating requests require the anti-CSRF token
   if (["POST", "PUT", "DELETE", "PATCH"].includes(method) && csrfToken) {
     headers["X-CSRF-Token"] = csrfToken;
   }
@@ -42,11 +84,15 @@ async function request(path, { method = "GET", body, params } = {}) {
     response = await fetch(url, {
       method,
       headers,
-      credentials: "include", // sends the HttpOnly session cookie
+      credentials: "include", // Enforces sending HttpOnly SameSite session cookie
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   } catch (networkErr) {
-    throw new ApiError("Could not reach the server. Check your connection and try again.", 0, "network_error");
+    throw new ApiError(
+      "Could not connect to RepForge server. Please verify your network connection.",
+      0,
+      "network_error"
+    );
   }
 
   let data = null;
@@ -68,6 +114,9 @@ async function request(path, { method = "GET", body, params } = {}) {
   return data;
 }
 
+/**
+ * Semantic HTTP verb helpers for unified application access.
+ */
 export const api = {
   get: (path, params) => request(path, { method: "GET", params }),
   post: (path, body) => request(path, { method: "POST", body: body ?? {} }),

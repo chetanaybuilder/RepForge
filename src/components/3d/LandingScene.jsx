@@ -116,12 +116,14 @@ function Scene({ isMobile }) {
     handleResize();
 
     const handlePointerMove = (e) => {
+      // Discard touch events: touch scrolling must never shake or jitter the 3D scene
+      if (e.pointerType === "touch") return;
       mouse.current.x = (e.clientX / window.innerWidth) * 2 - 1;
       mouse.current.y = -(e.clientY / window.innerHeight) * 2 + 1;
     };
 
     window.addEventListener("resize", handleResize);
-    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointermove", handlePointerMove, { passive: true });
     return () => {
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("pointermove", handlePointerMove);
@@ -129,11 +131,11 @@ function Scene({ isMobile }) {
   }, [camera]);
 
   useFrame(() => {
-    // Gentle camera parallax
-    const targetX = mouse.current.x * 1.2;
-    const targetY = mouse.current.y * 1.2;
-    camera.position.x += (targetX - camera.position.x) * 0.04;
-    camera.position.y += (targetY - camera.position.y) * 0.04;
+    // Smooth, stabilized camera parallax with gentle damping
+    const targetX = mouse.current.x * 0.8;
+    const targetY = mouse.current.y * 0.8;
+    camera.position.x += (targetX - camera.position.x) * 0.03;
+    camera.position.y += (targetY - camera.position.y) * 0.03;
     camera.lookAt(0, 0, 0);
   });
 

@@ -53,7 +53,11 @@ def create_app(config_class=Config):
 
     # --- Database ---
     if config_class.DATABASE_URL:
-        init_pool(config_class.DATABASE_URL)
+        init_pool(
+            config_class.DATABASE_URL,
+            minconn=config_class.DB_MIN_CONNECTIONS,
+            maxconn=config_class.DB_MAX_CONNECTIONS,
+        )
     else:
         logger.warning("DATABASE_URL not set — database-backed routes will fail until it is configured.")
 
