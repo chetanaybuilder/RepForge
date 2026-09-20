@@ -52,7 +52,7 @@ class Config:
     GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
     GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
     GOOGLE_REDIRECT_URI = os.environ.get(
-        "GOOGLE_REDIRECT_URI", "http://localhost:5000/auth/google/callback"
+        "GOOGLE_REDIRECT_URI", "http://localhost:5000/auth/google/callback" if not IS_PRODUCTION else ""
     )
     GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configuration"
 
@@ -62,8 +62,8 @@ class Config:
     GEMINI_TIMEOUT_SECONDS = int(os.environ.get("GEMINI_TIMEOUT_SECONDS", 20))
 
     # --- URLs / CORS ---
-    FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
-    BACKEND_URL = os.environ.get("BACKEND_URL", "http://localhost:5000")
+    FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173" if not IS_PRODUCTION else "")
+    BACKEND_URL = os.environ.get("BACKEND_URL", "http://localhost:5000" if not IS_PRODUCTION else "")
     CORS_ORIGINS = [
         origin.strip()
         for origin in os.environ.get("CORS_ORIGINS", FRONTEND_URL).split(",")
