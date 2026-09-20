@@ -62,11 +62,11 @@ class Config:
     GEMINI_TIMEOUT_SECONDS = int(os.environ.get("GEMINI_TIMEOUT_SECONDS", 20))
 
     # --- URLs / CORS ---
-    FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173" if not IS_PRODUCTION else "")
-    BACKEND_URL = os.environ.get("BACKEND_URL", "http://localhost:5000" if not IS_PRODUCTION else "")
+    # CORS is only needed if you run frontend/backend on separate domains.
+    # By default, they share the same origin, so CORS is not needed.
     CORS_ORIGINS = [
         origin.strip()
-        for origin in os.environ.get("CORS_ORIGINS", FRONTEND_URL).split(",")
+        for origin in os.environ.get("CORS_ORIGINS", "").split(",")
         if origin.strip()
     ]
 

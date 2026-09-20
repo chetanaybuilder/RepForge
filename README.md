@@ -35,16 +35,11 @@ pip install -r requirements.txt
 cp ../.env.example .env      # Configure your environment variables
 
 # 3. Setup Frontend
-cd ../frontend
 npm install
-cp .env.example .env         # Sets VITE_API_URL=http://localhost:5000
+npm run build
 
-# 4. Start Development Servers
-# Terminal 1 (Backend):
-cd backend && python -m backend.app
-
-# Terminal 2 (Frontend):
-cd frontend && npm run dev
+# 4. Start Development Server
+python app.py
 ```
 
 ---
@@ -61,58 +56,31 @@ cd frontend && npm run dev
 | `DATABASE_URL` | Yes | PostgreSQL connection URI | `postgresql://user:pass@host:5432/db` |
 | `GOOGLE_CLIENT_ID` | Yes | Google OAuth Client ID | `...apps.googleusercontent.com` |
 | `GOOGLE_CLIENT_SECRET`| Yes | Google OAuth Client Secret | `GOCSPX-...` |
-| `GOOGLE_REDIRECT_URI` | Yes | Callback URL registered with Google | `https://api.yourdomain.com/auth/google/callback` |
 | `GEMINI_API_KEY` | Yes | Gemini API key from AI Studio | `AIzaSy...` |
 | `GEMINI_MODEL` | No | Gemini Model identifier | `gemini-2.5-flash` |
-| `FRONTEND_URL` | Yes | Frontend client URL | `http://localhost:5173` / `https://your-app.onrender.com` |
-| `BACKEND_URL` | Yes | Backend public URL | `http://localhost:5000` / `https://your-api.onrender.com` |
-| `CORS_ORIGINS` | Yes | Allowed origins for CORS | `http://localhost:5173,https://your-app.onrender.com` |
 | `RATELIMIT_DEFAULT` | No | Default rate limit | `200 per hour` |
 | `RATELIMIT_AI` | No | AI endpoint rate limit | `15 per hour` |
 | `RATELIMIT_AUTH` | No | Auth endpoint rate limit | `20 per hour` |
-
-### Frontend (`frontend/.env`)
-
-| Variable | Required | Description | Example |
-|---|---|---|---|
-| `VITE_API_URL` | Yes | Base URL of deployed Flask backend | `http://localhost:5000` (local) or `https://repforge-api.onrender.com` (prod) |
 
 ---
 
 ## 3. Production Deployment Guide (Render)
 
-RepForge is split into two Render services: a **Web Service** for the Python backend and a **Static Site** for the React frontend.
+## 3. Production Deployment Guide (Render)
 
-> **Note**: The backend API is at `https://repforge-w7dh.onrender.com` — this is **not** the app UI.
-> Users should access RepForge through the **frontend Static Site URL** (see Step 2 below).
-
-### Step 1: Deploy Backend (Web Service)
+RepForge is a unified application that hosts both the frontend and backend together in a single Render **Web Service**.
 
 1. Connect your repository in the Render Dashboard.
-2. Select **New Web Service** and choose your repository.
+2. Select **New Web Service** and choose your repository (or use the provided `render.yaml`).
 3. Configure the service:
-   - **Name**: `repforge-api` (or any name you like)
+   - **Name**: `repforge`
    - **Environment**: `Python 3`
-   - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `gunicorn -w 4 -k sync -b 0.0.0.0:$PORT "backend.app:create_app()"`
+   - **Build Command**: `npm install && npm run build && pip install -r requirements.txt`
+   - **Start Command**: `gunicorn -w 4 -k sync -b 0.0.0.0:$PORT "app:create_app()"`
 4. Add Environment Variables:
-   - Set all variables from `.env.example` (`FLASK_ENV=production`, `DATABASE_URL`, `SESSION_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, `GEMINI_API_KEY`, etc.).
-   - Set `FRONTEND_URL` and `CORS_ORIGINS` to your frontend Render URL (e.g. `https://repforge-app.onrender.com`).
-5. Deploy and note your backend URL (e.g. `https://repforge-w7dh.onrender.com`).
-6. Update Google Cloud Console: Add `https://<your-backend>.onrender.com/auth/google/callback` to Authorized Redirect URIs.
-
-### Step 2: Deploy Frontend (Static Site)
-
-1. Select **New Static Site** in the Render Dashboard.
-2. Configure the service:
-   - **Name**: `repforge-app` (or any name you like)
-   - **Build Command**: `cd frontend && npm install && npm run build`
-   - **Publish Directory**: `frontend/dist`
-3. Add Environment Variable:
-   - `VITE_API_URL`: `https://repforge-w7dh.onrender.com` (your backend URL from Step 1)
-4. The SPA rewrite rule is handled automatically by the `frontend/public/_redirects` file — no manual rewrite rule is needed.
-5. Click **Create Static Site**.
-6. **This is the URL you share with users** — e.g. `https://repforge-app.onrender.com`.
+   - Set all required variables from `.env.example` (`FLASK_ENV=production`, `DATABASE_URL`, `SESSION_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GEMINI_API_KEY`).
+5. Deploy and note your web service URL (e.g. `https://repforge.onrender.com`).
+6. Update Google Cloud Console: Add `https://<your-app>.onrender.com/auth/google/callback` to Authorized Redirect URIs.
 
 ---
 
