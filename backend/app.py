@@ -39,8 +39,15 @@ def create_app(config_class=Config):
 
     config_class.validate()
 
-    app = Flask(__name__, static_folder="../frontend/dist", static_url_path="/")
+    import os
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    frontend_dist = os.path.join(os.path.dirname(current_dir), "frontend", "dist")
+    
+    app = Flask(__name__, static_folder=frontend_dist, static_url_path="/")
     app.config.from_object(config_class)
+    
+    logger.info("Static folder configured as: %s", frontend_dist)
+    logger.info("Static folder exists: %s", os.path.exists(frontend_dist))
 
     # --- Database ---
     if config_class.DATABASE_URL:
