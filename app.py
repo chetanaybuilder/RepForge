@@ -22,6 +22,7 @@ from extensions import cors, limiter
 from database.db import init_pool, close_pool
 from utils.errors import register_error_handlers, ApiError
 from utils.security import apply_security_headers
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from routes.auth_routes import auth_bp
 from routes.workout_routes import workout_bp
@@ -44,6 +45,7 @@ def create_app(config_class=Config):
     frontend_dist = os.path.join(current_dir, "dist")
     
     app = Flask(__name__, static_folder=frontend_dist, static_url_path="/")
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
     app.config.from_object(config_class)
     
     logger.info("Static folder configured as: %s", frontend_dist)

@@ -1,6 +1,6 @@
 import logging
 
-from flask import Blueprint, request, redirect, jsonify, current_app, g
+from flask import Blueprint, request, redirect, jsonify, current_app, g, url_for
 
 from auth.google_oauth import build_authorization_url, get_identity_from_google, OAuthError
 from auth.oauth_state import create_state, consume_state
@@ -51,7 +51,7 @@ def google_login():
     state = create_state()
     auth_url = build_authorization_url(
         client_id=cfg["GOOGLE_CLIENT_ID"],
-        redirect_uri=cfg["GOOGLE_REDIRECT_URI"],
+        redirect_uri=url_for("auth.google_callback", _external=True),
         state=state,
         discovery_url=cfg["GOOGLE_DISCOVERY_URL"],
     )
@@ -81,7 +81,7 @@ def google_callback():
             code=code,
             client_id=cfg["GOOGLE_CLIENT_ID"],
             client_secret=cfg["GOOGLE_CLIENT_SECRET"],
-            redirect_uri=cfg["GOOGLE_REDIRECT_URI"],
+            redirect_uri=url_for("auth.google_callback", _external=True),
             discovery_url=cfg["GOOGLE_DISCOVERY_URL"],
         )
     except OAuthError as exc:
