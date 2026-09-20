@@ -44,8 +44,7 @@ export function Landing() {
     try {
       const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
       const checkMode = () => {
-        const isMobile = window.innerWidth < 768;
-        setIsLiteMode(Boolean(mediaQuery?.matches || isMobile));
+        setIsLiteMode(Boolean(mediaQuery?.matches));
       };
       checkMode();
 
