@@ -83,37 +83,36 @@ cd frontend && npm run dev
 
 RepForge is split into two Render services: a **Web Service** for the Python backend and a **Static Site** for the React frontend.
 
+> **Note**: The backend API is at `https://repforge-w7dh.onrender.com` — this is **not** the app UI.
+> Users should access RepForge through the **frontend Static Site URL** (see Step 2 below).
+
 ### Step 1: Deploy Backend (Web Service)
 
 1. Connect your repository in the Render Dashboard.
 2. Select **New Web Service** and choose your repository.
 3. Configure the service:
-   - **Name**: `repforge-api`
+   - **Name**: `repforge-api` (or any name you like)
    - **Environment**: `Python 3`
-   - **Root Directory**: `backend` (or leave empty if using root)
    - **Build Command**: `pip install -r requirements.txt`
    - **Start Command**: `gunicorn -w 4 -k sync -b 0.0.0.0:$PORT "backend.app:create_app()"`
 4. Add Environment Variables:
    - Set all variables from `.env.example` (`FLASK_ENV=production`, `DATABASE_URL`, `SESSION_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, `GEMINI_API_KEY`, etc.).
-   - Set `FRONTEND_URL` and `CORS_ORIGINS` to your frontend Render URL.
-5. Deploy and note your backend URL (e.g. `https://repforge-api.onrender.com`).
-6. Update Google Cloud Console: Add `https://repforge-api.onrender.com/auth/google/callback` to Authorized Redirect URIs.
+   - Set `FRONTEND_URL` and `CORS_ORIGINS` to your frontend Render URL (e.g. `https://repforge-app.onrender.com`).
+5. Deploy and note your backend URL (e.g. `https://repforge-w7dh.onrender.com`).
+6. Update Google Cloud Console: Add `https://<your-backend>.onrender.com/auth/google/callback` to Authorized Redirect URIs.
 
 ### Step 2: Deploy Frontend (Static Site)
 
 1. Select **New Static Site** in the Render Dashboard.
 2. Configure the service:
-   - **Name**: `repforge-app`
-   - **Root Directory**: `frontend`
-   - **Build Command**: `npm install && npm run build`
-   - **Publish Directory**: `dist`
+   - **Name**: `repforge-app` (or any name you like)
+   - **Build Command**: `cd frontend && npm install && npm run build`
+   - **Publish Directory**: `frontend/dist`
 3. Add Environment Variable:
-   - `VITE_API_URL`: `https://repforge-api.onrender.com`
-4. Add Rewrite Rule for Single-Page Application (SPA):
-   - **Source**: `/*`
-   - **Destination**: `/index.html`
-   - **Action**: `Rewrite`
+   - `VITE_API_URL`: `https://repforge-w7dh.onrender.com` (your backend URL from Step 1)
+4. The SPA rewrite rule is handled automatically by the `frontend/public/_redirects` file — no manual rewrite rule is needed.
 5. Click **Create Static Site**.
+6. **This is the URL you share with users** — e.g. `https://repforge-app.onrender.com`.
 
 ---
 
