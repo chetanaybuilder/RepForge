@@ -47,11 +47,11 @@ export function Goals() {
       <div className="rf-page-header">
         <div>
           <div className="rf-telemetry-tag" style={{ marginBottom: 6 }}>
-            PERFORMANCE TARGETS & MILESTONES
+            04 — GOALS & ACHIEVEMENTS
           </div>
-          <h1 className="rf-page-title">Objectives & Crystals</h1>
+          <h1 className="rf-page-title">Goals & Achievements</h1>
           <p className="rf-page-subtitle">
-            Set hard biomechanical targets. Progress increments strictly from logged lifts.
+            Active performance targets, progression milestones, and quantum crystals.
           </p>
         </div>
         <PrimaryButton className="rf-btn--sm" onClick={() => setFormOpen(true)}>

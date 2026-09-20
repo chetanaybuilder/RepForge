@@ -8,7 +8,7 @@ import { ExerciseEditModal } from "../components/ExerciseEditModal";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { api } from "../services/api";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 
 export function Workouts() {
   const [search, setSearch] = useState("");
@@ -39,18 +39,18 @@ export function Workouts() {
   const handleSaveDay = async (payload) => {
     try {
       await createWorkout(payload);
-      toast.success("Workout session recorded.");
+      toast.success("Workout session recorded successfully.");
       setDayModalOpen(false);
       reload();
     } catch (err) {
-      toast.error(err.message || "Could not save workout session.");
+      toast.error(err.message || "Failed to record workout session.");
     }
   };
 
   const handleSaveExercise = async (payload) => {
     try {
       await api.put(`/api/workouts/exercises/${editingExercise.id}`, payload);
-      toast.success("Exercise telemetry updated.");
+      toast.success("Exercise updated.");
       setEditExerciseModalOpen(false);
       reload();
     } catch (err) {
@@ -84,33 +84,59 @@ export function Workouts() {
   };
 
   return (
-    <div>
-      {/* ====================================================================
-          PAGE HEADER & CALL TO ACTION
-          ==================================================================== */}
+    <div style={{ width: "100%", flex: 1, display: "flex", flexDirection: "column" }}>
+      {/* Header */}
       <div className="rf-page-header">
         <div>
           <div className="rf-telemetry-tag" style={{ marginBottom: 6 }}>
-            TRAINING LOG ARCHIVE
+            01 — LOG WORKOUT
           </div>
-          <h1 className="rf-page-title">Workouts & Protocols</h1>
+          <h1 className="rf-page-title">
+            Log Training Session
+          </h1>
           <p className="rf-page-subtitle">
-            Every set and rep logged with verified biometric accuracy.
+            Record exercises, sets, reps, and loads with fast mobile touch controls.
           </p>
         </div>
-        <PrimaryButton className="rf-btn--sm" onClick={openCreateDay}>
-          + Log Session
+      </div>
+
+      {/* Primary Action Hero Card: Immediate Intent */}
+      <div
+        className="rf-pod"
+        style={{
+          background: "linear-gradient(135deg, rgba(0, 242, 254, 0.1) 0%, rgba(138, 92, 246, 0.05) 100%)",
+          border: "1px solid rgba(0, 242, 254, 0.3)",
+          marginBottom: 28,
+          padding: "clamp(20px, 4vw, 28px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 16,
+        }}
+      >
+        <div>
+          <h2 style={{ fontSize: "1.35rem", color: "var(--rf-text-pure)", margin: "0 0 6px 0" }}>
+            Ready to record today's sets?
+          </h2>
+          <p style={{ margin: 0, color: "var(--rf-text-sub)", fontSize: "0.9rem" }}>
+            Launch the high-speed input console to log your movements, weight, and completed reps.
+          </p>
+        </div>
+
+        <PrimaryButton className="rf-btn--lg" onClick={openCreateDay}>
+          + LOG WORKOUT NOW
         </PrimaryButton>
       </div>
 
-      {/* Search Bar */}
-      <div style={{ marginBottom: 24 }}>
+      {/* Search & History Bar */}
+      <div style={{ marginBottom: 20 }}>
         <div className="rf-search-wrapper">
           <span className="rf-search-icon">🔍</span>
           <input
             type="search"
             className="rf-input rf-search-input"
-            placeholder="Search movements, muscle split, or notes…"
+            placeholder="Search logged exercises, split type, or notes…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -124,15 +150,15 @@ export function Workouts() {
 
       {status === "success" && workouts.length === 0 && (
         <EmptyState
-          title={search ? "No training data matched query" : "No workouts recorded yet"}
+          title={search ? "No workouts matched search query" : "No workout sessions recorded yet"}
           description={
             search
-              ? "Try broadening your movement search or clear filters."
-              : "Initiate your training program by logging your first workout day."
+              ? "Try broadening your query or clear filters."
+              : "Hit the button above to log your first training session."
           }
           action={
             <PrimaryButton className="rf-btn--sm" onClick={openCreateDay}>
-              Log First Session
+              Log Today's Workout
             </PrimaryButton>
           }
         />
@@ -152,7 +178,7 @@ export function Workouts() {
                 key={day.id}
                 className={`rf-workout-card${isExpanded ? " rf-workout-card--expanded" : ""}`}
               >
-                {/* Header Bar */}
+                {/* Accordion Header */}
                 <div
                   className="rf-workout-header"
                   onClick={() => setExpandedDayId(isExpanded ? null : day.id)}
@@ -173,7 +199,6 @@ export function Workouts() {
                         fontWeight: 700,
                         fontSize: "0.85rem",
                         color: isExpanded ? "var(--rf-cyan)" : "var(--rf-text-bright)",
-                        transition: "all var(--rf-transition-fast)",
                       }}
                     >
                       <span>D{day.day_number}</span>
@@ -187,7 +212,7 @@ export function Workouts() {
                         </span>
                       </div>
                       <div style={{ fontSize: "0.82rem", color: "var(--rf-text-sub)", textTransform: "capitalize" }}>
-                        {day.exercises.length} Movements · {totalSets} sets {primaryTypes ? `(${primaryTypes})` : ""}
+                        {day.exercises.length} Exercises · {totalSets} sets {primaryTypes ? `(${primaryTypes})` : ""}
                       </div>
                     </div>
                   </div>
@@ -197,8 +222,6 @@ export function Workouts() {
                       color: "var(--rf-text-faint)",
                       transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
                       transition: "transform 0.3s var(--rf-ease-spring)",
-                      display: "flex",
-                      alignItems: "center",
                     }}
                   >
                     ▼
@@ -223,10 +246,12 @@ export function Workouts() {
                           alignItems: "center",
                           padding: "14px 0",
                           borderBottom: "1px solid var(--rf-border-subtle)",
+                          flexWrap: "wrap",
+                          gap: 8,
                         }}
                       >
                         <span className="rf-telemetry-tag" style={{ color: "var(--rf-text-sub)" }}>
-                          SESSION BREAKDOWN
+                          EXERCISE BREAKDOWN
                         </span>
                         <button
                           type="button"
@@ -237,7 +262,7 @@ export function Workouts() {
                           }}
                           disabled={aiLoading[day.id]}
                         >
-                          {aiLoading[day.id] ? "Synthesizing Neural Review…" : "◈ AI Session Diagnostics"}
+                          {aiLoading[day.id] ? "Synthesizing AI Review…" : "◈ AI Session Diagnostics"}
                         </button>
                       </div>
 
@@ -248,7 +273,7 @@ export function Workouts() {
                           style={{ margin: "16px 0", padding: 18 }}
                         >
                           <div className="rf-badge rf-badge--violet" style={{ marginBottom: 10 }}>
-                            ◈ Neural Biomechanical Assessment
+                            ◈ Neural Session Review
                           </div>
                           <p style={{ margin: "0 0 12px 0", fontSize: "0.92rem", lineHeight: 1.6, color: "var(--rf-text-bright)" }}>
                             {aiResults[day.id].deep_review}
@@ -257,7 +282,7 @@ export function Workouts() {
                           {aiResults[day.id].good_points?.length > 0 && (
                             <div className="rf-insight-card rf-insight-card--success">
                               <span className="rf-insight-tag" style={{ color: "var(--rf-emerald)" }}>
-                                ↗ Biomechanical Strengths
+                                ↗ Good Points
                               </span>
                               <ul style={{ margin: 0, paddingLeft: 18, fontSize: "0.86rem", color: "var(--rf-text-bright)" }}>
                                 {aiResults[day.id].good_points.map((p, pIdx) => (
@@ -270,7 +295,7 @@ export function Workouts() {
                           {aiResults[day.id].critical_points?.length > 0 && (
                             <div className="rf-insight-card rf-insight-card--warning">
                               <span className="rf-insight-tag" style={{ color: "var(--rf-ember)" }}>
-                                ⚠ Fatigue / Overload Alerts
+                                ⚠ Critical Points
                               </span>
                               <ul style={{ margin: 0, paddingLeft: 18, fontSize: "0.86rem", color: "var(--rf-text-bright)" }}>
                                 {aiResults[day.id].critical_points.map((p, pIdx) => (
@@ -282,9 +307,9 @@ export function Workouts() {
                         </div>
                       )}
 
-                      {/* Exercise Cards */}
+                      {/* Exercises */}
                       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                        {day.exercises.map((ex, i) => (
+                        {day.exercises.map((ex) => (
                           <div key={ex.id} className="rf-exercise-pod">
                             <div className="rf-exercise-head">
                               <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -364,10 +389,10 @@ export function Workouts() {
         title="Delete this Movement?"
         message={
           pendingDelete
-            ? `Permanently remove ${pendingDelete.exercise_name} and all its recorded sets. If this is the last exercise, the Day session will also be pruned.`
+            ? `Permanently remove ${pendingDelete.exercise_name} and all its recorded sets. If this is the last exercise, the Day session will also be removed.`
             : ""
         }
-        confirmLabel="Confirm Delete"
+        confirmLabel="Delete"
         onConfirm={confirmDeleteExercise}
         onCancel={() => setPendingDelete(null)}
       />

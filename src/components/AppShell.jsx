@@ -1,25 +1,69 @@
-import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { useState } from "react";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { AmbientBackground3D } from "./3d/AmbientBackground3D";
 import { AnimatePresence, motion } from "framer-motion";
 
-const NAV_ITEMS = [
-  { to: "/dashboard", label: "Dashboard", shortLabel: "Deck", icon: "◧" },
-  { to: "/workouts", label: "Workouts", shortLabel: "Train", icon: "▦" },
-  { to: "/ai-analysis", label: "AI Coach", shortLabel: "Neural", icon: "◈" },
-  { to: "/progress", label: "Progress", shortLabel: "Metrics", icon: "◱" },
-  { to: "/goals", label: "Goals", shortLabel: "Targets", icon: "◎" },
+export const APP_SECTIONS = [
+  {
+    to: "/workouts",
+    number: "01",
+    label: "LOG WORKOUT",
+    desc: "Tactical training logging & exercise execution",
+    icon: "▦",
+  },
+  {
+    to: "/dashboard",
+    number: "02",
+    label: "DASHBOARD",
+    desc: "Total volume, statistics & progression telemetry",
+    icon: "◧",
+  },
+  {
+    to: "/ai-analysis",
+    number: "03",
+    label: "AI TRAINER",
+    desc: "Embedded neural coach & biomechanical intelligence",
+    icon: "◈",
+  },
+  {
+    to: "/goals",
+    number: "04",
+    label: "GOALS & ACHIEVEMENTS",
+    desc: "Performance objectives, milestones & crystals",
+    icon: "◎",
+  },
 ];
 
 export function AppShell() {
   const { user, logout } = useAuth();
-  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
-  const currentNav = NAV_ITEMS.find((item) => item.to === location.pathname) || {
-    label: "RepForge OS",
-    shortLabel: "RepForge",
+  // Find active destination
+  const activeSection =
+    APP_SECTIONS.find((sec) => sec.to === location.pathname) || {
+      number: "02",
+      label: "DASHBOARD",
+    };
+
+  // Lock body scroll when mobile full-screen menu is open
+  useEffect(() => {
+    if (menuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [menuOpen]);
+
+  // Handle mobile destination tap: close navigation immediately and navigate to full-screen page
+  const handleSelectDestination = (to) => {
+    setMenuOpen(false);
+    navigate(to);
   };
 
   return (
@@ -27,11 +71,12 @@ export function AppShell() {
       <AmbientBackground3D />
 
       {/* ====================================================================
-          DESKTOP COMMAND RAIL (>= 768px)
+          DESKTOP COMMAND RAIL (>= 1024px)
+          Exact 4 Destinations: 01 Log Workout, 02 Dashboard, 03 AI Trainer, 04 Goals
           ==================================================================== */}
       <aside className="rf-desktop-rail">
         <div className="rf-rail-header">
-          <div className="rf-telemetry-brand">
+          <div className="rf-brand-group">
             <div className="rf-brand-glyph">RF</div>
             <div>
               <div className="rf-brand-text">RepForge</div>
@@ -40,44 +85,90 @@ export function AppShell() {
               </div>
             </div>
           </div>
-          <div className="rf-status-beacon" title="Core Online — Synced" />
+          <div className="rf-status-beacon" title="Subsystem online" />
         </div>
 
         <nav className="rf-rail-nav">
-          {NAV_ITEMS.map((item) => (
+          {APP_SECTIONS.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               className={({ isActive }) =>
-                `rf-rail-link${isActive ? " rf-rail-link--active" : ""}`
+                `rf-rail-item${isActive ? " rf-rail-item--active" : ""}`
               }
             >
-              <span className="rf-dock-icon">{item.icon}</span>
-              <span>{item.label}</span>
+              <span className="rf-rail-num">{item.number}</span>
+              <span className="rf-rail-label">{item.label}</span>
             </NavLink>
           ))}
         </nav>
 
         <div className="rf-rail-footer">
-          <div className="rf-rail-user">
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "10px 12px",
+              borderRadius: "var(--rf-radius-md)",
+              background: "rgba(255, 255, 255, 0.02)",
+              border: "1px solid var(--rf-border-subtle)",
+            }}
+          >
             {user?.avatar_url ? (
               <img
                 src={user.avatar_url}
                 alt=""
-                className="rf-avatar-thumb"
+                style={{ width: 32, height: 32, borderRadius: "50%", border: "1px solid rgba(0, 242, 254, 0.4)" }}
                 referrerPolicy="no-referrer"
               />
             ) : (
-              <div className="rf-avatar-placeholder">
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: "50%",
+                  background: "linear-gradient(135deg, var(--rf-violet), var(--rf-cyan))",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: 800,
+                  fontSize: "0.85rem",
+                  color: "#fff",
+                }}
+              >
                 {user?.name?.[0] || "U"}
               </div>
             )}
-            <div className="rf-rail-user-info">
-              <span className="rf-rail-user-name">{user?.name || "Athlete"}</span>
-              <span className="rf-rail-user-email">{user?.email || "Connected"}</span>
+            <div style={{ overflow: "hidden", flex: 1 }}>
+              <div
+                style={{
+                  fontSize: "0.86rem",
+                  fontWeight: 600,
+                  color: "var(--rf-text-pure)",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {user?.name || "Athlete"}
+              </div>
+              <div
+                style={{
+                  fontSize: "0.7rem",
+                  color: "var(--rf-text-faint)",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {user?.email || "Connected"}
+              </div>
             </div>
           </div>
+
           <button
+            type="button"
             className="rf-btn rf-btn--ghost rf-btn--sm rf-btn--full"
             onClick={logout}
           >
@@ -87,201 +178,190 @@ export function AppShell() {
       </aside>
 
       {/* ====================================================================
-          MOBILE TOP TELEMETRY STRIP (< 768px)
+          MOBILE TOP BAR (< 1024px)
+          Includes Three-Line Hamburger Menu Button (☰)
           ==================================================================== */}
-      <header className="rf-mobile-telemetry">
-        <div className="rf-telemetry-brand">
+      <header className="rf-topbar">
+        <div className="rf-brand-group">
           <div className="rf-brand-glyph">RF</div>
           <div>
-            <div className="rf-brand-text" style={{ fontSize: "1rem" }}>
-              {currentNav.label}
+            <div className="rf-brand-text" style={{ fontSize: "1.05rem" }}>
+              RepForge
             </div>
-            <div className="rf-telemetry-tag" style={{ fontSize: "0.6rem" }}>
-              TELEMETRY LIVE
+            <div className="rf-telemetry-tag" style={{ fontSize: "0.62rem" }}>
+              {activeSection.number} · {activeSection.label}
             </div>
           </div>
         </div>
 
-        <div className="rf-telemetry-status">
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div className="rf-status-beacon" />
           <button
-            className="rf-user-trigger"
-            aria-label="User station menu"
-            onClick={() => setProfileModalOpen(true)}
+            type="button"
+            className="rf-hamburger-btn"
+            onClick={() => setMenuOpen(true)}
+            aria-label="Open Navigation Menu"
           >
-            {user?.avatar_url ? (
-              <img
-                src={user.avatar_url}
-                alt=""
-                className="rf-avatar-thumb"
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <div className="rf-avatar-placeholder">
-                {user?.name?.[0] || "U"}
-              </div>
-            )}
+            ☰
           </button>
         </div>
       </header>
 
       {/* ====================================================================
-          MOBILE PROFILE & STATION BOTTOM SHEET
+          FULL-SCREEN MOBILE NAVIGATION MENU OVERLAY
           ==================================================================== */}
       <AnimatePresence>
-        {profileModalOpen && (
-          <div
-            className="rf-modal-overlay"
-            onClick={() => setProfileModalOpen(false)}
+        {menuOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="rf-fullscreen-menu"
           >
-            <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 26, stiffness: 320 }}
-              className="rf-modal"
-              style={{ maxWidth: 420 }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="rf-modal-handle" />
-              <div className="rf-modal-header">
-                <h3 className="rf-modal-title">Athlete Station</h3>
-                <button
-                  className="rf-icon-btn"
-                  onClick={() => setProfileModalOpen(false)}
-                  aria-label="Close"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <div className="rf-modal-body" style={{ textAlign: "center" }}>
-                <div style={{ display: "inline-block", position: "relative", marginBottom: 14 }}>
-                  {user?.avatar_url ? (
-                    <img
-                      src={user.avatar_url}
-                      alt=""
-                      style={{
-                        width: 64,
-                        height: 64,
-                        borderRadius: "50%",
-                        border: "2px solid var(--rf-cyan)",
-                        boxShadow: "0 0 20px -2px rgba(0, 242, 254, 0.4)",
-                      }}
-                      referrerPolicy="no-referrer"
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        width: 64,
-                        height: 64,
-                        borderRadius: "50%",
-                        background: "linear-gradient(135deg, var(--rf-violet), var(--rf-cyan))",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "#fff",
-                        fontWeight: 800,
-                        fontSize: "1.4rem",
-                      }}
-                    >
-                      {user?.name?.[0] || "U"}
-                    </div>
-                  )}
-                </div>
-
-                <h4 style={{ fontSize: "1.1rem", marginBottom: 4 }}>
-                  {user?.name || "Verified Lifter"}
-                </h4>
-                <p style={{ fontSize: "0.84rem", color: "var(--rf-text-faint)", marginBottom: 20 }}>
-                  {user?.email}
-                </p>
-
-                <div
-                  className="rf-pod"
-                  style={{
-                    padding: 14,
-                    marginBottom: 20,
-                    textAlign: "left",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                  }}
-                >
-                  <div className="rf-status-beacon" />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: "0.74rem", color: "var(--rf-text-faint)", textTransform: "uppercase" }}>
-                      Neural Sync State
-                    </div>
-                    <div style={{ fontSize: "0.86rem", color: "var(--rf-text-pure)", fontWeight: 600 }}>
-                      Connected to Quantum Mesh
-                    </div>
+            {/* Menu Header */}
+            <div className="rf-menu-topbar">
+              <div className="rf-brand-group">
+                <div className="rf-brand-glyph">RF</div>
+                <div>
+                  <div className="rf-brand-text" style={{ fontSize: "1.2rem" }}>
+                    RepForge OS
+                  </div>
+                  <div className="rf-telemetry-tag" style={{ fontSize: "0.66rem" }}>
+                    NAVIGATION MATRIX
                   </div>
                 </div>
-
-                <button
-                  className="rf-btn rf-btn--danger rf-btn--full"
-                  onClick={() => {
-                    setProfileModalOpen(false);
-                    logout();
-                  }}
-                >
-                  Disconnect Session
-                </button>
               </div>
-            </motion.div>
-          </div>
+
+              <button
+                type="button"
+                className="rf-menu-close-btn"
+                onClick={() => setMenuOpen(false)}
+                aria-label="Close navigation"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* The Four Large Destinations */}
+            <div className="rf-menu-destinations">
+              {APP_SECTIONS.map((sec, idx) => {
+                const isActive = location.pathname === sec.to;
+
+                return (
+                  <motion.div
+                    key={sec.to}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 300,
+                      damping: 24,
+                      delay: idx * 0.06,
+                    }}
+                  >
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      className={`rf-menu-card${isActive ? " rf-menu-card--active" : ""}`}
+                      onClick={() => handleSelectDestination(sec.to)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          handleSelectDestination(sec.to);
+                        }
+                      }}
+                    >
+                      <div>
+                        <div className="rf-menu-num">
+                          {sec.number} — {sec.icon}
+                        </div>
+                        <div className="rf-menu-title">{sec.label}</div>
+                        <div className="rf-menu-desc">{sec.desc}</div>
+                      </div>
+
+                      <div className="rf-menu-arrow">→</div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            {/* Menu Footer with Athlete Info & Disconnect */}
+            <div className="rf-menu-footer">
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                {user?.avatar_url ? (
+                  <img
+                    src={user.avatar_url}
+                    alt=""
+                    style={{
+                      width: 42,
+                      height: 42,
+                      borderRadius: "50%",
+                      border: "2px solid var(--rf-cyan)",
+                    }}
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: 42,
+                      height: 42,
+                      borderRadius: "50%",
+                      background: "linear-gradient(135deg, var(--rf-violet), var(--rf-cyan))",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontWeight: 800,
+                      color: "#fff",
+                    }}
+                  >
+                    {user?.name?.[0] || "U"}
+                  </div>
+                )}
+                <div>
+                  <div style={{ fontWeight: 700, color: "var(--rf-text-pure)", fontSize: "0.95rem" }}>
+                    {user?.name || "Athlete Station"}
+                  </div>
+                  <div style={{ fontSize: "0.76rem", color: "var(--rf-text-faint)" }}>
+                    {user?.email}
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="rf-btn rf-btn--danger rf-btn--sm"
+                onClick={() => {
+                  setMenuOpen(false);
+                  logout();
+                }}
+              >
+                Disconnect
+              </button>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
 
       {/* ====================================================================
-          MAIN VIEWPORT (Responsive Offset)
+          FULL-SCREEN APPLICATION VIEWPORT (Edge-to-Edge Canvas)
           ==================================================================== */}
       <main className="rf-shell-main">
-        <div className="rf-page-container">
+        <div className="rf-page-canvas">
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              transition={{ type: "spring", stiffness: 260, damping: 24 }}
-              style={{ width: "100%" }}
+              transition={{ type: "spring", stiffness: 280, damping: 24 }}
+              style={{ width: "100%", flex: 1, display: "flex", flexDirection: "column" }}
             >
               <Outlet />
             </motion.div>
           </AnimatePresence>
         </div>
       </main>
-
-      {/* ====================================================================
-          MOBILE SPATIAL BOTTOM DOCK (< 768px)
-          ==================================================================== */}
-      <nav className="rf-spatial-dock" aria-label="Mobile Navigation">
-        {NAV_ITEMS.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            className={({ isActive }) =>
-              `rf-dock-item${isActive ? " rf-dock-item--active" : ""}`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                {isActive && (
-                  <motion.div
-                    layoutId="rf-dock-pill"
-                    className="rf-dock-active-pill"
-                    transition={{ type: "spring", stiffness: 350, damping: 28 }}
-                  />
-                )}
-                <span className="rf-dock-icon">{item.icon}</span>
-                <span>{item.shortLabel}</span>
-              </>
-            )}
-          </NavLink>
-        ))}
-      </nav>
     </div>
   );
 }
