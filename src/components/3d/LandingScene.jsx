@@ -114,7 +114,7 @@ export default function LandingScene() {
 
   return (
     <ThreeErrorBoundary fallback={null}>
-      <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", minHeight: "60vh", zIndex: 0, pointerEvents: "none", touchAction: "pan-y" }}>
+      <div style={{ position: "absolute", inset: 0, width: "100%", height: "100%", zIndex: 0, pointerEvents: "none", touchAction: "pan-y" }}>
         <Canvas camera={{ position: [0, 0, 7], fov: 50 }} dpr={typeof window !== "undefined" ? Math.min(window.devicePixelRatio, 2) : [1, 2]} gl={{ alpha: true }}>
           <Scene />
         </Canvas>

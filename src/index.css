@@ -431,7 +431,7 @@ p {
 
 @media (max-width: 900px) {
   .rf-sidebar {
-    display: none;
+    display: none !important;
   }
 }
 
@@ -702,7 +702,7 @@ p {
   -webkit-backdrop-filter: blur(22px);
   border-top: 1px solid var(--rf-border);
   padding: 8px 6px calc(8px + env(safe-area-inset-bottom, 0px));
-  z-index: 40;
+  z-index: 50;
 }
 
 @media (max-width: 900px) {
