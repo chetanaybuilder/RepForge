@@ -52,7 +52,7 @@ class Config:
     GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
     GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
     GOOGLE_REDIRECT_URI = os.environ.get(
-        "GOOGLE_REDIRECT_URI", "http://localhost:5000/auth/google/callback" if not IS_PRODUCTION else ""
+        "GOOGLE_REDIRECT_URI", "https://repforge-w7dh.onrender.com/auth/google/callback"
     )
     GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configuration"
 

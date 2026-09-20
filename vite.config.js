@@ -7,11 +7,11 @@ export default defineConfig({
     port: 5173,
     proxy: {
       "/api": {
-        target: "http://localhost:5000",
+        target: "https://repforge-w7dh.onrender.com",
         changeOrigin: true,
       },
       "/auth": {
-        target: "http://localhost:5000",
+        target: "https://repforge-w7dh.onrender.com",
         changeOrigin: true,
       }
     }
