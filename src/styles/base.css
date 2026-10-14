@@ -187,7 +187,6 @@ button {
 }
 
 @keyframes rf-pulse-dot {
-
   0%,
   100% {
     opacity: 0.4;

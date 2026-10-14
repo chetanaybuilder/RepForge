@@ -32,9 +32,7 @@ export function NotFound() {
         The telemetry sector you are attempting to query does not exist in the neural registry.
       </p>
       <Link to="/dashboard">
-        <PrimaryButton className="rf-btn--sm">
-          Return to Command Deck →
-        </PrimaryButton>
+        <PrimaryButton className="rf-btn--sm">Return to Command Deck →</PrimaryButton>
       </Link>
     </div>
   );

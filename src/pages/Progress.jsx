@@ -22,7 +22,12 @@ import { TiltCard } from "../components/TiltCard";
 const CHART_COLORS = ["#00f2fe", "#8a5cf6", "#ff3366", "#00f5a0", "#ffb800", "#38bdf8"];
 
 export function Progress() {
-  const { data: analytics, status, error, reload } = useFetch(
+  const {
+    data: analytics,
+    status,
+    error,
+    reload,
+  } = useFetch(
     () => api.get("/api/workouts/analytics"),
     [],
     () => false,
@@ -62,7 +67,9 @@ export function Progress() {
   const dashboardStats = analytics?.dashboard_stats || {};
   const totalWorkouts = dashboardStats.total_workouts ?? 0;
   const volumeTrend = Array.isArray(analytics?.volume_trend) ? analytics.volume_trend : [];
-  const frequencyByType = Array.isArray(analytics?.frequency_by_type) ? analytics.frequency_by_type : [];
+  const frequencyByType = Array.isArray(analytics?.frequency_by_type)
+    ? analytics.frequency_by_type
+    : [];
   const plateaus = Array.isArray(analytics?.plateaus) ? analytics.plateaus : [];
   const safeProgression = Array.isArray(progression) ? progression : [];
 
@@ -82,9 +89,7 @@ export function Progress() {
       </div>
 
       {status === "loading" && <SkeletonGrid count={2} height="280px" />}
-      {status === "error" && (
-        <ErrorState message={error?.message} onRetry={reload} />
-      )}
+      {status === "error" && <ErrorState message={error?.message} onRetry={reload} />}
 
       {status === "success" && totalWorkouts === 0 && (
         <EmptyState
@@ -99,7 +104,16 @@ export function Progress() {
               1. 26-WEEK VOLUME LOAD TRAJECTORY
               ================================================================ */}
           <div className="rf-pod">
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18, flexWrap: "wrap", gap: 8 }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 18,
+                flexWrap: "wrap",
+                gap: 8,
+              }}
+            >
               <div>
                 <div className="rf-telemetry-tag" style={{ color: "var(--rf-cyan)" }}>
                   LOAD INDEX
@@ -114,7 +128,10 @@ export function Progress() {
             {volumeTrend.length > 0 ? (
               <div style={{ width: "100%", height: 280 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={volumeTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <AreaChart
+                    data={volumeTrend}
+                    margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  >
                     <defs>
                       <linearGradient id="volumeGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#00f2fe" stopOpacity={0.4} />
@@ -155,7 +172,16 @@ export function Progress() {
               2. EXERCISE PROGRESSION & ESTIMATED 1RM
               ================================================================ */}
           <div className="rf-pod">
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18, flexWrap: "wrap", gap: 12 }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 18,
+                flexWrap: "wrap",
+                gap: 12,
+              }}
+            >
               <div>
                 <div className="rf-telemetry-tag" style={{ color: "var(--rf-violet)" }}>
                   STRENGTH OVERLOAD
@@ -190,7 +216,10 @@ export function Progress() {
             {progressionStatus === "success" && safeProgression.length > 0 && (
               <div style={{ width: "100%", height: 280 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={safeProgression} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <LineChart
+                    data={safeProgression}
+                    margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  >
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                     <XAxis dataKey="date" tick={{ fill: "#60637a", fontSize: 11 }} />
                     <YAxis tick={{ fill: "#60637a", fontSize: 11 }} />
@@ -235,7 +264,10 @@ export function Progress() {
               3. TRAINING SPLIT RADAR & DISTRIBUTION
               ================================================================ */}
           <div className="rf-pod">
-            <div className="rf-telemetry-tag" style={{ color: "var(--rf-emerald)", marginBottom: 4 }}>
+            <div
+              className="rf-telemetry-tag"
+              style={{ color: "var(--rf-emerald)", marginBottom: 4 }}
+            >
               ANATOMICAL SPLIT
             </div>
             <h3 style={{ fontSize: "1.15rem", color: "var(--rf-text-pure)", marginBottom: 18 }}>
@@ -253,9 +285,7 @@ export function Progress() {
                       outerRadius={95}
                       innerRadius={50}
                       paddingAngle={4}
-                      label={({ name, percent }) =>
-                        `${name} ${(percent * 100).toFixed(0)}%`
-                      }
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                     >
                       {frequencyByType.map((_, i) => (
                         <Cell
@@ -291,7 +321,8 @@ export function Progress() {
             <div>
               <div className="rf-section-head">
                 <h2 className="rf-section-title">
-                  <span style={{ color: "var(--rf-ember)" }}>⚠</span> Plateaus & Stagnation Diagnostics
+                  <span style={{ color: "var(--rf-ember)" }}>⚠</span> Plateaus & Stagnation
+                  Diagnostics
                 </h2>
               </div>
               <div

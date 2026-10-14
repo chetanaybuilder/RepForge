@@ -6,9 +6,7 @@ export function isWebGLAvailable() {
 
   try {
     const canvas = document.createElement("canvas");
-    const gl =
-      canvas.getContext("webgl") ||
-      canvas.getContext("experimental-webgl");
+    const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
     _webglSupported = Boolean(gl && gl instanceof WebGLRenderingContext);
   } catch {
     _webglSupported = false;

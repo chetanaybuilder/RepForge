@@ -3,21 +3,19 @@ All queries against the users table. Every statement is parameterized;
 nothing here ever string-formats user input into SQL.
 """
 
-from database.db import fetch_one, execute_returning
+from database.db import execute_returning, fetch_one
 
 
 def get_user_by_google_id(google_id: str):
     return fetch_one(
-        "SELECT id, google_id, email, name, avatar_url, created_at, updated_at "
-        "FROM users WHERE google_id = %s",
+        "SELECT id, google_id, email, name, avatar_url, created_at, updated_at FROM users WHERE google_id = %s",
         (google_id,),
     )
 
 
 def get_user_by_id(user_id: str):
     return fetch_one(
-        "SELECT id, google_id, email, name, avatar_url, created_at, updated_at "
-        "FROM users WHERE id = %s",
+        "SELECT id, google_id, email, name, avatar_url, created_at, updated_at FROM users WHERE id = %s",
         (user_id,),
     )
 

@@ -10,11 +10,14 @@ export function PrimaryButton({
   style = {},
   ...props
 }) {
-  const variantClass = 
-    variant === "violet" ? "rf-btn--violet" :
-    variant === "ghost" ? "rf-btn--ghost" :
-    variant === "danger" ? "rf-btn--danger" :
-    "rf-btn--primary";
+  const variantClass =
+    variant === "violet"
+      ? "rf-btn--violet"
+      : variant === "ghost"
+        ? "rf-btn--ghost"
+        : variant === "danger"
+          ? "rf-btn--danger"
+          : "rf-btn--primary";
 
   return (
     <motion.button
@@ -28,7 +31,15 @@ export function PrimaryButton({
       style={style}
       {...props}
     >
-      <span style={{ position: "relative", zIndex: 2, display: "inline-flex", alignItems: "center", gap: 8 }}>
+      <span
+        style={{
+          position: "relative",
+          zIndex: 2,
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 8,
+        }}
+      >
         {children}
       </span>
     </motion.button>

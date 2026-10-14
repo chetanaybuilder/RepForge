@@ -18,10 +18,10 @@ import { NotFound } from "./pages/NotFound";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 2 * 60 * 1000,       // 2 minutes — cached data is fresh
-      gcTime: 10 * 60 * 1000,          // 10 minutes — keep in cache
-      retry: 1,                         // retry once on failure
-      refetchOnWindowFocus: false,      // don't spam the API on tab switch
+      staleTime: 2 * 60 * 1000, // 2 minutes — cached data is fresh
+      gcTime: 10 * 60 * 1000, // 10 minutes — keep in cache
+      retry: 1, // retry once on failure
+      refetchOnWindowFocus: false, // don't spam the API on tab switch
     },
   },
 });
@@ -34,8 +34,22 @@ export default function App() {
           <ToastProvider>
             <BrowserRouter>
               <Routes>
-                <Route path="/" element={<PageErrorBoundary><Landing /></PageErrorBoundary>} />
-                <Route path="/login" element={<PageErrorBoundary><Login /></PageErrorBoundary>} />
+                <Route
+                  path="/"
+                  element={
+                    <PageErrorBoundary>
+                      <Landing />
+                    </PageErrorBoundary>
+                  }
+                />
+                <Route
+                  path="/login"
+                  element={
+                    <PageErrorBoundary>
+                      <Login />
+                    </PageErrorBoundary>
+                  }
+                />
 
                 <Route
                   element={
@@ -44,11 +58,46 @@ export default function App() {
                     </ProtectedRoute>
                   }
                 >
-                  <Route path="/dashboard" element={<PageErrorBoundary><Dashboard /></PageErrorBoundary>} />
-                  <Route path="/workouts" element={<PageErrorBoundary><Workouts /></PageErrorBoundary>} />
-                  <Route path="/ai-analysis" element={<PageErrorBoundary><AIAnalysis /></PageErrorBoundary>} />
-                  <Route path="/progress" element={<PageErrorBoundary><Progress /></PageErrorBoundary>} />
-                  <Route path="/goals" element={<PageErrorBoundary><Goals /></PageErrorBoundary>} />
+                  <Route
+                    path="/dashboard"
+                    element={
+                      <PageErrorBoundary>
+                        <Dashboard />
+                      </PageErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/workouts"
+                    element={
+                      <PageErrorBoundary>
+                        <Workouts />
+                      </PageErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/ai-analysis"
+                    element={
+                      <PageErrorBoundary>
+                        <AIAnalysis />
+                      </PageErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/progress"
+                    element={
+                      <PageErrorBoundary>
+                        <Progress />
+                      </PageErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/goals"
+                    element={
+                      <PageErrorBoundary>
+                        <Goals />
+                      </PageErrorBoundary>
+                    }
+                  />
                 </Route>
 
                 <Route path="/404" element={<NotFound />} />

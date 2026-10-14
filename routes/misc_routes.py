@@ -1,35 +1,50 @@
+"""
+RepForge Miscellaneous & Operational Routes.
+
+Purpose:
+    Exposes platform health checks and operational telemetry endpoints.
+    Provides backward-compatible session identity resolution for frontend clients.
+"""
+
+from __future__ import annotations
+
+import logging
+
 from flask import Blueprint, jsonify
+from werkzeug.wrappers import Response
 
-from auth.decorators import get_current_session
 from database.db import health_check
-from database.queries_users import get_user_by_id
+from routes.auth_routes import get_current_user_payload
 
-misc_bp = Blueprint("misc", __name__, url_prefix="/api")
+logger = logging.getLogger("repforge.routes.misc")
+
+misc_bp = Blueprint("misc", __name__)
 
 
 @misc_bp.route("/health", methods=["GET"])
-def health():
+@misc_bp.route("/api/health", methods=["GET"])
+def health() -> tuple[Response, int]:
+    """
+    Performs comprehensive liveness and database readiness probe.
+
+    Returns:
+        tuple[Response, int]: JSON status payload and HTTP status (200 OK or 503 Service Unavailable).
+    """
     db_ok = health_check()
-    return jsonify({"status": "ok" if db_ok else "degraded", "database": db_ok}), (200 if db_ok else 503)
+    status_str = "ok" if db_ok else "degraded"
+    status_code = 200 if db_ok else 503
+    return jsonify({"status": status_str, "database": db_ok}), status_code
 
 
-@misc_bp.route("/me", methods=["GET"])
-def me():
-    _, session_row = get_current_session()
-    if not session_row:
-        return jsonify({"authenticated": False, "user": None}), 200
+@misc_bp.route("/api/me", methods=["GET"])
+def api_me() -> tuple[Response, int]:
+    """
+    Backward-compatible user profile endpoint mirroring /auth/me.
 
-    user = get_user_by_id(session_row["user_id"])
-    if not user:
-        return jsonify({"authenticated": False, "user": None}), 200
+    Delegates to canonical get_current_user_payload() to eliminate duplicated logic.
 
-    return jsonify({
-        "authenticated": True,
-        "user": {
-            "id": user["id"],
-            "email": user["email"],
-            "name": user["name"],
-            "avatar_url": user["avatar_url"],
-        },
-        "csrf_token": session_row["csrf_token"],
-    })
+    Returns:
+        tuple[Response, int]: User authentication and profile state tuple.
+    """
+    payload, status = get_current_user_payload()
+    return jsonify(payload), status

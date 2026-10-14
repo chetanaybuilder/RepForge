@@ -16,7 +16,12 @@ const GOAL_TYPES = [
 ];
 
 export function Goals() {
-  const { data: goalsData, status, error, reload } = useFetch(
+  const {
+    data: goalsData,
+    status,
+    error,
+    reload,
+  } = useFetch(
     () => api.get("/api/goals"),
     [],
     () => false,
@@ -39,14 +44,14 @@ export function Goals() {
   const goals = Array.isArray(goalsData?.goals)
     ? goalsData.goals
     : Array.isArray(goalsData)
-    ? goalsData
-    : [];
+      ? goalsData
+      : [];
 
   const achievements = Array.isArray(achievementsData?.achievements)
     ? achievementsData.achievements
     : Array.isArray(achievementsData)
-    ? achievementsData
-    : [];
+      ? achievementsData
+      : [];
 
   const handleDelete = async () => {
     try {
@@ -79,9 +84,7 @@ export function Goals() {
       </div>
 
       {status === "loading" && <SkeletonGrid count={4} height="140px" />}
-      {status === "error" && (
-        <ErrorState message={error?.message} onRetry={reload} />
-      )}
+      {status === "error" && <ErrorState message={error?.message} onRetry={reload} />}
 
       {status === "success" && (goals?.length === 0 || goalsData?.goals?.length === 0) && (
         <EmptyState
@@ -122,9 +125,7 @@ export function Goals() {
         </span>
       </div>
 
-      {achStatus === "loading" && (
-        <LoadingState label="Synthesizing achievement matrix…" />
-      )}
+      {achStatus === "loading" && <LoadingState label="Synthesizing achievement matrix…" />}
 
       {achStatus === "success" && achievements?.length === 0 && (
         <p style={{ color: "var(--rf-text-sub)", fontSize: "0.9rem", margin: "16px 0" }}>
@@ -154,17 +155,21 @@ export function Goals() {
                     color={a?.unlocked ? "#00f2fe" : "#8a5cf6"}
                   />
                   <div style={{ flex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}
+                    >
                       <h4 style={{ margin: 0, color: "var(--rf-text-pure)", fontSize: "1rem" }}>
                         {a?.title}
                       </h4>
-                      {a?.unlocked && (
-                        <span className="rf-badge rf-badge--emerald">
-                          Unlocked
-                        </span>
-                      )}
+                      {a?.unlocked && <span className="rf-badge rf-badge--emerald">Unlocked</span>}
                     </div>
-                    <p style={{ margin: "4px 0 0 0", fontSize: "0.82rem", color: "var(--rf-text-sub)" }}>
+                    <p
+                      style={{
+                        margin: "4px 0 0 0",
+                        fontSize: "0.82rem",
+                        color: "var(--rf-text-sub)",
+                      }}
+                    >
                       {a?.description}
                     </p>
                   </div>
@@ -175,11 +180,18 @@ export function Goals() {
                     className={`rf-progress-bar-fill ${a?.unlocked ? "rf-progress-bar-fill--emerald" : ""}`}
                     initial={{ width: 0 }}
                     animate={{ width: `${pct}%` }}
-                    transition={{ type: "spring", damping: 20, stiffness: 60, delay: 0.2 + i * 0.08 }}
+                    transition={{
+                      type: "spring",
+                      damping: 20,
+                      stiffness: 60,
+                      delay: 0.2 + i * 0.08,
+                    }}
                   />
                 </div>
 
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div
+                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+                >
                   <span className="rf-stat-sub">
                     {progressVal} / {targetVal}
                   </span>
@@ -234,11 +246,16 @@ function GoalCard({ goal, onDelete }) {
     <div className="rf-pod">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div>
-          <span className="rf-badge rf-badge--cyan">
-            {typeLabel}
-          </span>
+          <span className="rf-badge rf-badge--cyan">{typeLabel}</span>
           {goal?.exercise_name && (
-            <div style={{ fontSize: "1.05rem", fontWeight: 700, color: "var(--rf-text-pure)", marginTop: 6 }}>
+            <div
+              style={{
+                fontSize: "1.05rem",
+                fontWeight: 700,
+                color: "var(--rf-text-pure)",
+                marginTop: 6,
+              }}
+            >
               {goal.exercise_name}
             </div>
           )}
@@ -266,9 +283,7 @@ function GoalCard({ goal, onDelete }) {
           {progress?.current_value ?? 0} / {goal?.target_value ?? 0} {progress?.unit || ""}
         </span>
         <span
-          className={`rf-badge ${
-            progress?.is_complete ? "rf-badge--emerald" : "rf-badge--cyan"
-          }`}
+          className={`rf-badge ${progress?.is_complete ? "rf-badge--emerald" : "rf-badge--cyan"}`}
         >
           {progress?.is_complete ? "Target Achieved ✓" : `${pct}% Active`}
         </span>

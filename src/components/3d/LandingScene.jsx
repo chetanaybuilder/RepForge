@@ -184,10 +184,7 @@ export default function LandingScene() {
 
   return (
     <ThreeErrorBoundary fallback={null}>
-      <div
-        className="rf-hero-canvas-wrap"
-        style={{ touchAction: "pan-y" }}
-      >
+      <div className="rf-hero-canvas-wrap" style={{ touchAction: "pan-y" }}>
         <Canvas
           camera={{ position: [0, 0, 7], fov: 50 }}
           dpr={typeof window !== "undefined" ? Math.min(window.devicePixelRatio, 1.5) : 1}

@@ -58,9 +58,7 @@ def apply_security_headers(response, is_production: bool):
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
 
     # Restrict unnecessary browser sensors & hardware capabilities
-    response.headers["Permissions-Policy"] = (
-        "camera=(), microphone=(), geolocation=(), payment=(), usb=(), vr=()"
-    )
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=(), usb=(), vr=()"
 
     # Cross-Origin Isolation & Pop-up Handling
     response.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
@@ -74,9 +72,7 @@ def apply_security_headers(response, is_production: bool):
 
     # Enforce HTTPS with 2-year HSTS & subdomains in production
     if is_production:
-        response.headers["Strict-Transport-Security"] = (
-            "max-age=63072000; includeSubDomains; preload"
-        )
+        response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
 
     # Strip web server fingerprinting banners
     response.headers.pop("Server", None)

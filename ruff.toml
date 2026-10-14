@@ -1,0 +1,14 @@
+# RepForge Ruff Configuration
+line-length = 120
+target-version = "py311"
+
+[lint]
+select = ["E", "F", "W", "I", "B", "C4", "UP"]
+ignore = [
+    "B008",  # do not perform function calls in argument defaults (standard Flask pattern)
+    "E501",  # line length formatting is governed by ruff format
+]
+
+[lint.isort]
+combine-as-imports = true
+force-sort-within-sections = true

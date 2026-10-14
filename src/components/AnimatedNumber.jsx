@@ -5,12 +5,12 @@ export function AnimatedNumber({ value, format = (n) => Math.round(n) }) {
   const [numVal, setNumVal] = useState(0);
   const [suffix, setSuffix] = useState("");
   const [display, setDisplay] = useState("");
-  
+
   useEffect(() => {
     if (typeof value === "number") {
       setNumVal(value);
     } else if (typeof value === "string") {
-      const parsed = parseFloat(value.replace(/,/g, ''));
+      const parsed = parseFloat(value.replace(/,/g, ""));
       if (!isNaN(parsed)) {
         setNumVal(parsed);
         const match = value.match(/[a-zA-Z%]+/);
@@ -20,7 +20,7 @@ export function AnimatedNumber({ value, format = (n) => Math.round(n) }) {
   }, [value]);
 
   const spring = useSpring(0, { stiffness: 50, damping: 20 });
-  
+
   useMotionValueEvent(spring, "change", (latest) => {
     setDisplay(format(latest) + suffix);
   });
@@ -29,5 +29,5 @@ export function AnimatedNumber({ value, format = (n) => Math.round(n) }) {
     spring.set(numVal);
   }, [numVal, spring]);
 
-  return <span>{display || (format(numVal) + suffix)}</span>;
+  return <span>{display || format(numVal) + suffix}</span>;
 }

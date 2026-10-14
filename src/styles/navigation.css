@@ -201,7 +201,9 @@
   background: rgba(20, 20, 36, 0.9);
   border-color: rgba(0, 242, 254, 0.4);
   transform: translateX(4px);
-  box-shadow: 0 10px 30px -4px rgba(0, 0, 0, 0.6), 0 0 20px -2px rgba(0, 242, 254, 0.2);
+  box-shadow:
+    0 10px 30px -4px rgba(0, 0, 0, 0.6),
+    0 0 20px -2px rgba(0, 242, 254, 0.2);
 }
 
 .rf-menu-card--active {
@@ -248,7 +250,9 @@
 .rf-menu-arrow {
   font-size: 1.4rem;
   color: var(--rf-text-faint);
-  transition: transform var(--rf-transition-fast), color var(--rf-transition-fast);
+  transition:
+    transform var(--rf-transition-fast),
+    color var(--rf-transition-fast);
 }
 
 .rf-menu-card:hover .rf-menu-arrow,

@@ -93,9 +93,12 @@ CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions (expires_at);
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS oauth_states (
     state           TEXT PRIMARY KEY,
+    nonce           TEXT NOT NULL DEFAULT '',
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     expires_at      TIMESTAMPTZ NOT NULL
 );
+ALTER TABLE oauth_states ADD COLUMN IF NOT EXISTS nonce TEXT NOT NULL DEFAULT '';
+
 
 -- ---------------------------------------------------------------------
 -- Goals (used by the Goals / Performance page)

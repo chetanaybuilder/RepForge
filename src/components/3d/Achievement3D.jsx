@@ -1,10 +1,21 @@
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useState, useEffect } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Center, Float } from "@react-three/drei";
 import * as THREE from "three";
 import { isWebGLAvailable } from "../../utils/webgl";
 import { ThreeErrorBoundary } from "./ThreeErrorBoundary";
 
+/**
+ * Track active WebGL canvases across the document to prevent context exhaustion.
+ * Most mobile and desktop browsers fail once 8-16 contexts are instantiated.
+ */
+let activeCanvasCount = 0;
+const MAX_CONCURRENT_CANVASES = 4;
+
+/**
+ * Procedural physical octahedron gem with rotating metallic sheen.
+ * @param {{ color?: string, active?: boolean }} props
+ */
 function QuantumGem({ color = "#8a5cf6", active }) {
   const meshRef = useRef();
 
@@ -38,6 +49,11 @@ function QuantumGem({ color = "#8a5cf6", active }) {
   );
 }
 
+/**
+ * Lightweight hardware-accelerated CSS badge fallback for inactive badges
+ * or when WebGL context quota is exceeded.
+ * @param {{ color?: string, active?: boolean, size?: number }} props
+ */
 function FallbackGem({ color = "#8a5cf6", active, size = 56 }) {
   return (
     <div
@@ -62,8 +78,28 @@ function FallbackGem({ color = "#8a5cf6", active, size = 56 }) {
   );
 }
 
+/**
+ * 3D Achievement Gem Component with dynamic context budgeting.
+ *
+ * @param {{ color?: string, active?: boolean, size?: number }} props
+ */
 export function Achievement3D({ color = "#8a5cf6", active = true, size = 56 }) {
-  if (!isWebGLAvailable()) {
+  const [canRender3D, setCanRender3D] = useState(false);
+
+  useEffect(() => {
+    if (!isWebGLAvailable() || !active) {
+      return;
+    }
+    if (activeCanvasCount < MAX_CONCURRENT_CANVASES) {
+      activeCanvasCount += 1;
+      setCanRender3D(true);
+      return () => {
+        activeCanvasCount = Math.max(0, activeCanvasCount - 1);
+      };
+    }
+  }, [active]);
+
+  if (!canRender3D) {
     return <FallbackGem color={color} active={active} size={size} />;
   }
 

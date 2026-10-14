@@ -179,7 +179,10 @@ export function DayFormModal({ open, onSave, onClose }) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
+        <form
+          onSubmit={handleSubmit}
+          style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}
+        >
           <div className="rf-modal-body">
             {errors.general && (
               <div className="rf-field-error" style={{ marginBottom: 14 }}>
@@ -236,13 +239,14 @@ export function DayFormModal({ open, onSave, onClose }) {
                   {/* Exercise Header with Reorder and Delete Controls */}
                   <div className="rf-exercise-card-header">
                     <div className="rf-exercise-card-title-group">
-                      <span className="rf-telemetry-tag" style={{ color: "var(--rf-cyan)", fontSize: "0.68rem" }}>
+                      <span
+                        className="rf-telemetry-tag"
+                        style={{ color: "var(--rf-cyan)", fontSize: "0.68rem" }}
+                      >
                         MOVEMENT #{String(eIdx + 1).padStart(2, "0")}
                       </span>
                       {ex.exercise_name && (
-                        <span className="rf-exercise-card-name-preview">
-                          · {ex.exercise_name}
-                        </span>
+                        <span className="rf-exercise-card-name-preview">· {ex.exercise_name}</span>
                       )}
                     </div>
 
@@ -282,9 +286,14 @@ export function DayFormModal({ open, onSave, onClose }) {
                   </div>
 
                   {/* Split and Exercise Name Grid */}
-                  <div className="rf-form-grid rf-form-grid--2" style={{ gap: 10, marginBottom: 8 }}>
+                  <div
+                    className="rf-form-grid rf-form-grid--2"
+                    style={{ gap: 10, marginBottom: 8 }}
+                  >
                     <div className="rf-field">
-                      <label className="rf-label" style={{ fontSize: "0.72rem" }}>Target Split</label>
+                      <label className="rf-label" style={{ fontSize: "0.72rem" }}>
+                        Target Split
+                      </label>
                       <select
                         className="rf-select rf-select--compact"
                         value={ex.workout_type}
@@ -299,7 +308,9 @@ export function DayFormModal({ open, onSave, onClose }) {
                     </div>
 
                     <div className="rf-field">
-                      <label className="rf-label" style={{ fontSize: "0.72rem" }}>Exercise Name</label>
+                      <label className="rf-label" style={{ fontSize: "0.72rem" }}>
+                        Exercise Name
+                      </label>
                       <input
                         type="text"
                         className="rf-input rf-input--compact"
@@ -338,7 +349,10 @@ export function DayFormModal({ open, onSave, onClose }) {
 
                     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                       {ex.sets.map((set, sIdx) => {
-                        const prevRef = sIdx > 0 ? `${ex.sets[sIdx - 1].weight} × ${ex.sets[sIdx - 1].reps}` : "—";
+                        const prevRef =
+                          sIdx > 0
+                            ? `${ex.sets[sIdx - 1].weight} × ${ex.sets[sIdx - 1].reps}`
+                            : "—";
                         return (
                           <div
                             key={sIdx}
@@ -364,7 +378,12 @@ export function DayFormModal({ open, onSave, onClose }) {
                                 value={set.weight === 0 ? "" : set.weight}
                                 placeholder="0"
                                 onChange={(e) =>
-                                  updateSet(eIdx, sIdx, "weight", e.target.value === "" ? 0 : Number(e.target.value))
+                                  updateSet(
+                                    eIdx,
+                                    sIdx,
+                                    "weight",
+                                    e.target.value === "" ? 0 : Number(e.target.value)
+                                  )
                                 }
                                 aria-label={`Set ${sIdx + 1} weight (kg)`}
                               />
@@ -380,7 +399,12 @@ export function DayFormModal({ open, onSave, onClose }) {
                                 value={set.reps === 0 ? "" : set.reps}
                                 placeholder="0"
                                 onChange={(e) =>
-                                  updateSet(eIdx, sIdx, "reps", e.target.value === "" ? 0 : Number(e.target.value))
+                                  updateSet(
+                                    eIdx,
+                                    sIdx,
+                                    "reps",
+                                    e.target.value === "" ? 0 : Number(e.target.value)
+                                  )
                                 }
                                 aria-label={`Set ${sIdx + 1} reps`}
                               />

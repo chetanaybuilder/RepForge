@@ -54,7 +54,8 @@ class AIErrorBoundary extends Component {
             Telemetry Presentation Guard Triggered
           </h3>
           <p style={{ margin: "0 0 16px 0", color: "var(--rf-text-sub)", fontSize: "0.88rem" }}>
-            An unexpected format in the incoming telemetry payload was safely caught. Your logged training history remains fully protected.
+            An unexpected format in the incoming telemetry payload was safely caught. Your logged
+            training history remains fully protected.
           </p>
           <button
             type="button"
@@ -114,10 +115,10 @@ export function AIAnalysis() {
     triggerInitialCheckin();
   }, [user?.id]);
 
-  // Save to local storage whenever history changes
+  // Save to local storage whenever history changes (bounded to last 20 messages)
   useEffect(() => {
     if (!user?.id || chatHistory.length === 0) return;
-    localStorage.setItem(`rf_chat_${user.id}`, JSON.stringify(chatHistory));
+    localStorage.setItem(`rf_chat_${user.id}`, JSON.stringify(chatHistory.slice(-20)));
   }, [chatHistory, user?.id]);
 
   // Scroll to bottom when history updates
@@ -203,7 +204,8 @@ export function AIAnalysis() {
             <span className="rf-gradient-text">Tactical AI Coach</span>
           </h1>
           <p className="rf-page-subtitle">
-            Concise, telemetry-driven insights on volume load, progressive overload targets, and recovery.
+            Concise, telemetry-driven insights on volume load, progressive overload targets, and
+            recovery.
           </p>
         </div>
         <button
@@ -280,14 +282,23 @@ export function AIAnalysis() {
               <div style={{ fontWeight: 700, color: "var(--rf-text-pure)", fontSize: "0.92rem" }}>
                 RepForge Biomechanical Engine
               </div>
-              <div style={{ fontSize: "0.72rem", color: "var(--rf-cyan)", fontFamily: "var(--rf-font-mono)" }}>
+              <div
+                style={{
+                  fontSize: "0.72rem",
+                  color: "var(--rf-cyan)",
+                  fontFamily: "var(--rf-font-mono)",
+                }}
+              >
                 TELEMETRY SYNCHRONIZED · LATENCY 18MS
               </div>
             </div>
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span className="rf-badge rf-badge--cyan" style={{ fontSize: "0.7rem", padding: "2px 8px" }}>
+            <span
+              className="rf-badge rf-badge--cyan"
+              style={{ fontSize: "0.7rem", padding: "2px 8px" }}
+            >
               ACTIVE MODEL
             </span>
             <div className="rf-status-beacon" title="Model operational" />
@@ -308,7 +319,9 @@ export function AIAnalysis() {
             }}
           >
             {chatHistory.length === 0 && !chatLoading && !chatError && (
-              <div style={{ textAlign: "center", color: "var(--rf-text-faint)", marginTop: "2.5rem" }}>
+              <div
+                style={{ textAlign: "center", color: "var(--rf-text-faint)", marginTop: "2.5rem" }}
+              >
                 <div className="rf-state-radar" style={{ margin: "0 auto 16px" }} />
                 <div style={{ fontFamily: "var(--rf-font-mono)", fontSize: "0.85rem" }}>
                   INITIALIZING TELEMETRY STREAM…
@@ -450,10 +463,10 @@ function TelemetryInsightCard({ label, badge, badgeType, title, cue, onClick }) 
     badgeType === "emerald"
       ? "rf-badge--emerald"
       : badgeType === "ember"
-      ? "rf-badge--ember"
-      : badgeType === "violet"
-      ? "rf-badge--violet"
-      : "rf-badge--cyan";
+        ? "rf-badge--ember"
+        : badgeType === "violet"
+          ? "rf-badge--violet"
+          : "rf-badge--cyan";
 
   return (
     <div
@@ -474,16 +487,17 @@ function TelemetryInsightCard({ label, badge, badgeType, title, cue, onClick }) 
         <span className="rf-telemetry-tag" style={{ fontSize: "0.68rem" }}>
           {label}
         </span>
-        <span className={`rf-badge ${badgeClass}`} style={{ fontSize: "0.68rem", padding: "1px 6px" }}>
+        <span
+          className={`rf-badge ${badgeClass}`}
+          style={{ fontSize: "0.68rem", padding: "1px 6px" }}
+        >
           {badge}
         </span>
       </div>
       <div style={{ fontSize: "0.92rem", fontWeight: 700, color: "var(--rf-text-pure)" }}>
         {title}
       </div>
-      <div style={{ fontSize: "0.78rem", color: "var(--rf-text-sub)", lineHeight: 1.4 }}>
-        {cue}
-      </div>
+      <div style={{ fontSize: "0.78rem", color: "var(--rf-text-sub)", lineHeight: 1.4 }}>{cue}</div>
     </div>
   );
 }
@@ -496,7 +510,9 @@ function computeActionableInsights(statsData, analyticsData) {
   const recentPrs = Array.isArray(statsData?.recent_prs) ? statsData.recent_prs : [];
   const volumeTrend = Array.isArray(analyticsData?.volume_trend) ? analyticsData.volume_trend : [];
   const plateaus = Array.isArray(analyticsData?.plateaus) ? analyticsData.plateaus : [];
-  const frequency = Array.isArray(analyticsData?.frequency_by_type) ? analyticsData.frequency_by_type : [];
+  const frequency = Array.isArray(analyticsData?.frequency_by_type)
+    ? analyticsData.frequency_by_type
+    : [];
 
   // 1. Volume Trend Insight
   let volume = {
@@ -673,11 +689,7 @@ function formatCoachReply(text) {
       cleanText = text;
     } else if (text && typeof text === "object") {
       cleanText =
-        text?.reply ||
-        text?.message ||
-        text?.deep_review ||
-        text?.text ||
-        JSON.stringify(text);
+        text?.reply || text?.message || text?.deep_review || text?.text || JSON.stringify(text);
     } else {
       cleanText = String(text ?? "Biomechanical telemetry verified.");
     }

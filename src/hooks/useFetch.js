@@ -1,10 +1,30 @@
 import { useCallback, useEffect, useState } from "react";
 
 /**
+ * Maximum entries retained in the module-level universal fetch cache.
+ * Bounded to prevent memory accumulation in long-lived browser sessions.
+ */
+const MAX_CACHE_SIZE = 50;
+
+/**
  * Shared in-memory query cache keyed by dependency hash or explicit cacheKey.
  * Prevents flashing loaders and redundant network roundtrips on tab switching.
+ * @type {Map<string, any>}
  */
 const globalCache = new Map();
+
+/**
+ * Stores a key-value pair in globalCache with bounded FIFO eviction.
+ * @param {string} key
+ * @param {any} value
+ */
+function setBoundedCache(key, value) {
+  if (globalCache.size >= MAX_CACHE_SIZE) {
+    const oldestKey = globalCache.keys().next().value;
+    if (oldestKey) globalCache.delete(oldestKey);
+  }
+  globalCache.set(key, value);
+}
 
 /**
  * Universal async data-fetching hook with caching, status state machine,
@@ -54,23 +74,21 @@ export function useFetch(
       setError(null);
       try {
         const result = await fetcher();
-        globalCache.set(key, result);
+        setBoundedCache(key, result);
         setData(result);
         setStatus(emptyCheck(result) ? "empty" : "success");
       } catch (err) {
         setError(err);
-        if (!globalCache.has(key)) {
-          setStatus("error");
-        }
+        if (!globalCache.has(key)) setStatus("error");
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    deps
+    [key]
   );
 
   useEffect(() => {
     load();
   }, [load]);
 
-  return { data, status, error, reload: () => load(true) };
+  return { data, status, error, reload: load };
 }

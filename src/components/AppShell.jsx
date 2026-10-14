@@ -42,11 +42,10 @@ export function AppShell() {
   const navigate = useNavigate();
 
   // Find active destination
-  const activeSection =
-    APP_SECTIONS.find((sec) => sec.to === location.pathname) || {
-      number: "02",
-      label: "DASHBOARD",
-    };
+  const activeSection = APP_SECTIONS.find((sec) => sec.to === location.pathname) || {
+    number: "02",
+    label: "DASHBOARD",
+  };
 
   // Lock body scroll when mobile full-screen menu is open
   useEffect(() => {
@@ -93,9 +92,7 @@ export function AppShell() {
             <NavLink
               key={item.to}
               to={item.to}
-              className={({ isActive }) =>
-                `rf-rail-item${isActive ? " rf-rail-item--active" : ""}`
-              }
+              className={({ isActive }) => `rf-rail-item${isActive ? " rf-rail-item--active" : ""}`}
             >
               <span className="rf-rail-num">{item.number}</span>
               <span className="rf-rail-label">{item.label}</span>
@@ -119,7 +116,12 @@ export function AppShell() {
               <img
                 src={user.avatar_url}
                 alt=""
-                style={{ width: 32, height: 32, borderRadius: "50%", border: "1px solid rgba(0, 242, 254, 0.4)" }}
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: "50%",
+                  border: "1px solid rgba(0, 242, 254, 0.4)",
+                }}
                 referrerPolicy="no-referrer"
               />
             ) : (
@@ -314,7 +316,9 @@ export function AppShell() {
                   </div>
                 )}
                 <div>
-                  <div style={{ fontWeight: 700, color: "var(--rf-text-pure)", fontSize: "0.95rem" }}>
+                  <div
+                    style={{ fontWeight: 700, color: "var(--rf-text-pure)", fontSize: "0.95rem" }}
+                  >
                     {user?.name || "Athlete Station"}
                   </div>
                   <div style={{ fontSize: "0.76rem", color: "var(--rf-text-faint)" }}>

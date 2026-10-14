@@ -132,15 +132,20 @@ export function Landing() {
             AI-POWERED TRAINING INTELLIGENCE
           </span>
           <h1 className="rf-hero-title">
-            Train. Track.<br />
+            Train. Track.
+            <br />
             <span className="rf-gradient-text">Evolve.</span>
           </h1>
           <p className="rf-hero-sub">
-            RepForge turns every set you log into real signal — strength trends, plateaus,
-            and personal records, analyzed by AI that only ever looks at your actual training.
+            RepForge turns every set you log into real signal — strength trends, plateaus, and
+            personal records, analyzed by AI that only ever looks at your actual training.
           </p>
           <div className="rf-hero-actions">
-            <PrimaryButton className="rf-btn--lg" onClick={handleContinue} style={{ minWidth: 180, letterSpacing: "0.04em", fontWeight: 800 }}>
+            <PrimaryButton
+              className="rf-btn--lg"
+              onClick={handleContinue}
+              style={{ minWidth: 180, letterSpacing: "0.04em", fontWeight: 800 }}
+            >
               CONTINUE
             </PrimaryButton>
           </div>
@@ -159,7 +164,10 @@ export function Landing() {
             transition={{ type: "spring", delay: i * 0.1 }}
           >
             <div className="rf-metric-num rf-gradient-text">{m.value}</div>
-            <div className="rf-metric-desc" style={{ color: "var(--rf-text-bright)", fontWeight: 600 }}>
+            <div
+              className="rf-metric-desc"
+              style={{ color: "var(--rf-text-bright)", fontWeight: 600 }}
+            >
               {m.label}
             </div>
           </motion.div>
@@ -167,16 +175,26 @@ export function Landing() {
       </section>
 
       {/* Features Showcase */}
-      <section className="rf-page-container" style={{ padding: "clamp(48px, 8vw, 88px) 20px", position: "relative", zIndex: 10 }}>
+      <section
+        className="rf-page-container"
+        style={{ padding: "clamp(48px, 8vw, 88px) 20px", position: "relative", zIndex: 10 }}
+      >
         <div style={{ textAlign: "center", maxWidth: 640, margin: "0 auto 40px" }}>
           <div className="rf-telemetry-tag" style={{ marginBottom: 8 }}>
             BUILT FOR LIFTERS WHO TRACK EVERYTHING
           </div>
-          <h2 style={{ fontSize: "var(--rf-text-2xl)", marginBottom: 14, color: "var(--rf-text-pure)" }}>
+          <h2
+            style={{
+              fontSize: "var(--rf-text-2xl)",
+              marginBottom: 14,
+              color: "var(--rf-text-pure)",
+            }}
+          >
             Everything a serious training log should do — and the analysis a coach would give you.
           </h2>
           <p style={{ color: "var(--rf-text-sub)", fontSize: "0.95rem" }}>
-            No placeholder charts, no invented statistics. Every number on RepForge traces back to a set you actually logged.
+            No placeholder charts, no invented statistics. Every number on RepForge traces back to a
+            set you actually logged.
           </p>
         </div>
 
@@ -194,7 +212,14 @@ export function Landing() {
               <h3 style={{ fontSize: "1.2rem", color: "var(--rf-text-pure)", marginBottom: 8 }}>
                 {f.title}
               </h3>
-              <p style={{ margin: 0, fontSize: "0.9rem", color: "var(--rf-text-sub)", lineHeight: 1.6 }}>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: "0.9rem",
+                  color: "var(--rf-text-sub)",
+                  lineHeight: 1.6,
+                }}
+              >
                 {f.body}
               </p>
             </motion.div>
@@ -206,7 +231,8 @@ export function Landing() {
       <section
         style={{
           padding: "clamp(48px, 8vw, 88px) 20px",
-          background: "linear-gradient(180deg, transparent 0%, rgba(138, 92, 246, 0.04) 50%, transparent 100%)",
+          background:
+            "linear-gradient(180deg, transparent 0%, rgba(138, 92, 246, 0.04) 50%, transparent 100%)",
           borderTop: "1px solid var(--rf-border-subtle)",
           borderBottom: "1px solid var(--rf-border-subtle)",
           position: "relative",
@@ -215,7 +241,10 @@ export function Landing() {
       >
         <div className="rf-page-container">
           <div style={{ textAlign: "center", maxWidth: 640, margin: "0 auto 44px" }}>
-            <div className="rf-telemetry-tag" style={{ color: "var(--rf-violet)", marginBottom: 8 }}>
+            <div
+              className="rf-telemetry-tag"
+              style={{ color: "var(--rf-violet)", marginBottom: 8 }}
+            >
               THE REVOLUTIONARY FOUR-PILLAR ENGINE
             </div>
             <h2 style={{ fontSize: "var(--rf-text-xl)", color: "var(--rf-text-pure)" }}>
@@ -240,13 +269,23 @@ export function Landing() {
                 transition={{ type: "spring", delay: idx * 0.08 }}
                 style={{ padding: 24 }}
               >
-                <div className="rf-telemetry-tag" style={{ color: "var(--rf-cyan)", marginBottom: 8 }}>
+                <div
+                  className="rf-telemetry-tag"
+                  style={{ color: "var(--rf-cyan)", marginBottom: 8 }}
+                >
                   {step.num}
                 </div>
                 <h3 style={{ fontSize: "1.05rem", color: "var(--rf-text-pure)", marginBottom: 8 }}>
                   {step.label}
                 </h3>
-                <p style={{ margin: 0, fontSize: "0.86rem", color: "var(--rf-text-sub)", lineHeight: 1.55 }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "0.86rem",
+                    color: "var(--rf-text-sub)",
+                    lineHeight: 1.55,
+                  }}
+                >
                   {step.desc}
                 </p>
               </motion.div>
@@ -266,13 +305,23 @@ export function Landing() {
         }}
       >
         <div style={{ maxWidth: 640, margin: "0 auto" }}>
-          <h2 style={{ fontSize: "var(--rf-text-xl)", color: "var(--rf-text-pure)", marginBottom: 12 }}>
+          <h2
+            style={{
+              fontSize: "var(--rf-text-xl)",
+              color: "var(--rf-text-pure)",
+              marginBottom: 12,
+            }}
+          >
             Your next PR starts with logging today's set.
           </h2>
           <p style={{ color: "var(--rf-text-sub)", marginBottom: 28, fontSize: "0.95rem" }}>
             Sign in with Google — no passwords, no setup, just training.
           </p>
-          <PrimaryButton className="rf-btn--lg" onClick={handleContinue} style={{ minWidth: 180, letterSpacing: "0.04em", fontWeight: 800 }}>
+          <PrimaryButton
+            className="rf-btn--lg"
+            onClick={handleContinue}
+            style={{ minWidth: 180, letterSpacing: "0.04em", fontWeight: 800 }}
+          >
             CONTINUE
           </PrimaryButton>
         </div>

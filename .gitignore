@@ -14,8 +14,14 @@ env/
 
 # Node / frontend
 node_modules/
+dist/
 .vite/
 npm-debug.log*
+
+# Testing & Coverage
+.pytest_cache/
+.ruff_cache/
+coverage/
 
 # OS / editor
 .DS_Store
@@ -24,3 +30,4 @@ npm-debug.log*
 
 # Logs
 *.log
+

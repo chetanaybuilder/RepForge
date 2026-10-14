@@ -13,10 +13,7 @@ import { AnimatePresence, motion } from "framer-motion";
 export function Workouts() {
   const [search, setSearch] = useState("");
 
-  const filters = useMemo(
-    () => ({ search: search || undefined }),
-    [search]
-  );
+  const filters = useMemo(() => ({ search: search || undefined }), [search]);
 
   const { workouts, status, error, reload, createWorkout } = useWorkouts(filters);
   const toast = useToast();
@@ -91,9 +88,7 @@ export function Workouts() {
           <div className="rf-telemetry-tag" style={{ marginBottom: 6 }}>
             01 — LOG WORKOUT
           </div>
-          <h1 className="rf-page-title">
-            Log Training Session
-          </h1>
+          <h1 className="rf-page-title">Log Training Session</h1>
           <p className="rf-page-subtitle">
             Record exercises, sets, reps, and loads with fast mobile touch controls.
           </p>
@@ -104,7 +99,8 @@ export function Workouts() {
       <div
         className="rf-pod"
         style={{
-          background: "linear-gradient(135deg, rgba(0, 242, 254, 0.1) 0%, rgba(138, 92, 246, 0.05) 100%)",
+          background:
+            "linear-gradient(135deg, rgba(0, 242, 254, 0.1) 0%, rgba(138, 92, 246, 0.05) 100%)",
           border: "1px solid rgba(0, 242, 254, 0.3)",
           marginBottom: 28,
           padding: "clamp(20px, 4vw, 28px)",
@@ -144,9 +140,7 @@ export function Workouts() {
       </div>
 
       {status === "loading" && <SkeletonGrid count={3} height="120px" />}
-      {status === "error" && (
-        <ErrorState message={error?.message} onRetry={reload} />
-      )}
+      {status === "error" && <ErrorState message={error?.message} onRetry={reload} />}
 
       {status === "success" && workouts.length === 0 && (
         <EmptyState
@@ -189,8 +183,12 @@ export function Workouts() {
                         width: 44,
                         height: 44,
                         borderRadius: "var(--rf-radius-sm)",
-                        background: isExpanded ? "rgba(0, 242, 254, 0.15)" : "rgba(255, 255, 255, 0.04)",
-                        border: isExpanded ? "1px solid rgba(0, 242, 254, 0.4)" : "1px solid var(--rf-border-subtle)",
+                        background: isExpanded
+                          ? "rgba(0, 242, 254, 0.15)"
+                          : "rgba(255, 255, 255, 0.04)",
+                        border: isExpanded
+                          ? "1px solid rgba(0, 242, 254, 0.4)"
+                          : "1px solid var(--rf-border-subtle)",
                         display: "flex",
                         flexDirection: "column",
                         alignItems: "center",
@@ -207,12 +205,17 @@ export function Workouts() {
                     <div className="rf-workout-title-group">
                       <div className="rf-workout-day-badge">
                         <span>{day.day ? day.day : `Session #${day.day_number}`}</span>
-                        <span className="rf-badge rf-badge--cyan">
-                          {formatDate(day.date)}
-                        </span>
+                        <span className="rf-badge rf-badge--cyan">{formatDate(day.date)}</span>
                       </div>
-                      <div style={{ fontSize: "0.82rem", color: "var(--rf-text-sub)", textTransform: "capitalize" }}>
-                        {day.exercises.length} Exercises · {totalSets} sets {primaryTypes ? `(${primaryTypes})` : ""}
+                      <div
+                        style={{
+                          fontSize: "0.82rem",
+                          color: "var(--rf-text-sub)",
+                          textTransform: "capitalize",
+                        }}
+                      >
+                        {day.exercises.length} Exercises · {totalSets} sets{" "}
+                        {primaryTypes ? `(${primaryTypes})` : ""}
                       </div>
                     </div>
                   </div>
@@ -262,7 +265,9 @@ export function Workouts() {
                           }}
                           disabled={aiLoading[day.id]}
                         >
-                          {aiLoading[day.id] ? "Synthesizing AI Review…" : "◈ AI Session Diagnostics"}
+                          {aiLoading[day.id]
+                            ? "Synthesizing AI Review…"
+                            : "◈ AI Session Diagnostics"}
                         </button>
                       </div>
 
@@ -275,16 +280,33 @@ export function Workouts() {
                           <div className="rf-badge rf-badge--violet" style={{ marginBottom: 10 }}>
                             ◈ Neural Session Review
                           </div>
-                          <p style={{ margin: "0 0 12px 0", fontSize: "0.92rem", lineHeight: 1.6, color: "var(--rf-text-bright)" }}>
+                          <p
+                            style={{
+                              margin: "0 0 12px 0",
+                              fontSize: "0.92rem",
+                              lineHeight: 1.6,
+                              color: "var(--rf-text-bright)",
+                            }}
+                          >
                             {aiResults[day.id].deep_review}
                           </p>
 
                           {aiResults[day.id].good_points?.length > 0 && (
                             <div className="rf-insight-card rf-insight-card--success">
-                              <span className="rf-insight-tag" style={{ color: "var(--rf-emerald)" }}>
+                              <span
+                                className="rf-insight-tag"
+                                style={{ color: "var(--rf-emerald)" }}
+                              >
                                 ↗ Good Points
                               </span>
-                              <ul style={{ margin: 0, paddingLeft: 18, fontSize: "0.86rem", color: "var(--rf-text-bright)" }}>
+                              <ul
+                                style={{
+                                  margin: 0,
+                                  paddingLeft: 18,
+                                  fontSize: "0.86rem",
+                                  color: "var(--rf-text-bright)",
+                                }}
+                              >
                                 {aiResults[day.id].good_points.map((p, pIdx) => (
                                   <li key={pIdx}>{p}</li>
                                 ))}
@@ -297,7 +319,14 @@ export function Workouts() {
                               <span className="rf-insight-tag" style={{ color: "var(--rf-ember)" }}>
                                 ⚠ Critical Points
                               </span>
-                              <ul style={{ margin: 0, paddingLeft: 18, fontSize: "0.86rem", color: "var(--rf-text-bright)" }}>
+                              <ul
+                                style={{
+                                  margin: 0,
+                                  paddingLeft: 18,
+                                  fontSize: "0.86rem",
+                                  color: "var(--rf-text-bright)",
+                                }}
+                              >
                                 {aiResults[day.id].critical_points.map((p, pIdx) => (
                                   <li key={pIdx}>{p}</li>
                                 ))}
@@ -312,7 +341,14 @@ export function Workouts() {
                         {day.exercises.map((ex) => (
                           <div key={ex.id} className="rf-exercise-pod">
                             <div className="rf-exercise-head">
-                              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 8,
+                                  flexWrap: "wrap",
+                                }}
+                              >
                                 <span className="rf-badge rf-badge--cyan">
                                   {ex.workout_type.replace("_", " ")}
                                 </span>
@@ -338,13 +374,22 @@ export function Workouts() {
                             </div>
 
                             {ex.notes && (
-                              <p style={{ margin: "4px 0 10px 0", fontSize: "0.82rem", color: "var(--rf-text-sub)", fontStyle: "italic" }}>
+                              <p
+                                style={{
+                                  margin: "4px 0 10px 0",
+                                  fontSize: "0.82rem",
+                                  color: "var(--rf-text-sub)",
+                                  fontStyle: "italic",
+                                }}
+                              >
                                 "{ex.notes}"
                               </p>
                             )}
 
                             {/* Sets Chips */}
-                            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+                            <div
+                              style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}
+                            >
                               {ex.sets.map((set, sIdx) => (
                                 <div
                                   key={set.id || sIdx}
@@ -354,7 +399,9 @@ export function Workouts() {
                                   <strong>{set.weight} kg</strong>
                                   <span>×</span>
                                   <strong>{set.reps} reps</strong>
-                                  {set.completed && <span style={{ color: "var(--rf-emerald)" }}>✓</span>}
+                                  {set.completed && (
+                                    <span style={{ color: "var(--rf-emerald)" }}>✓</span>
+                                  )}
                                 </div>
                               ))}
                             </div>

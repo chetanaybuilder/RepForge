@@ -24,8 +24,16 @@ function ErrorFallback({ error, resetErrorBoundary }) {
       <h2 style={{ margin: 0, color: "var(--rf-text-pure)", fontSize: "1.6rem" }}>
         Neural Anomaly Interruption
       </h2>
-      <p style={{ color: "var(--rf-text-sub)", maxWidth: "460px", lineHeight: 1.6, fontSize: "0.9rem" }}>
-        An unexpected execution exception occurred in the presentation layer. Telemetry state has been recorded for diagnostics.
+      <p
+        style={{
+          color: "var(--rf-text-sub)",
+          maxWidth: "460px",
+          lineHeight: 1.6,
+          fontSize: "0.9rem",
+        }}
+      >
+        An unexpected execution exception occurred in the presentation layer. Telemetry state has
+        been recorded for diagnostics.
       </p>
 
       <details
@@ -86,9 +94,7 @@ function ErrorFallback({ error, resetErrorBoundary }) {
       </details>
 
       <div style={{ display: "flex", gap: "12px", marginTop: "14px" }}>
-        <PrimaryButton onClick={resetErrorBoundary}>
-          Re-initialize Subsystem
-        </PrimaryButton>
+        <PrimaryButton onClick={resetErrorBoundary}>Re-initialize Subsystem</PrimaryButton>
         <button
           className="rf-btn rf-btn--ghost"
           onClick={() => {

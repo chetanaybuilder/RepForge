@@ -54,9 +54,7 @@ export function Dashboard() {
   const stats = data?.stats || DEFAULT_STATS_SCHEMA.stats;
   const recentPrs = Array.isArray(data?.recent_prs) ? data.recent_prs : [];
   const recentWorkouts = Array.isArray(data?.recent_workouts) ? data.recent_workouts : [];
-  const volumeTrend = Array.isArray(analyticsData?.volume_trend)
-    ? analyticsData.volume_trend
-    : [];
+  const volumeTrend = Array.isArray(analyticsData?.volume_trend) ? analyticsData.volume_trend : [];
 
   const isLoading = status === "loading" || (!data?.stats && status !== "error");
 
@@ -76,16 +74,12 @@ export function Dashboard() {
           </p>
         </div>
         <Link to="/workouts">
-          <PrimaryButton className="rf-btn--sm">
-            + Log Session
-          </PrimaryButton>
+          <PrimaryButton className="rf-btn--sm">+ Log Session</PrimaryButton>
         </Link>
       </div>
 
       {isLoading && <SkeletonGrid count={6} />}
-      {status === "error" && (
-        <ErrorState message={error?.message} onRetry={reload} />
-      )}
+      {status === "error" && <ErrorState message={error?.message} onRetry={reload} />}
 
       {!isLoading && status !== "error" && (
         <motion.div
@@ -116,7 +110,10 @@ export function Dashboard() {
             >
               {/* PRIMARY FOCUS: TOTAL VOLUME */}
               <div>
-                <div className="rf-telemetry-tag" style={{ color: "var(--rf-cyan)", marginBottom: 8 }}>
+                <div
+                  className="rf-telemetry-tag"
+                  style={{ color: "var(--rf-cyan)", marginBottom: 8 }}
+                >
                   PRIMARY TELEMETRY · CUMULATIVE LOAD
                 </div>
                 <div
@@ -141,7 +138,9 @@ export function Dashboard() {
                     KG
                   </span>
                 </div>
-                <p style={{ margin: "10px 0 0 0", color: "var(--rf-text-sub)", fontSize: "0.9rem" }}>
+                <p
+                  style={{ margin: "10px 0 0 0", color: "var(--rf-text-sub)", fontSize: "0.9rem" }}
+                >
                   Total mechanical load moved across all verified training sets.
                 </p>
               </div>
@@ -158,7 +157,10 @@ export function Dashboard() {
                   justifyContent: "center",
                 }}
               >
-                <div className="rf-telemetry-tag" style={{ color: "var(--rf-ember)", marginBottom: 6 }}>
+                <div
+                  className="rf-telemetry-tag"
+                  style={{ color: "var(--rf-ember)", marginBottom: 6 }}
+                >
                   TRAINING MOMENTUM
                 </div>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
@@ -192,7 +194,16 @@ export function Dashboard() {
               variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
               className="rf-pod"
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 16,
+                  flexWrap: "wrap",
+                  gap: 8,
+                }}
+              >
                 <div>
                   <div className="rf-telemetry-tag" style={{ color: "var(--rf-cyan)" }}>
                     PROGRESSION CURVE
@@ -206,7 +217,10 @@ export function Dashboard() {
 
               <div style={{ width: "100%", height: 260 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={volumeTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <AreaChart
+                    data={volumeTrend}
+                    margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  >
                     <defs>
                       <linearGradient id="dashVolumeGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#00f2fe" stopOpacity={0.4} />
@@ -282,7 +296,8 @@ export function Dashboard() {
             {recentPrs.length === 0 ? (
               <div className="rf-pod" style={{ textAlign: "center", padding: "28px 16px" }}>
                 <p style={{ margin: 0, color: "var(--rf-text-sub)", fontSize: "0.88rem" }}>
-                  No personal records in the last 30 days. Log your upcoming sessions to register new peak loads.
+                  No personal records in the last 30 days. Log your upcoming sessions to register
+                  new peak loads.
                 </p>
               </div>
             ) : (
@@ -295,9 +310,7 @@ export function Dashboard() {
               >
                 {recentPrs.map((pr) => (
                   <div key={pr?.exercise_name || Math.random()} className="rf-pr-card">
-                    <div className="rf-badge rf-badge--ember">
-                      PR · {formatDate(pr?.date)}
-                    </div>
+                    <div className="rf-badge rf-badge--ember">PR · {formatDate(pr?.date)}</div>
                     <div
                       style={{
                         fontFamily: "var(--rf-font-display)",
@@ -307,9 +320,16 @@ export function Dashboard() {
                         margin: "12px 0 4px",
                       }}
                     >
-                      {pr?.weight ?? 0} <span style={{ fontSize: "1rem", color: "var(--rf-text-sub)" }}>kg</span>
+                      {pr?.weight ?? 0}{" "}
+                      <span style={{ fontSize: "1rem", color: "var(--rf-text-sub)" }}>kg</span>
                     </div>
-                    <div style={{ color: "var(--rf-text-bright)", fontWeight: 600, fontSize: "0.95rem" }}>
+                    <div
+                      style={{
+                        color: "var(--rf-text-bright)",
+                        fontWeight: 600,
+                        fontSize: "0.95rem",
+                      }}
+                    >
                       {pr?.exercise_name || "Exercise"}
                     </div>
                     <div className="rf-stat-sub">
@@ -349,14 +369,13 @@ export function Dashboard() {
                 {recentWorkouts.map((day, i) => {
                   const exercises = Array.isArray(day?.exercises) ? day.exercises : [];
                   const totalSets = exercises.reduce(
-                    (acc, ex) => acc + (Array.isArray(ex?.sets) ? ex.sets.length : (Number(ex?.sets) || 1)),
+                    (acc, ex) =>
+                      acc + (Array.isArray(ex?.sets) ? ex.sets.length : Number(ex?.sets) || 1),
                     0
                   );
                   const uniqueTypes = [
                     ...new Set(
-                      exercises.map((ex) =>
-                        (ex?.workout_type || "workout").replace("_", " ")
-                      )
+                      exercises.map((ex) => (ex?.workout_type || "workout").replace("_", " "))
                     ),
                   ].join(" · ");
 
@@ -394,7 +413,14 @@ export function Dashboard() {
                         </div>
 
                         <div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                              flexWrap: "wrap",
+                            }}
+                          >
                             <span
                               style={{
                                 fontFamily: "var(--rf-font-display)",
@@ -403,13 +429,19 @@ export function Dashboard() {
                                 color: "var(--rf-text-pure)",
                               }}
                             >
-                              Day {day?.day_number ?? (i + 1)}
+                              Day {day?.day_number ?? i + 1}
                             </span>
                             <span className="rf-badge rf-badge--cyan">
                               {exercises.length} Exercises
                             </span>
                             {uniqueTypes && (
-                              <span style={{ fontSize: "0.76rem", color: "var(--rf-text-faint)", textTransform: "capitalize" }}>
+                              <span
+                                style={{
+                                  fontSize: "0.76rem",
+                                  color: "var(--rf-text-faint)",
+                                  textTransform: "capitalize",
+                                }}
+                              >
                                 {uniqueTypes}
                               </span>
                             )}
@@ -421,7 +453,10 @@ export function Dashboard() {
                       </div>
 
                       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                        <div className="rf-telemetry-tag" style={{ color: "var(--rf-text-faint)", fontSize: "0.75rem" }}>
+                        <div
+                          className="rf-telemetry-tag"
+                          style={{ color: "var(--rf-text-faint)", fontSize: "0.75rem" }}
+                        >
                           {formatDate(day?.date)}
                         </div>
                         <Link to="/workouts">

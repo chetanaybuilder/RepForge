@@ -1,10 +1,9 @@
 """Queries for the goals table — always scoped to user_id."""
 
-from database.db import fetch_all, fetch_one, execute, execute_returning
+from database.db import execute, execute_returning, fetch_all, fetch_one
 
 GOAL_COLUMNS = (
-    "id, user_id, goal_type, exercise_name, target_value, "
-    "period_start, period_end, is_active, created_at, updated_at"
+    "id, user_id, goal_type, exercise_name, target_value, period_start, period_end, is_active, created_at, updated_at"
 )
 
 

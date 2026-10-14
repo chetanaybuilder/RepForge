@@ -133,13 +133,17 @@
   padding: 14px 18px;
   font-size: 0.88rem;
   color: var(--rf-text-pure);
-  box-shadow: 0 12px 36px -4px rgba(0, 0, 0, 0.8), 0 0 20px -4px rgba(0, 242, 254, 0.15);
+  box-shadow:
+    0 12px 36px -4px rgba(0, 0, 0, 0.8),
+    0 0 20px -4px rgba(0, 242, 254, 0.15);
   display: flex;
   align-items: center;
   gap: 12px;
   animation: rf-slide-up 0.3s var(--rf-ease-spring);
   cursor: pointer;
-  transition: transform var(--rf-transition-fast), opacity var(--rf-transition-fast);
+  transition:
+    transform var(--rf-transition-fast),
+    opacity var(--rf-transition-fast);
 }
 
 .rf-toast:hover {
@@ -148,7 +152,9 @@
 
 .rf-toast--success {
   border-color: rgba(0, 245, 160, 0.4);
-  box-shadow: 0 12px 36px -4px rgba(0, 0, 0, 0.8), 0 0 20px -4px rgba(0, 245, 160, 0.25);
+  box-shadow:
+    0 12px 36px -4px rgba(0, 0, 0, 0.8),
+    0 0 20px -4px rgba(0, 245, 160, 0.25);
 }
 
 .rf-toast--success::before {
@@ -160,7 +166,9 @@
 
 .rf-toast--error {
   border-color: rgba(255, 51, 102, 0.4);
-  box-shadow: 0 12px 36px -4px rgba(0, 0, 0, 0.8), 0 0 20px -4px rgba(255, 51, 102, 0.25);
+  box-shadow:
+    0 12px 36px -4px rgba(0, 0, 0, 0.8),
+    0 0 20px -4px rgba(255, 51, 102, 0.25);
 }
 
 .rf-toast--error::before {

@@ -1,16 +1,20 @@
 """
-Authentication/authorization decorators.
+RepForge Authentication & Authorization Decorators.
 
-`g.user` and `g.user_id` are the ONLY source of truth for "who is making
-this request" anywhere in the app. Routes must never read a user id out of
-the request body, query string, or headers and use it for authorization —
-see backend/database/queries_workouts.py for why that matters (IDOR).
+Purpose:
+    Enforces authentication boundaries and cryptographic CSRF protection on API routes.
+    Guarantees that `g.user` and `g.user_id` serve as the singular source of truth
+    for tenant isolation, eliminating Insecure Direct Object Reference (IDOR) vulnerabilities.
 """
 
+from __future__ import annotations
+
+from collections.abc import Callable
 import functools
 import hmac
+from typing import Any
 
-from flask import request, g, current_app
+from flask import current_app, g, request
 
 from auth.session_store import get_session
 from database.queries_users import get_user_by_id
@@ -20,10 +24,17 @@ SESSION_COOKIE_NAME_DEFAULT = "repforge_session"
 
 
 def _get_session_cookie_name() -> str:
+    """Retrieves the configured session cookie name from current app config."""
     return current_app.config.get("SESSION_COOKIE_NAME", SESSION_COOKIE_NAME_DEFAULT)
 
 
-def get_current_session():
+def get_current_session() -> tuple[str | None, dict[str, Any] | None]:
+    """
+    Extracts and resolves the active session from request cookies.
+
+    Returns:
+        tuple[str | None, dict[str, Any] | None]: (session_id, session_row) or (None, None).
+    """
     cookie_name = _get_session_cookie_name()
     session_id = request.cookies.get(cookie_name)
     if not session_id:
@@ -32,16 +43,32 @@ def get_current_session():
     return session_id, session_row
 
 
-def login_required(view_func):
+def login_required(view_func: Callable) -> Callable:
+    """
+    Decorator requiring an active authenticated session for route execution.
+
+    Extracts session from cookie, verifies that the referenced user exists in PostgreSQL,
+    and populates `g.session_id`, `g.session`, `g.user`, and `g.user_id`.
+
+    Args:
+        view_func: Target Flask endpoint view function.
+
+    Returns:
+        Callable: Wrapped endpoint enforcing authentication.
+
+    Raises:
+        ApiError: 401 Unauthorized if session is missing, expired, or invalid.
+    """
+
     @functools.wraps(view_func)
-    def wrapped(*args, **kwargs):
+    def wrapped(*args: Any, **kwargs: Any) -> Any:
         session_id, session_row = get_current_session()
         if not session_row:
             raise ApiError("Authentication required.", 401, "unauthorized")
 
         user = get_user_by_id(session_row["user_id"])
         if not user:
-            # User row vanished (shouldn't normally happen) — treat as logged out.
+            # User record was pruned or invalidated; force re-authentication
             raise ApiError("Authentication required.", 401, "unauthorized")
 
         g.session_id = session_id
@@ -53,24 +80,36 @@ def login_required(view_func):
     return wrapped
 
 
-def csrf_protect(view_func):
+def csrf_protect(view_func: Callable) -> Callable:
     """
-    Cryptographic constant-time CSRF validation for mutating endpoints:
-    The client must echo the session's CSRF token in the X-CSRF-Token header.
-    Prevents cross-site request forgery and timing side-channel attacks.
-    Must be applied AFTER login_required so g.session is populated.
+    Decorator enforcing cryptographic double-submit constant-time CSRF protection.
+
+    Validates that mutating requests (POST, PUT, PATCH, DELETE) include an `X-CSRF-Token`
+    header that matches the session's server-stored `csrf_token` using constant-time
+    comparison (`hmac.compare_digest`) to prevent timing side-channel attacks.
+
+    Must be applied after `@login_required` so `g.session` is populated.
+
+    Args:
+        view_func: Target Flask endpoint view function.
+
+    Returns:
+        Callable: Wrapped endpoint enforcing CSRF validation.
+
+    Raises:
+        ApiError: 403 Forbidden if CSRF token is missing, invalid, or mismatched.
     """
 
     @functools.wraps(view_func)
-    def wrapped(*args, **kwargs):
+    def wrapped(*args: Any, **kwargs: Any) -> Any:
         if request.method in ("POST", "PUT", "PATCH", "DELETE"):
             header_token = request.headers.get("X-CSRF-Token", "")
-            session_token = getattr(g, "session", {}).get("csrf_token") if hasattr(g, "session") else None
+            session_token = getattr(g, "session", {}).get("csrf_token") if hasattr(g, "session") and g.session else None
 
             if not header_token or not session_token:
                 raise ApiError("Missing required CSRF token.", 403, "csrf_missing")
 
-            # Cryptographic constant-time comparison to prevent timing attacks
+            # Cryptographic constant-time comparison prevents timing side-channels
             if not hmac.compare_digest(str(header_token), str(session_token)):
                 raise ApiError("Invalid or expired CSRF token.", 403, "csrf_failed")
 

@@ -44,7 +44,12 @@ export function TiltCard({ children, className = "", style = {}, glowColor = "cy
     y.set(0);
   };
 
-  const glowRgb = glowColor === "ember" ? "255, 51, 102" : glowColor === "violet" ? "138, 92, 246" : "0, 242, 254";
+  const glowRgb =
+    glowColor === "ember"
+      ? "255, 51, 102"
+      : glowColor === "violet"
+        ? "138, 92, 246"
+        : "0, 242, 254";
 
   if (!canHover) {
     // Touch / Mobile Fallback: pure hardware accelerated tap response without perspective distortion
@@ -87,7 +92,9 @@ export function TiltCard({ children, className = "", style = {}, glowColor = "cy
           exit={{ opacity: 0 }}
         />
       )}
-      <div style={{ transform: "translateZ(18px)", position: "relative", zIndex: 1, height: "100%" }}>
+      <div
+        style={{ transform: "translateZ(18px)", position: "relative", zIndex: 1, height: "100%" }}
+      >
         {children}
       </div>
     </motion.div>

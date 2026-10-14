@@ -104,9 +104,15 @@
   justify-content: center;
 }
 
-.rf-gap-2 { gap: var(--rf-space-2); }
-.rf-gap-4 { gap: var(--rf-space-4); }
-.rf-gap-6 { gap: var(--rf-space-6); }
+.rf-gap-2 {
+  gap: var(--rf-space-2);
+}
+.rf-gap-4 {
+  gap: var(--rf-space-4);
+}
+.rf-gap-6 {
+  gap: var(--rf-space-6);
+}
 
 /* ==========================================================================
    LANDING PAGE: 2040 CINEMATIC HERO & SHOWCASE
@@ -268,7 +274,9 @@
 .rf-feature-card:hover {
   border-color: rgba(0, 242, 254, 0.35);
   transform: translateY(-4px);
-  box-shadow: 0 16px 40px -6px rgba(0, 0, 0, 0.8), 0 0 30px -6px rgba(0, 242, 254, 0.15);
+  box-shadow:
+    0 16px 40px -6px rgba(0, 0, 0, 0.8),
+    0 0 30px -6px rgba(0, 242, 254, 0.15);
 }
 
 .rf-feature-icon {
@@ -297,9 +305,9 @@
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background: radial-gradient(circle at 50% 40%, rgba(138, 92, 246, 0.12), transparent 70%),
-              radial-gradient(circle at 50% 80%, rgba(0, 242, 254, 0.08), transparent 60%),
-              var(--rf-void);
+  background:
+    radial-gradient(circle at 50% 40%, rgba(138, 92, 246, 0.12), transparent 70%),
+    radial-gradient(circle at 50% 80%, rgba(0, 242, 254, 0.08), transparent 60%), var(--rf-void);
   position: relative;
 }
 
@@ -312,7 +320,9 @@
   border: 1px solid var(--rf-border-laser);
   border-radius: var(--rf-radius-xl);
   padding: clamp(24px, 6vw, 40px);
-  box-shadow: var(--rf-shadow-modal), 0 0 50px -10px rgba(0, 242, 254, 0.2);
+  box-shadow:
+    var(--rf-shadow-modal),
+    0 0 50px -10px rgba(0, 242, 254, 0.2);
   text-align: center;
   position: relative;
   overflow: hidden;
@@ -361,7 +371,9 @@
   background: rgba(10, 10, 20, 0.95) !important;
   border: 1px solid var(--rf-border-laser) !important;
   border-radius: var(--rf-radius-md) !important;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.8), 0 0 16px rgba(0, 242, 254, 0.2) !important;
+  box-shadow:
+    0 12px 30px rgba(0, 0, 0, 0.8),
+    0 0 16px rgba(0, 242, 254, 0.2) !important;
   backdrop-filter: blur(16px) !important;
   padding: 10px 14px !important;
 }

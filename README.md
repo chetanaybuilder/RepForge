@@ -35,18 +35,21 @@ RepForge is an advanced biomechanical strength intelligence platform. Built for 
 ## ✦ The Four Core Subsystems
 
 ### `01` — Log Workout Console
+
 - **Multi-Exercise Execution**: Add unlimited exercise movements per session with reordering and deletions.
 - **Micro-Input Set Matrix**: Ultra-compact inline table for sets, weight (kg), target reps, and completion flags.
 - **In-Line AI Diagnostics**: Instant neural review of individual workout days with good points, critical warnings, and biomechanical adjustments.
 
 ### `02` — Telemetry Dashboard
+
 - **Cumulative Volume Telemetry**: Real-time counter tracking total mechanical load lifted across all sessions.
 - **Momentum & Streak Tracking**: Current training streak and historical peak adherence tracking.
 - **Progression Trajectory Curve**: Recharts-powered interactive weekly volume curves (kg) over time.
 - **Milestone Feed**: High-contrast PR cards displaying peak weights, set-rep schemes, and dates.
 
 ### `03` — Tactical AI Trainer
-- **Live Telemetry HUD**: 
+
+- **Live Telemetry HUD**:
   - **Volume Trend**: Automatic detection of volume surges or dips against baseline capacity.
   - **Progressive Overload Target**: Micro-loading directives (+2.5kg compound targets or plateau deload protocols).
   - **Recovery & CNS Status**: Central nervous system fatigue warnings for 4+ day streaks and split symmetry indicators.
@@ -54,6 +57,7 @@ RepForge is an advanced biomechanical strength intelligence platform. Built for 
 - **Fault-Tolerant Synthesizer**: Client-side algorithmic synthesizer ensuring instant, tailored briefings even under network or rate-limit events.
 
 ### `04` — Goals & 3D Crystals
+
 - **Custom Milestone Targets**: Set targets for Weekly Frequency, Exercise Peak PRs, or Total Volume.
 - **WebGL Quantum Crystals**: Real-time 3D crystalline milestone objects that react visually as goals are approached and completed.
 - **Clean Empty States & Fallbacks**: Fully guarded against uninitialized arrays with safe fallback schemas.
@@ -63,22 +67,26 @@ RepForge is an advanced biomechanical strength intelligence platform. Built for 
 ## ✦ Enterprise Security & High-Concurrency Hardening
 
 ### 1. High-Concurrency Database Architecture (50–100 Concurrent Users)
+
 - **Threaded Connection Pool**: Configured with `minconn=4` and `maxconn=50` (configurable via `DB_MAX_CONNECTIONS`).
 - **Active Socket Liveness Verification**: Tests connections with `SELECT 1` ping before dispatching queries, automatically purging dead or dropped cloud sockets (Supabase / Neon idle disconnects).
 - **Exponential Backoff Queue**: Requests during peak traffic spikes gracefully back off and queue across 4 retry attempts rather than throwing `PoolError`.
 - **Clean Dirty-Socket Disposal**: Any connection marked broken or closed is evicted via `_pool.putconn(conn, close=True)` to prevent pool poisoning.
 
 ### 2. Zero-Trust Identity Isolation (No IDOR)
+
 - All workout, goal, and telemetry queries resolve the owner strictly from server-authenticated session state (`g.user_id`).
 - Client-supplied IDs in request bodies or query parameters are ignored.
 - 100% of database queries execute through parameterized placeholders (`%s`) to render SQL injection impossible.
 
 ### 3. Cryptographic Constant-Time Anti-CSRF
+
 - Mutating routes (`POST`, `PUT`, `DELETE`) require an `X-CSRF-Token` header.
 - Verification uses `hmac.compare_digest` to prevent timing side-channel attacks.
 - Tokens reside strictly in client memory, never in `localStorage` or `sessionStorage`.
 
 ### 4. Defense-In-Depth HTTP Security Headers
+
 - **Content Security Policy (CSP)**: Strict boundaries preventing external script injection, clickjacking, and unauthorized resource fetching.
 - **Strict-Transport-Security (HSTS)**: 2-year `max-age=63072000; includeSubDomains; preload`.
 - **Anti-Clickjacking**: `X-Frame-Options: DENY` and `frame-ancestors 'none'`.
@@ -86,6 +94,7 @@ RepForge is an advanced biomechanical strength intelligence platform. Built for 
 - **Hardware Isolation**: `Permissions-Policy` completely disabling microphone, camera, geolocation, and USB APIs.
 
 ### 5. Resilient WebGL Presentation Boundaries
+
 - All 3D canvases (Neural Core, particles, coach avatars, crystals) feature runtime `isWebGLAvailable()` detection.
 - Wrapped inside `ThreeErrorBoundary` and `AIErrorBoundary` to safely isolate graphics failures without crashing the view.
 
@@ -95,33 +104,35 @@ RepForge is an advanced biomechanical strength intelligence platform. Built for 
 
 Create a `.env` file in the root directory:
 
-| Variable | Required | Description | Default / Example |
-|---|---|---|---|
-| `FLASK_ENV` | Yes | Application environment | `production` or `development` |
-| `SESSION_SECRET` | Yes | 32-byte secret for session signing | `python -c "import secrets; print(secrets.token_hex(32))"` |
-| `SESSION_LIFETIME_SECONDS` | No | Session expiration timeout | `604800` (7 days) |
-| `DATABASE_URL` | Yes | PostgreSQL connection URI | `postgresql://user:pass@host:5432/dbname` |
-| `DB_MIN_CONNECTIONS` | No | Connection pool baseline | `4` |
-| `DB_MAX_CONNECTIONS` | No | Max pool capacity for burst traffic | `50` |
-| `GOOGLE_CLIENT_ID` | Yes | Google Cloud OAuth Client ID | `...apps.googleusercontent.com` |
-| `GOOGLE_CLIENT_SECRET` | Yes | Google Cloud OAuth Client Secret | `GOCSPX-...` |
-| `GOOGLE_REDIRECT_URI` | Yes | OAuth callback endpoint | `https://<your-app>.com/auth/google/callback` |
-| `GEMINI_API_KEY` | Yes | Google AI Studio API Key | `AIzaSy...` |
-| `GEMINI_MODEL` | No | Gemini Model Identifier | `gemini-2.5-flash` |
-| `RATELIMIT_DEFAULT` | No | Default rate limit per IP | `200 per hour` |
-| `RATELIMIT_AI` | No | Rate limit on AI chat requests | `15 per hour` |
-| `RATELIMIT_AUTH` | No | Rate limit on login attempts | `20 per hour` |
+| Variable                   | Required | Description                         | Default / Example                                          |
+| -------------------------- | -------- | ----------------------------------- | ---------------------------------------------------------- |
+| `FLASK_ENV`                | Yes      | Application environment             | `production` or `development`                              |
+| `SESSION_SECRET`           | Yes      | 32-byte secret for session signing  | `python -c "import secrets; print(secrets.token_hex(32))"` |
+| `SESSION_LIFETIME_SECONDS` | No       | Session expiration timeout          | `604800` (7 days)                                          |
+| `DATABASE_URL`             | Yes      | PostgreSQL connection URI           | `postgresql://user:pass@host:5432/dbname`                  |
+| `DB_MIN_CONNECTIONS`       | No       | Connection pool baseline            | `4`                                                        |
+| `DB_MAX_CONNECTIONS`       | No       | Max pool capacity for burst traffic | `50`                                                       |
+| `GOOGLE_CLIENT_ID`         | Yes      | Google Cloud OAuth Client ID        | `...apps.googleusercontent.com`                            |
+| `GOOGLE_CLIENT_SECRET`     | Yes      | Google Cloud OAuth Client Secret    | `GOCSPX-...`                                               |
+| `GOOGLE_REDIRECT_URI`      | Yes      | OAuth callback endpoint             | `https://<your-app>.com/auth/google/callback`              |
+| `GEMINI_API_KEY`           | Yes      | Google AI Studio API Key            | `AIzaSy...`                                                |
+| `GEMINI_MODEL`             | No       | Gemini Model Identifier             | `gemini-2.5-flash`                                         |
+| `RATELIMIT_DEFAULT`        | No       | Default rate limit per IP           | `200 per hour`                                             |
+| `RATELIMIT_AI`             | No       | Rate limit on AI chat requests      | `15 per hour`                                              |
+| `RATELIMIT_AUTH`           | No       | Rate limit on login attempts        | `20 per hour`                                              |
 
 ---
 
 ## ✦ Local Development Quickstart
 
 ### Prerequisites
+
 - Node.js 18+ and npm
 - Python 3.11+
 - PostgreSQL database instance
 
 ### 1. Clone & Setup Python Virtual Environment
+
 ```bash
 git clone https://github.com/chetanaybuilder/RepForge.git
 cd RepForge
@@ -140,21 +151,25 @@ pip install -r requirements.txt
 ```
 
 ### 2. Configure Environment
+
 ```bash
 cp .env.example .env
 # Edit .env with your DATABASE_URL, GOOGLE_CLIENT_ID, and GEMINI_API_KEY
 ```
 
 ### 3. Build Frontend Assets
+
 ```bash
 npm install
 npm run build
 ```
 
 ### 4. Start Unified Development Server
+
 ```bash
 python app.py
 ```
+
 Open `http://localhost:5000` in your browser.
 
 ---
@@ -212,4 +227,5 @@ RepForge/
 ---
 
 ## ✦ License
+
 MIT License. Crafted for lifters who demand precision.

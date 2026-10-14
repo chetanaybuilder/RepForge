@@ -36,7 +36,10 @@ export function Login() {
         transition={{ type: "spring", stiffness: 300, damping: 24 }}
         className="rf-auth-card"
       >
-        <Link to="/" style={{ display: "inline-flex", alignItems: "center", gap: 10, marginBottom: 24 }}>
+        <Link
+          to="/"
+          style={{ display: "inline-flex", alignItems: "center", gap: 10, marginBottom: 24 }}
+        >
           <div className="rf-brand-glyph" style={{ width: 38, height: 38, fontSize: "1rem" }}>
             RF
           </div>
@@ -53,14 +56,11 @@ export function Login() {
           Access Your Telemetry
         </h1>
         <p style={{ color: "var(--rf-text-sub)", fontSize: "0.88rem", marginBottom: 24 }}>
-          Connect securely via Google to synchronize your workout logs, PR milestones, and AI models.
+          Connect securely via Google to synchronize your workout logs, PR milestones, and AI
+          models.
         </p>
 
-        <button
-          type="button"
-          className="rf-google-btn"
-          onClick={loginWithGoogle}
-        >
+        <button type="button" className="rf-google-btn" onClick={loginWithGoogle}>
           <GoogleIcon />
           <span>Authenticate with Google</span>
         </button>
@@ -75,7 +75,8 @@ export function Login() {
             lineHeight: 1.5,
           }}
         >
-          RepForge utilizes verified OAuth identity protocols. Your credentials and training logs are encrypted in isolation.
+          RepForge utilizes verified OAuth identity protocols. Your credentials and training logs
+          are encrypted in isolation.
         </div>
       </motion.div>
     </div>

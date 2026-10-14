@@ -26,9 +26,7 @@ export function ConfirmDialog({
           aria-modal="true"
         >
           <div className="rf-confirm-dialog">
-            <div className="rf-confirm-icon">
-              {danger ? "⚠" : "◈"}
-            </div>
+            <div className="rf-confirm-icon">{danger ? "⚠" : "◈"}</div>
             <h3 className="rf-modal-title" style={{ fontSize: "1.25rem" }}>
               {title}
             </h3>

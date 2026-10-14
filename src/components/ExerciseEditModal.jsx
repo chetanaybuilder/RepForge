@@ -119,7 +119,10 @@ export function ExerciseEditModal({ open, initialValue, onSave, onClose }) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
+        <form
+          onSubmit={handleSubmit}
+          style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}
+        >
           <div className="rf-modal-body">
             {errors.general && (
               <div className="rf-field-error" style={{ marginBottom: 14 }}>
@@ -129,7 +132,9 @@ export function ExerciseEditModal({ open, initialValue, onSave, onClose }) {
 
             <div className="rf-form-grid rf-form-grid--2" style={{ gap: 10, marginBottom: 8 }}>
               <div className="rf-field">
-                <label className="rf-label" style={{ fontSize: "0.72rem" }}>Target Split</label>
+                <label className="rf-label" style={{ fontSize: "0.72rem" }}>
+                  Target Split
+                </label>
                 <select
                   className="rf-select rf-select--compact"
                   value={form.workout_type}
@@ -144,7 +149,9 @@ export function ExerciseEditModal({ open, initialValue, onSave, onClose }) {
               </div>
 
               <div className="rf-field">
-                <label className="rf-label" style={{ fontSize: "0.72rem" }}>Exercise Name</label>
+                <label className="rf-label" style={{ fontSize: "0.72rem" }}>
+                  Exercise Name
+                </label>
                 <input
                   type="text"
                   className="rf-input rf-input--compact"
@@ -181,7 +188,8 @@ export function ExerciseEditModal({ open, initialValue, onSave, onClose }) {
 
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {form.sets.map((set, sIdx) => {
-                  const prevRef = sIdx > 0 ? `${form.sets[sIdx - 1].weight} × ${form.sets[sIdx - 1].reps}` : "—";
+                  const prevRef =
+                    sIdx > 0 ? `${form.sets[sIdx - 1].weight} × ${form.sets[sIdx - 1].reps}` : "—";
                   return (
                     <div
                       key={sIdx}
@@ -207,7 +215,11 @@ export function ExerciseEditModal({ open, initialValue, onSave, onClose }) {
                           value={set.weight === 0 ? "" : set.weight}
                           placeholder="0"
                           onChange={(e) =>
-                            updateSet(sIdx, "weight", e.target.value === "" ? 0 : Number(e.target.value))
+                            updateSet(
+                              sIdx,
+                              "weight",
+                              e.target.value === "" ? 0 : Number(e.target.value)
+                            )
                           }
                           aria-label={`Set ${sIdx + 1} weight (kg)`}
                         />
@@ -223,7 +235,11 @@ export function ExerciseEditModal({ open, initialValue, onSave, onClose }) {
                           value={set.reps === 0 ? "" : set.reps}
                           placeholder="0"
                           onChange={(e) =>
-                            updateSet(sIdx, "reps", e.target.value === "" ? 0 : Number(e.target.value))
+                            updateSet(
+                              sIdx,
+                              "reps",
+                              e.target.value === "" ? 0 : Number(e.target.value)
+                            )
                           }
                           aria-label={`Set ${sIdx + 1} reps`}
                         />
