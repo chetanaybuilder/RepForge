@@ -1,0 +1,3 @@
+/api/* https://repforge.chetanaybatra03-8b2.workers.dev/api/:splat 200
+/auth/* https://repforge.chetanaybatra03-8b2.workers.dev/auth/:splat 200
+/* /index.html 200

@@ -1,9 +1,9 @@
 # RepForge — Production Cloudflare Architecture & Deployment Guide
 
-> **Status:** Production Deployed on Cloudflare Workers & Cloudflare D1  
-> **Frontend & API Live URL:** [`https://repforge.chetanaybatra03-8b2.workers.dev`](https://repforge.chetanaybatra03-8b2.workers.dev)  
-> **Standalone API Worker:** [`https://repforge-api.chetanaybatra03-8b2.workers.dev`](https://repforge-api.chetanaybatra03-8b2.workers.dev)  
+> **Status:** Production Deployed on Cloudflare Pages & Cloudflare D1  
+> **Production Live URL (Clean Domain):** [`https://repforge-app.pages.dev`](https://repforge-app.pages.dev)  
 > **Edge Database:** Cloudflare D1 `repforge-db` (`a70eb32e-c5e0-46c6-bf38-b8223047dd25`)  
+> **Worker Fallback:** [`https://repforge.chetanaybatra03-8b2.workers.dev`](https://repforge.chetanaybatra03-8b2.workers.dev)  
 
 ---
 
@@ -124,8 +124,8 @@ npm install
 # 2. Build the production React + Three.js 3D bundle
 npm run build
 
-# 3. Deploy full-stack to Cloudflare Workers
-npx wrangler deploy
+# 3. Deploy full-stack to Cloudflare Pages (Clean pages.dev domain)
+npm run deploy
 ```
 
 ### Setting Environment Secrets
@@ -141,9 +141,53 @@ npx wrangler secret put GOOGLE_CLIENT_SECRET
 
 ### Local Development
 ```bash
-# Run local Vite development server with proxy
+# Run local Vite development server with proxy (Frontend on port 5173)
 npm run dev
 
 # Run local Cloudflare Worker simulation with D1 local storage
 npx wrangler dev
 ```
+
+---
+
+## 6. Google Cloud Console Configuration Guide
+
+To enable Google OAuth authentication in RepForge, configure your credentials in the [Google Cloud Console](https://console.cloud.google.com/):
+
+### Step 1: Create OAuth 2.0 Client ID
+1. Navigate to **APIs & Services** > **Credentials**.
+2. Click **Create Credentials** > **OAuth client ID**.
+3. Choose **Application type**: `Web application`.
+4. Set **Name**: `RepForge Web Client`.
+
+### Step 2: Authorized JavaScript Origins
+Add the following origins (no trailing slashes):
+- `https://repforge-app.pages.dev` *(Production Clean Domain)*
+- `https://repforge.chetanaybatra03-8b2.workers.dev` *(Cloudflare Workers Domain)*
+- `http://localhost:5173` *(Local Vite Frontend)*
+- `http://localhost:8787` *(Local Wrangler Dev)*
+- `http://localhost:5000` *(Local Flask Backend)*
+
+### Step 3: Authorized Redirect URIs
+Add the exact callback URLs:
+- `https://repforge-app.pages.dev/auth/google/callback` *(Production Clean Domain)*
+- `https://repforge.chetanaybatra03-8b2.workers.dev/auth/google/callback` *(Cloudflare Workers Domain)*
+- `http://localhost:5173/auth/google/callback` *(Local Vite Frontend)*
+- `http://localhost:8787/auth/google/callback` *(Local Wrangler Dev)*
+- `http://localhost:5000/auth/google/callback` *(Local Flask Backend)*
+
+### Step 4: OAuth Consent Screen Setup
+1. Go to **APIs & Services** > **OAuth consent screen**.
+2. **User type**: `External`.
+3. **App name**: `RepForge`.
+4. **User support email**: Your email (e.g. `chetanaybatra03@gmail.com`).
+5. **Scopes**: Add `openid`, `.../auth/userinfo.email`, and `.../auth/userinfo.profile`.
+6. **Test users**: While in testing mode, add your email address under **Test users**.
+
+### Step 5: Save & Apply Secrets
+Copy the **Client ID** and **Client Secret** and run:
+```bash
+npx wrangler secret put GOOGLE_CLIENT_ID
+npx wrangler secret put GOOGLE_CLIENT_SECRET
+```
+And add them to `backend/.env` for local Flask development.

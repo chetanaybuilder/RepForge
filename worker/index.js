@@ -1077,12 +1077,12 @@ app.all("/auth/*", (c) =>
 // Delegate all client-side SPA routes and static assets to Cloudflare Assets
 app.all("*", async (c) => {
   if (c.env?.ASSETS) {
-    const url = new URL(c.req.url);
-    if (url.pathname.includes(".")) {
-      return c.env.ASSETS.fetch(c.req.raw);
+    let res = await c.env.ASSETS.fetch(c.req.raw);
+    if (res.status === 404 && !new URL(c.req.url).pathname.includes(".")) {
+      const rootUrl = new URL("/", c.req.url);
+      res = await c.env.ASSETS.fetch(new Request(rootUrl, c.req.raw));
     }
-    const indexUrl = new URL("/index.html", c.req.url);
-    return c.env.ASSETS.fetch(new Request(indexUrl, c.req.raw));
+    return res;
   }
   return c.text("Not Found", 404);
 });

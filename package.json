@@ -3,44 +3,20 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "workspaces": [
+    "frontend"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
-    "lint": "eslint src",
-    "lint:fix": "eslint src --fix",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "test": "vitest run",
-    "media:capture": "node tests/e2e/capture_media.js",
-    "start": "gunicorn app:create_app()"
-  },
-  "dependencies": {
-    "@fontsource/inter": "^5.3.0",
-    "@fontsource/space-grotesk": "^5.3.0",
-    "@react-three/drei": "^9.105.6",
-    "@react-three/fiber": "^8.16.1",
-    "@tanstack/react-query": "^5.103.1",
-    "framer-motion": "^13.4.0",
-    "hono": "^4.13.13",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-error-boundary": "^6.1.5",
-    "react-router-dom": "^6.26.2",
-    "recharts": "^2.12.7",
-    "three": "^0.164.0"
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build && powershell -Command \"Copy-Item 'worker\\index.js' -Destination 'dist\\_worker.js' -Force\"",
+    "preview": "npm --prefix frontend run preview",
+    "deploy": "npm run build && npx wrangler pages deploy dist --commit-dirty=true",
+    "lint": "npm --prefix frontend run lint",
+    "format": "npm --prefix frontend run format",
+    "test": "npm --prefix frontend run test",
+    "test:backend": "pytest backend/tests"
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "^7.0.1",
-    "@testing-library/react": "^16.3.3",
-    "@vitejs/plugin-react": "^4.3.1",
-    "eslint": "^8.57.0",
-    "eslint-plugin-react": "^7.35.0",
-    "eslint-plugin-react-hooks": "^4.6.2",
-    "jsdom": "^30.1.2",
-    "playwright": "^1.64.1",
-    "prettier": "^3.9.10",
-    "vite": "^5.4.8",
-    "vitest": "^2.1.9"
+    "wrangler": "^3.114.0 || ^4.0.0"
   }
 }

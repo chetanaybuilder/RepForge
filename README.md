@@ -26,7 +26,7 @@
   Powered by Cloudflare Workers, Cloudflare D1 serverless SQL, and Groq LLaMA 3.3 streaming intelligence, it delivers deterministic progressive overload tracking with sub-10ms global latency.
 </p>
 
-[**⚡ Experience Live Production App**](https://repforge.chetanaybatra03-8b2.workers.dev) · [**Explore Architecture**](#-system-architecture) · [**View Media Showcase**](#-interactive-showcase) · [**Read Deployment Docs**](DEPLOYMENT.md)
+[**⚡ Experience Live Production App**](https://repforge-app.pages.dev) · [**Explore Architecture**](#-system-architecture) · [**View Media Showcase**](#-interactive-showcase) · [**Read Deployment Docs**](DEPLOYMENT.md)
 
 </div>
 
