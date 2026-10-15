@@ -174,26 +174,24 @@ Open `http://localhost:5000` in your browser.
 
 ---
 
-## ✦ Production Deployment (Render)
+## ✦ Production Deployment (Cloudflare)
 
-RepForge is configured to deploy as a unified single-service web application on **Render**:
+RepForge is deployed as a high-performance, full-stack application on **Cloudflare Workers & Cloudflare D1**:
 
-1. Fork or push this repository to GitHub.
-2. Log in to [Render](https://render.com) and click **New > Web Service**.
-3. Select your repository.
-4. Set the following build configuration:
-   - **Runtime**: `Python 3`
-   - **Build Command**: `npm install && npm run build && pip install -r requirements.txt`
-   - **Start Command**: `gunicorn -w 4 -k sync -b 0.0.0.0:$PORT "app:create_app()"`
-5. In **Environment Variables**, supply:
-   - `FLASK_ENV`: `production`
-   - `DATABASE_URL`: Your PostgreSQL connection string
-   - `SESSION_SECRET`: A generated 32-byte hex string
-   - `GOOGLE_CLIENT_ID`: Your Google OAuth client ID
-   - `GOOGLE_CLIENT_SECRET`: Your Google OAuth secret
-   - `GOOGLE_REDIRECT_URI`: `https://<your-service-name>.onrender.com/auth/google/callback`
-   - `GEMINI_API_KEY`: Your Gemini API Key
-6. Click **Deploy Web Service**.
+- **Live Production URL:** [`https://repforge.chetanaybatra03-8b2.workers.dev`](https://repforge.chetanaybatra03-8b2.workers.dev)
+- **Standalone API Worker:** [`https://repforge-api.chetanaybatra03-8b2.workers.dev`](https://repforge-api.chetanaybatra03-8b2.workers.dev)
+- **Edge SQL Database:** Cloudflare D1 `repforge-db` (`a70eb32e-c5e0-46c6-bf38-b8223047dd25`)
+
+### Deploying to Cloudflare
+```bash
+# 1. Build the production React + Three.js 3D bundle
+npm run build
+
+# 2. Deploy full-stack to Cloudflare Workers
+npx wrangler deploy
+```
+
+See [`DEPLOYMENT.md`](file:///c:/Users/batra/Downloads/RepForgev2/RepForge/DEPLOYMENT.md) for full architectural documentation, D1 schema, and secrets management.
 
 ---
 
@@ -201,25 +199,32 @@ RepForge is configured to deploy as a unified single-service web application on 
 
 ```
 RepForge/
-├── ai/                     # Gemini AI service integration & system prompts
 ├── auth/                   # Google OAuth 2.0, session store, CSRF decorators
-├── database/               # PostgreSQL connection pool, schema, CRUD queries
+├── database/               # D1 schema, PostgreSQL queries, exercise library seed
+│   ├── d1_schema.sql       # Cloudflare D1 SQLite production schema
+│   ├── data/               # 876 exercise movements from free-exercise-db
 │   ├── db.py               # Threaded connection pool with auto-recovery
 │   ├── queries_workouts.py # Workout day & exercise CRUD operations
-│   └── queries_goals.py    # Goals & achievements queries
-├── routes/                 # Flask blueprints (auth, workouts, goals, ai, misc)
-├── services/               # Pure calculation services (stats, volume trends, PRs)
+│   └── queries_exercises.py# Exercise library search & favorites queries
+├── routes/                 # Blueprints (auth, workouts, exercises, goals, coach, misc)
+├── services/               # Calculation services & Groq LLaMA 3.3 Coach
+│   ├── groq_service.py     # Groq API client with SSE streaming & prompt guards
+│   └── stats_service.py    # Streaks, volume trends, PRs, and 1RM progression
 ├── src/                    # Frontend React 18 application
-│   ├── components/         # Reusable UI components, modals, buttons, error boundaries
-│   │   └── 3d/             # Three.js WebGL scenes (ambient stars, crystals, avatar)
+│   ├── components/         # UI components, modals, buttons, error boundaries
+│   │   └── 3d/             # Three.js WebGL scenes (Ultra-3D Hero, Avatar, Crystals)
 │   ├── context/            # AuthContext & ToastContext providers
 │   ├── hooks/              # useFetch, useWorkouts data hooks
-│   ├── pages/              # Landing, Login, Dashboard, Workouts, AI Trainer, Goals
+│   ├── pages/              # Landing, Login, Dashboard, Workouts, Coach, Exercises, Goals
 │   ├── services/           # Frontend API client with CSRF interceptor
 │   └── styles/             # Modular Vanilla CSS design system (tokens, surfaces, base)
-├── app.py                  # Backend application factory & production entrypoint
+├── worker/                 # Cloudflare Edge Hono API worker
+│   └── index.js            # Serverless edge API (D1, Groq streaming, static assets)
+├── DEPLOYMENT.md           # Production deployment & architecture guide
+├── wrangler.toml           # Cloudflare Workers & D1 configuration
+├── app.py                  # Python backend application factory
 ├── config.py               # Central environment configuration & validations
-├── package.json            # Frontend Vite & React dependencies
+├── package.json            # Frontend & Worker dependencies
 ├── requirements.txt        # Python backend dependencies
 └── vite.config.js          # Vite production build bundler configuration
 ```

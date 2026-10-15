@@ -65,3 +65,6 @@ jobs:
 
       - name: Build Production Frontend
         run: npm run build
+
+      - name: Verify Cloudflare Worker & Static Assets Build
+        run: npx wrangler deploy --dry-run

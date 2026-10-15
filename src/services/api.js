@@ -5,8 +5,8 @@
  * credential management, URL normalization, and structured error responses.
  */
 
-// Force relative paths in production so a bad VITE_API_URL doesn't break the app
-const API_URL = import.meta.env.PROD ? "" : import.meta.env.VITE_API_URL || "";
+// Use configured VITE_API_URL or fall back to empty string (relative paths / same-origin proxy)
+const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 
 /**
  * Memory-only CSRF Token Storage.
