@@ -61,35 +61,6 @@ const WORKFLOW_STEPS = [
 export function Landing() {
   const { status } = useAuth();
   const navigate = useNavigate();
-  const [isLiteMode, setIsLiteMode] = useState(false);
-
-  useEffect(() => {
-    try {
-      const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-      const checkMode = () => {
-        setIsLiteMode(Boolean(mediaQuery?.matches));
-      };
-      checkMode();
-
-      if (mediaQuery.addEventListener) {
-        mediaQuery.addEventListener("change", checkMode);
-      } else if (mediaQuery.addListener) {
-        mediaQuery.addListener(checkMode);
-      }
-      window.addEventListener("resize", checkMode);
-
-      return () => {
-        if (mediaQuery.removeEventListener) {
-          mediaQuery.removeEventListener("change", checkMode);
-        } else if (mediaQuery.removeListener) {
-          mediaQuery.removeListener(checkMode);
-        }
-        window.removeEventListener("resize", checkMode);
-      };
-    } catch {
-      setIsLiteMode(true);
-    }
-  }, []);
 
   const handleContinue = () => {
     if (status === "authenticated") navigate("/dashboard");
@@ -115,11 +86,9 @@ export function Landing() {
       <header className="rf-hero">
         <div className="rf-hero-bg" style={{ zIndex: 1 }} />
 
-        {!isLiteMode && (
-          <Suspense fallback={<div className="rf-hero-bg" />}>
-            <LandingScene />
-          </Suspense>
-        )}
+        <Suspense fallback={<div className="rf-hero-bg" />}>
+          <LandingScene />
+        </Suspense>
 
         <motion.div
           className="rf-hero-content"

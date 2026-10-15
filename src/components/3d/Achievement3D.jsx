@@ -1,57 +1,8 @@
-import { useRef, useMemo, useState, useEffect } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
-import { Center, Float } from "@react-three/drei";
-import * as THREE from "three";
-import { isWebGLAvailable } from "../../utils/webgl";
-import { ThreeErrorBoundary } from "./ThreeErrorBoundary";
-
-/**
- * Track active WebGL canvases across the document to prevent context exhaustion.
- * Most mobile and desktop browsers fail once 8-16 contexts are instantiated.
- */
-let activeCanvasCount = 0;
-const MAX_CONCURRENT_CANVASES = 4;
-
-/**
- * Procedural physical octahedron gem with rotating metallic sheen.
- * @param {{ color?: string, active?: boolean }} props
- */
-function QuantumGem({ color = "#8a5cf6", active }) {
-  const meshRef = useRef();
-
-  const material = useMemo(
-    () =>
-      new THREE.MeshPhysicalMaterial({
-        color: active ? color : "#242436",
-        emissive: active ? color : "#0a0a14",
-        emissiveIntensity: active ? 0.7 : 0,
-        metalness: active ? 0.85 : 0.2,
-        roughness: active ? 0.15 : 0.8,
-        clearcoat: 1,
-        clearcoatRoughness: 0.1,
-      }),
-    [color, active]
-  );
-
-  useFrame((_, delta) => {
-    if (meshRef.current) {
-      meshRef.current.rotation.y += delta * (active ? 0.7 : 0.15);
-      meshRef.current.rotation.x += delta * (active ? 0.35 : 0.1);
-    }
-  });
-
-  return (
-    <Float speed={active ? 2.5 : 0.5} rotationIntensity={0.5} floatIntensity={1}>
-      <mesh ref={meshRef} material={material}>
-        <octahedronGeometry args={[1.4, 0]} />
-      </mesh>
-    </Float>
-  );
-}
+import { LazyThree } from "./LazyThree";
 
 /**
  * Lightweight hardware-accelerated CSS badge fallback for inactive badges
- * or when WebGL context quota is exceeded.
+ * or when WebGL context quota is exceeded / disabled.
  * @param {{ color?: string, active?: boolean, size?: number }} props
  */
 function FallbackGem({ color = "#8a5cf6", active, size = 56 }) {
@@ -72,6 +23,7 @@ function FallbackGem({ color = "#8a5cf6", active, size = 56 }) {
         fontSize: Math.round(size * 0.44),
         color: active ? color : "var(--rf-text-faint)",
       }}
+      aria-hidden="true"
     >
       {active ? "✦" : "◇"}
     </div>
@@ -79,41 +31,23 @@ function FallbackGem({ color = "#8a5cf6", active, size = 56 }) {
 }
 
 /**
- * 3D Achievement Gem Component with dynamic context budgeting.
+ * 3D Achievement Gem Component with dynamic context budgeting and lazy loading.
  *
  * @param {{ color?: string, active?: boolean, size?: number }} props
  */
 export function Achievement3D({ color = "#8a5cf6", active = true, size = 56 }) {
-  const [canRender3D, setCanRender3D] = useState(false);
+  const fallback = <FallbackGem color={color} active={active} size={size} />;
 
-  useEffect(() => {
-    if (!isWebGLAvailable() || !active) {
-      return;
-    }
-    if (activeCanvasCount < MAX_CONCURRENT_CANVASES) {
-      activeCanvasCount += 1;
-      setCanRender3D(true);
-      return () => {
-        activeCanvasCount = Math.max(0, activeCanvasCount - 1);
-      };
-    }
-  }, [active]);
-
-  if (!canRender3D) {
-    return <FallbackGem color={color} active={active} size={size} />;
+  if (!active) {
+    return fallback;
   }
 
   return (
-    <ThreeErrorBoundary fallback={<FallbackGem color={color} active={active} size={size} />}>
-      <div style={{ width: size, height: size, cursor: "pointer", flexShrink: 0 }}>
-        <Canvas camera={{ position: [0, 0, 4.5], fov: 45 }} dpr={[1, 1.5]}>
-          <ambientLight intensity={0.6} />
-          <pointLight position={[4, 4, 4]} intensity={25} color="#ffffff" distance={12} />
-          <Center>
-            <QuantumGem color={color} active={active} />
-          </Center>
-        </Canvas>
-      </div>
-    </ThreeErrorBoundary>
+    <LazyThree
+      loadComponent={() => import("./QuantumGemCanvas")}
+      fallback={fallback}
+      props={{ color, active, size, fallback }}
+    />
   );
 }
+

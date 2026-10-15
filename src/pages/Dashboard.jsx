@@ -7,6 +7,7 @@ import { SkeletonGrid } from "../components/Skeleton";
 import { AnimatedNumber } from "../components/AnimatedNumber";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { TiltCard } from "../components/TiltCard";
+import { DashboardHero } from "../components/3d/DashboardHero";
 import { motion } from "framer-motion";
 import {
   ResponsiveContainer,
@@ -97,7 +98,9 @@ export function Dashboard() {
           <motion.div
             variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
             className="rf-hero-pod"
+            style={{ position: "relative", overflow: "hidden" }}
           >
+            <DashboardHero />
             <div
               style={{
                 display: "grid",
@@ -308,8 +311,12 @@ export function Dashboard() {
                   gap: 16,
                 }}
               >
-                {recentPrs.map((pr) => (
-                  <div key={pr?.exercise_name || Math.random()} className="rf-pr-card">
+                {recentPrs.map((pr, idx) => (
+                  <TiltCard
+                    key={pr?.exercise_name ? `${pr.exercise_name}-${pr.date}-${idx}` : `pr-${idx}`}
+                    className="rf-pr-card"
+                    glowColor="ember"
+                  >
                     <div className="rf-badge rf-badge--ember">PR · {formatDate(pr?.date)}</div>
                     <div
                       style={{
@@ -335,7 +342,7 @@ export function Dashboard() {
                     <div className="rf-stat-sub">
                       {pr?.sets ?? 1} sets × {pr?.reps ?? 0} reps
                     </div>
-                  </div>
+                  </TiltCard>
                 ))}
               </div>
             )}

@@ -1,53 +1,34 @@
-import { Canvas } from "@react-three/fiber";
-import { Sparkles, Stars } from "@react-three/drei";
-import { useState, useEffect } from "react";
-import { isWebGLAvailable } from "../../utils/webgl";
-import { ThreeErrorBoundary } from "./ThreeErrorBoundary";
+/**
+ * RepForge - Ambient Background Orchestrator
+ *
+ * Responsibilities:
+ * - Employs LazyThree to dynamically load the ambient 3D starfield only on capable devices.
+ * - Falls back to a lightweight CSS gradient nebula on low-tier or reduced-motion environments.
+ */
 
-function AmbientScene() {
+import { LazyThree } from "./LazyThree";
+
+function FallbackNebula() {
   return (
-    <>
-      <Stars radius={40} depth={40} count={1200} factor={2} saturation={0} fade speed={0.8} />
-      <Sparkles count={30} scale={10} size={2} speed={0.3} opacity={0.12} color="#8a5cf6" />
-      <Sparkles count={30} scale={10} size={2} speed={0.3} opacity={0.12} color="#00f2fe" />
-    </>
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 0,
+        pointerEvents: "none",
+        background:
+          "radial-gradient(circle at 50% 20%, rgba(138, 92, 246, 0.04) 0%, transparent 60%), radial-gradient(circle at 80% 80%, rgba(0, 242, 254, 0.03) 0%, transparent 50%)",
+      }}
+      aria-hidden="true"
+    />
   );
 }
 
 export function AmbientBackground3D() {
-  const [isLiteMode, setIsLiteMode] = useState(false);
-
-  useEffect(() => {
-    try {
-      const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-      const isMobile = window.innerWidth < 768;
-      setIsLiteMode(Boolean(mediaQuery.matches || isMobile || !isWebGLAvailable()));
-    } catch {
-      setIsLiteMode(true);
-    }
-  }, []);
-
-  if (isLiteMode) return null;
-
   return (
-    <ThreeErrorBoundary fallback={null}>
-      <div
-        style={{
-          position: "fixed",
-          inset: 0,
-          zIndex: 0,
-          pointerEvents: "none",
-          opacity: 0.35,
-        }}
-      >
-        <Canvas
-          camera={{ position: [0, 0, 5], fov: 60 }}
-          gl={{ alpha: true, antialias: false, powerPreference: "low-power" }}
-          dpr={1}
-        >
-          <AmbientScene />
-        </Canvas>
-      </div>
-    </ThreeErrorBoundary>
+    <LazyThree
+      loadComponent={() => import("./AmbientScene3D")}
+      fallback={<FallbackNebula />}
+    />
   );
 }

@@ -72,6 +72,32 @@
   animation: rf-spin-radar 1.6s linear infinite;
 }
 
+@keyframes rf-spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.rf-spin-slow {
+  animation: rf-spin-slow 24s linear infinite;
+}
+
+@keyframes rf-spin-reverse {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+.rf-spin-reverse {
+  animation: rf-spin-reverse 18s linear infinite;
+}
+
 /* Page Transition Stagger Helpers */
 .rf-animate-fade-in {
   animation: rf-fade-in 0.35s var(--rf-ease-smooth) forwards;
