@@ -9,8 +9,8 @@ const LandingScene = React.lazy(() => import("../components/3d/LandingScene"));
 const FEATURES = [
   {
     icon: "◈",
-    title: "AI Training Analysis",
-    body: "Gemini reads your real training history — sets, reps, weight, and time — and surfaces plateaus, momentum, and what to target next. Never invented, always grounded in your data.",
+    title: "Groq Strength Coach",
+    body: "Groq LLaMA 3.3 reads your real training history — sets, reps, weight, and volume — and surfaces plateaus, momentum, and what to target next. Never invented, always grounded in your data.",
   },
   {
     icon: "▦",
@@ -32,7 +32,7 @@ const FEATURES = [
 const METRICS = [
   { value: "100%", label: "Your data, your account" },
   { value: "0", label: "Fake statistics" },
-  { value: "24/7", label: "AI analysis on demand" },
+  { value: "24/7", label: "Coach intelligence on demand" },
 ];
 
 const WORKFLOW_STEPS = [
@@ -48,8 +48,8 @@ const WORKFLOW_STEPS = [
   },
   {
     num: "03",
-    label: "AI TRAINER",
-    desc: "Receive conversational coach diagnostics that interpret your real fatigue and milestones.",
+    label: "COACH",
+    desc: "Receive conversational Groq strength coach diagnostics that interpret your real fatigue and milestones.",
   },
   {
     num: "04",

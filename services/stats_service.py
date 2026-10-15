@@ -323,7 +323,7 @@ def build_ai_context(
     dashboard_stats: dict[str, Any],
 ) -> dict[str, Any]:
     """
-    Assembles real, verified telemetry payload supplied to Google Gemini for inference.
+    Assembles real, verified telemetry payload supplied to Groq strength coach for inference.
 
     Args:
         workouts: Flattened workout set records.

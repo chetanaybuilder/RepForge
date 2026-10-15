@@ -11,7 +11,7 @@ import { Login } from "./pages/Login";
 import { Dashboard } from "./pages/Dashboard";
 import { Workouts } from "./pages/Workouts";
 import { ExerciseLibrary } from "./pages/ExerciseLibrary";
-import { AIAnalysis } from "./pages/AIAnalysis";
+import { Coach } from "./pages/Coach";
 import { Progress } from "./pages/Progress";
 import { Goals } from "./pages/Goals";
 import { NotFound } from "./pages/NotFound";
@@ -84,13 +84,14 @@ export default function App() {
                     }
                   />
                   <Route
-                    path="/ai-analysis"
+                    path="/coach"
                     element={
                       <PageErrorBoundary>
-                        <AIAnalysis />
+                        <Coach />
                       </PageErrorBoundary>
                     }
                   />
+                  <Route path="/ai-analysis" element={<Navigate to="/coach" replace />} />
                   <Route
                     path="/progress"
                     element={

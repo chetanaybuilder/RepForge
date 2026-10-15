@@ -89,11 +89,11 @@ export function Workouts() {
   const runAiAnalysis = async (dayId) => {
     setAiLoading((prev) => ({ ...prev, [dayId]: true }));
     try {
-      const data = await api.post(`/api/ai/insights/${dayId}`);
+      const data = await api.post(`/api/coach/insights/${dayId}`);
       setAiResults((prev) => ({ ...prev, [dayId]: data.insights }));
-      toast.success("Session analysis synthesized.");
+      toast.success("Coach analysis synthesized.");
     } catch (err) {
-      toast.error(err.message || "AI Analysis unavailable.");
+      toast.error(err.message || "Coach Diagnostics unavailable.");
     } finally {
       setAiLoading((prev) => ({ ...prev, [dayId]: false }));
     }
@@ -285,8 +285,8 @@ export function Workouts() {
                           disabled={aiLoading[day.id]}
                         >
                           {aiLoading[day.id]
-                            ? "Synthesizing AI Review…"
-                            : "◈ AI Session Diagnostics"}
+                            ? "Synthesizing Coach Review…"
+                            : "◈ Coach Session Diagnostics"}
                         </button>
                       </div>
 
@@ -297,7 +297,7 @@ export function Workouts() {
                           style={{ margin: "16px 0", padding: 18 }}
                         >
                           <div className="rf-badge rf-badge--violet" style={{ marginBottom: 10 }}>
-                            ◈ Neural Session Review
+                            ◈ Coach Tactical Review
                           </div>
                           <p
                             style={{

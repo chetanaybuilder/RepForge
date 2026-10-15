@@ -27,7 +27,7 @@ export const APP_SECTIONS = [
     icon: "✦",
   },
   {
-    to: "/ai-analysis",
+    to: "/coach",
     number: "04",
     label: "COACH",
     desc: "Groq-powered training intelligence & diagnostics",

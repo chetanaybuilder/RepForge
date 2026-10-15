@@ -34,8 +34,8 @@ if os.environ.get("FORCE_IPV4", "").lower() in ("1", "true", "yes"):
 from config import Config
 from database.db import init_pool
 from extensions import cors, limiter
-from routes.ai_routes import ai_bp
 from routes.auth_routes import auth_bp
+from routes.coach_routes import coach_bp
 from routes.exercise_routes import exercise_bp
 from routes.goals_routes import goals_bp
 from routes.misc_routes import misc_bp
@@ -109,7 +109,7 @@ def create_app(config_class: type[Config] = Config) -> Flask:
     app.register_blueprint(workout_bp)
     app.register_blueprint(exercise_bp)
     app.register_blueprint(goals_bp)
-    app.register_blueprint(ai_bp)
+    app.register_blueprint(coach_bp)
     app.register_blueprint(misc_bp)
 
     # --- SPA catch-all route (exclude /api/ and /auth/ from returning index.html) ---

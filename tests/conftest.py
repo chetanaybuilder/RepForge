@@ -29,7 +29,8 @@ class TestConfig(Config):
     RATELIMIT_STORAGE_URI = "memory://"
     GOOGLE_CLIENT_ID = "mock-google-client-id"
     GOOGLE_CLIENT_SECRET = "mock-google-client-secret"
-    GEMINI_API_KEY = "mock-gemini-key"
+    GROQ_API_KEY = "mock-groq-key"
+    GROQ_MODEL = "llama-3.3-70b-versatile"
 
 
 @pytest.fixture

@@ -72,14 +72,15 @@ def test_user_cannot_delete_other_users_goal(auth_client, auth_session):
 
 
 def test_user_cannot_request_ai_insights_for_other_users_day(auth_client, auth_session):
-    """Verifies that requesting AI analysis for a workout day owned by another user returns 404."""
+    """Verifies that requesting Coach analysis for a workout day owned by another user returns 404."""
     foreign_day_id = "66666666-6666-6666-6666-666666666666"
 
     # get_day_for_stats returns empty list when day does not belong to user
     with patch("database.queries_workouts.get_day_for_stats", return_value=[]):
         resp = auth_client.post(
-            f"/api/ai/insights/{foreign_day_id}",
+            f"/api/coach/insights/{foreign_day_id}",
             headers={"X-CSRF-Token": auth_session["csrf_token"]},
         )
         assert resp.status_code == 404
         assert resp.get_json()["error"]["code"] == "not_found"
+

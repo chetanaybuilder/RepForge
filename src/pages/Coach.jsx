@@ -1,5 +1,16 @@
+/**
+ * RepForge - Coach (Groq AI Strength Intelligence)
+ *
+ * Responsibilities:
+ * - Real-time conversational strength coaching powered by Groq (LLaMA 3.3 70B Versatile).
+ * - Live Server-Sent Events (SSE) streaming token accumulation.
+ * - Ingestion and display of actionable user volume, overload, and CNS recovery telemetry.
+ * - Interactive 3D Coach Avatar with streaming telemetry state indicator.
+ * - Quick-action prompt chips and instant tactical check-ins.
+ */
+
 import { useState, useEffect, useRef, Component } from "react";
-import { api } from "../services/api";
+import { api, API_URL, getCsrfToken } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { useFetch } from "../hooks/useFetch";
 import { AnimatePresence, motion } from "framer-motion";
@@ -14,10 +25,9 @@ const QUICK_PROMPTS = [
 ];
 
 /**
- * Dedicated Error Boundary for the AI Trainer Presentation Layer.
- * Prevents any unhandled parsing or telemetry format error from crashing the view.
+ * Dedicated Error Boundary for Coach Presentation Layer.
  */
-class AIErrorBoundary extends Component {
+class CoachErrorBoundary extends Component {
   constructor(props) {
     super(props);
     this.state = { hasError: false, error: null };
@@ -28,7 +38,7 @@ class AIErrorBoundary extends Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error("RepForge AI Trainer Presentation Boundary caught error:", error, errorInfo);
+    console.error("RepForge Coach Presentation Boundary caught error:", error, errorInfo);
   }
 
   handleReset = () => {
@@ -48,7 +58,7 @@ class AIErrorBoundary extends Component {
           }}
         >
           <div className="rf-telemetry-tag" style={{ color: "var(--rf-ember)", marginBottom: 8 }}>
-            AI TRAINER TELEMETRY SAFEGUARD
+            COACH TELEMETRY SAFEGUARD
           </div>
           <h3 style={{ margin: "0 0 8px 0", color: "var(--rf-text-pure)", fontSize: "1.05rem" }}>
             Telemetry Presentation Guard Triggered
@@ -71,15 +81,16 @@ class AIErrorBoundary extends Component {
   }
 }
 
-export function AIAnalysis() {
+export function Coach() {
   const { user } = useAuth();
   const [chatInput, setChatInput] = useState("");
   const [chatHistory, setChatHistory] = useState([]);
   const [chatLoading, setChatLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [chatError, setChatError] = useState(null);
   const scrollRef = useRef(null);
 
-  // Fetch verified user workout telemetry to power concise, data-driven insights
+  // Fetch verified user workout telemetry
   const { data: statsData } = useFetch(
     () => api.get("/api/workouts/stats"),
     [],
@@ -97,10 +108,10 @@ export function AIAnalysis() {
 
   const actionableInsights = computeActionableInsights(statsData, analyticsData);
 
-  // Load chat from local storage on mount
+  // Load chat history from local storage on mount
   useEffect(() => {
     if (!user?.id) return;
-    const saved = localStorage.getItem(`rf_chat_${user.id}`);
+    const saved = localStorage.getItem(`rf_coach_${user.id}`);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -118,7 +129,7 @@ export function AIAnalysis() {
   // Save to local storage whenever history changes (bounded to last 20 messages)
   useEffect(() => {
     if (!user?.id || chatHistory.length === 0) return;
-    localStorage.setItem(`rf_chat_${user.id}`, JSON.stringify(chatHistory.slice(-20)));
+    localStorage.setItem(`rf_coach_${user.id}`, JSON.stringify(chatHistory.slice(-20)));
   }, [chatHistory, user?.id]);
 
   // Scroll to bottom when history updates
@@ -126,22 +137,21 @@ export function AIAnalysis() {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [chatHistory, chatLoading]);
+  }, [chatHistory, chatLoading, isStreaming]);
 
   const triggerInitialCheckin = async () => {
     setChatLoading(true);
     setChatError(null);
     try {
-      const data = await api.post("/api/ai/chat", {
+      const data = await api.post("/api/coach/chat", {
         message: "_INIT_CHECKIN_",
         history: [],
       });
       const replyText = extractReplyText(data);
-      setChatHistory([{ role: "model", text: replyText }]);
+      setChatHistory([{ role: "assistant", text: replyText }]);
     } catch {
-      // Offline / Unconfigured fallback: synthesize tactical telemetry directly from user's data
       const syntheticCheckin = generateSyntheticCheckin(actionableInsights);
-      setChatHistory([{ role: "model", text: syntheticCheckin }]);
+      setChatHistory([{ role: "assistant", text: syntheticCheckin }]);
     } finally {
       setChatLoading(false);
     }
@@ -149,28 +159,95 @@ export function AIAnalysis() {
 
   const handleSendMessage = async (msgOverride) => {
     const textToSend = (msgOverride || chatInput).trim();
-    if (!textToSend || chatLoading) return;
+    if (!textToSend || chatLoading || isStreaming) return;
 
     setChatInput("");
     setChatError(null);
     setChatLoading(true);
 
-    const updatedHistory = [...chatHistory, { role: "user", text: textToSend }];
+    const userMessage = { role: "user", text: textToSend };
+    const historyForRequest = [...chatHistory];
+    const updatedHistory = [...chatHistory, userMessage];
     setChatHistory(updatedHistory);
 
     try {
-      const data = await api.post("/api/ai/chat", {
-        message: textToSend,
-        history: chatHistory,
+      const csrf = getCsrfToken();
+      const headers = {
+        "Content-Type": "application/json",
+        "Accept": "text/event-stream",
+      };
+      if (csrf) headers["X-CSRF-Token"] = csrf;
+
+      const response = await fetch(`${API_URL}/api/coach/chat`, {
+        method: "POST",
+        headers,
+        credentials: "include",
+        body: JSON.stringify({
+          message: textToSend,
+          history: historyForRequest,
+        }),
       });
-      const replyText = extractReplyText(data);
-      setChatHistory([...updatedHistory, { role: "model", text: replyText }]);
+
+      if (!response.ok) {
+        throw new Error("Coach stream connection failed");
+      }
+
+      setChatLoading(false);
+      setIsStreaming(true);
+
+      const isSSE = response.headers.get("Content-Type")?.includes("text/event-stream");
+
+      if (isSSE && response.body) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let accumulatedReply = "";
+
+        // Add empty assistant turn to stream tokens into
+        setChatHistory((prev) => [...prev, { role: "assistant", text: "" }]);
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunkStr = decoder.decode(value, { stream: true });
+          const lines = chunkStr.split("\n");
+
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              const dataStr = line.slice(6).trim();
+              if (dataStr === "[DONE]") break;
+              try {
+                const parsed = JSON.parse(dataStr);
+                if (parsed.chunk) {
+                  accumulatedReply += parsed.chunk;
+                  setChatHistory((prev) => {
+                    const next = [...prev];
+                    if (next.length > 0) {
+                      next[next.length - 1] = {
+                        role: "assistant",
+                        text: accumulatedReply,
+                      };
+                    }
+                    return next;
+                  });
+                }
+              } catch {
+                // Ignore parse errors on SSE chunk boundaries
+              }
+            }
+          }
+        }
+      } else {
+        const data = await response.json();
+        const replyText = extractReplyText(data);
+        setChatHistory([...updatedHistory, { role: "assistant", text: replyText }]);
+      }
     } catch {
       // Tactical data-driven fallback when AI service is rate-limited or offline
       const syntheticReply = generateTacticalReply(textToSend, actionableInsights);
-      setChatHistory([...updatedHistory, { role: "model", text: syntheticReply }]);
+      setChatHistory([...updatedHistory, { role: "assistant", text: syntheticReply }]);
     } finally {
       setChatLoading(false);
+      setIsStreaming(false);
     }
   };
 
@@ -178,7 +255,7 @@ export function AIAnalysis() {
     if (window.confirm("Start a new check-in? This will clear the current conversation.")) {
       setChatHistory([]);
       if (user?.id) {
-        localStorage.removeItem(`rf_chat_${user.id}`);
+        localStorage.removeItem(`rf_coach_${user.id}`);
       }
       triggerInitialCheckin();
     }
@@ -198,257 +275,306 @@ export function AIAnalysis() {
       <div className="rf-page-header" style={{ marginBottom: 16 }}>
         <div>
           <div className="rf-telemetry-tag" style={{ marginBottom: 4 }}>
-            03 — AI TRAINER · BIOMECHANICAL NEURAL ENGINE
+            04 — COACH
           </div>
           <h1 className="rf-page-title">
-            <span className="rf-gradient-text">Tactical AI Coach</span>
+            RepForge <span className="rf-gradient-text">Coach</span>
           </h1>
           <p className="rf-page-subtitle">
-            Concise, telemetry-driven insights on volume load, progressive overload targets, and
-            recovery.
+            Evidence-based strength coaching powered by Groq LLaMA 3.3. Grounded exclusively in your real training logs.
           </p>
         </div>
-        <button
-          type="button"
-          className="rf-btn rf-btn--ghost rf-btn--sm"
-          onClick={startNewCheckin}
-          disabled={chatLoading}
-        >
-          ↺ New Check-In
-        </button>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <button
+            type="button"
+            className="rf-btn rf-btn--outline rf-btn--sm"
+            onClick={startNewCheckin}
+            disabled={chatLoading || isStreaming}
+          >
+            ↻ New Check-In
+          </button>
+        </div>
       </div>
 
-      {/* Actionable Telemetry HUD Strip: Volume Trends, Overload Targets, Recovery Cues */}
+      {/* Main Terminal Grid */}
       <div
+        className="rf-coach-grid"
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-          gap: 12,
-          marginBottom: 16,
-        }}
-      >
-        <TelemetryInsightCard
-          label="VOLUME TREND"
-          badge={actionableInsights.volume.status}
-          badgeType={actionableInsights.volume.badgeType}
-          title={actionableInsights.volume.metric}
-          cue={actionableInsights.volume.recommendation}
-          onClick={() => handleSendMessage("Analyze my volume & fatigue trends")}
-        />
-        <TelemetryInsightCard
-          label="PROGRESSIVE OVERLOAD"
-          badge={actionableInsights.overload.status}
-          badgeType={actionableInsights.overload.badgeType}
-          title={actionableInsights.overload.target}
-          cue={actionableInsights.overload.recommendation}
-          onClick={() => handleSendMessage("Recommend next progressive overload")}
-        />
-        <TelemetryInsightCard
-          label="RECOVERY & CNS"
-          badge={actionableInsights.recovery.status}
-          badgeType={actionableInsights.recovery.badgeType}
-          title={actionableInsights.recovery.state}
-          cue={actionableInsights.recovery.recommendation}
-          onClick={() => handleSendMessage("Review my recovery & split balance")}
-        />
-      </div>
-
-      {/* Main Chat Interface */}
-      <div
-        className="rf-pod"
-        style={{
+          gridTemplateColumns: "minmax(0, 1fr) minmax(280px, 340px)",
+          gap: 20,
           flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          padding: 0,
-          overflow: "hidden",
-          border: "1px solid var(--rf-border-laser)",
+          minHeight: 0,
         }}
       >
-        {/* Telemetry Sub-header with Status */}
+        {/* Left Column: Conversational Terminal */}
         <div
+          className="rf-pod"
           style={{
-            padding: "12px 20px",
-            background: "rgba(8, 8, 16, 0.92)",
-            borderBottom: "1px solid var(--rf-border-subtle)",
             display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
+            flexDirection: "column",
+            minHeight: "520px",
+            maxHeight: "calc(100vh - 200px)",
+            padding: 0,
+            overflow: "hidden",
+            position: "relative",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <CoachAvatar3D size={38} />
-            <div>
-              <div style={{ fontWeight: 700, color: "var(--rf-text-pure)", fontSize: "0.92rem" }}>
-                RepForge Biomechanical Engine
+          {/* Terminal Sub-Header */}
+          <div
+            style={{
+              padding: "12px 18px",
+              borderBottom: "1px solid rgba(255, 255, 255, 0.06)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              background: "rgba(10, 10, 20, 0.6)",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <CoachAvatar3D size={32} />
+              <div>
+                <div style={{ fontSize: "0.86rem", fontWeight: 700, color: "var(--rf-text-pure)" }}>
+                  RepForge Strength Coach
+                </div>
+                <div className="rf-telemetry-tag" style={{ fontSize: "0.65rem", color: "var(--rf-cyan)" }}>
+                  GROQ · LLAMA-3.3-70B · REAL-TIME TELEMETRY
+                </div>
               </div>
-              <div
-                style={{
-                  fontSize: "0.72rem",
-                  color: "var(--rf-cyan)",
-                  fontFamily: "var(--rf-font-mono)",
-                }}
-              >
-                TELEMETRY SYNCHRONIZED · LATENCY 18MS
-              </div>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {(chatLoading || isStreaming) && (
+                <span className="rf-telemetry-tag" style={{ color: "var(--rf-cyan)" }}>
+                  <span className="rf-spin" style={{ display: "inline-block", marginRight: 4 }}>
+                    ◈
+                  </span>
+                  {isStreaming ? "STREAMING TOKENS..." : "ANALYZING SETS..."}
+                </span>
+              )}
             </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span
-              className="rf-badge rf-badge--cyan"
-              style={{ fontSize: "0.7rem", padding: "2px 8px" }}
-            >
-              ACTIVE MODEL
-            </span>
-            <div className="rf-status-beacon" title="Model operational" />
-          </div>
-        </div>
-
-        {/* Message Stream Protected by AIErrorBoundary */}
-        <AIErrorBoundary>
+          {/* Dialogue Scroll Stage */}
           <div
             ref={scrollRef}
             style={{
               flex: 1,
               overflowY: "auto",
-              padding: "clamp(16px, 3vw, 24px)",
+              padding: "18px 20px",
               display: "flex",
               flexDirection: "column",
               gap: 16,
             }}
           >
-            {chatHistory.length === 0 && !chatLoading && !chatError && (
-              <div
-                style={{ textAlign: "center", color: "var(--rf-text-faint)", marginTop: "2.5rem" }}
-              >
-                <div className="rf-state-radar" style={{ margin: "0 auto 16px" }} />
-                <div style={{ fontFamily: "var(--rf-font-mono)", fontSize: "0.85rem" }}>
-                  INITIALIZING TELEMETRY STREAM…
-                </div>
-              </div>
-            )}
-
-            <AnimatePresence initial={false}>
-              {chatHistory.map((msg, i) => (
-                <motion.div
-                  key={i}
-                  layout
-                  initial={{ opacity: 0, y: 14 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 24 }}
-                  className={msg?.role === "user" ? "rf-msg-user" : "rf-msg-ai"}
-                >
-                  {msg?.role === "model" && <CoachAvatar3D size={34} />}
-                  <div className={msg?.role === "model" ? "rf-msg-ai-content" : ""}>
-                    {formatCoachReply(msg?.text)}
-                  </div>
-                </motion.div>
-              ))}
-
-              {chatLoading && (
-                <motion.div
-                  layout
-                  initial={{ opacity: 0, y: 14 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className="rf-msg-ai"
-                >
-                  <CoachAvatar3D size={34} />
-                  <div
-                    className="rf-msg-ai-content"
-                    style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 18px" }}
+            <CoachErrorBoundary>
+              {chatHistory.map((msg, idx) => {
+                const isUser = msg.role === "user";
+                return (
+                  <motion.div
+                    key={idx}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2 }}
+                    style={{
+                      display: "flex",
+                      justifyContent: isUser ? "flex-end" : "flex-start",
+                    }}
                   >
-                    <div className="rf-wave-loader">
-                      <div className="rf-wave-bar" />
-                      <div className="rf-wave-bar" />
-                      <div className="rf-wave-bar" />
-                      <div className="rf-wave-bar" />
-                      <div className="rf-wave-bar" />
-                    </div>
-                    <span
+                    <div
                       style={{
-                        fontFamily: "var(--rf-font-mono)",
-                        fontSize: "0.8rem",
-                        color: "var(--rf-cyan)",
-                        letterSpacing: "0.04em",
+                        maxWidth: "85%",
+                        padding: "12px 16px",
+                        borderRadius: "var(--rf-radius-md)",
+                        background: isUser
+                          ? "linear-gradient(135deg, rgba(0, 242, 254, 0.15) 0%, rgba(138, 92, 246, 0.15) 100%)"
+                          : "rgba(14, 14, 26, 0.8)",
+                        border: isUser
+                          ? "1px solid rgba(0, 242, 254, 0.4)"
+                          : "1px solid rgba(255, 255, 255, 0.08)",
+                        boxShadow: isUser
+                          ? "0 4px 20px rgba(0, 242, 254, 0.1)"
+                          : "0 4px 20px rgba(0, 0, 0, 0.5)",
                       }}
                     >
-                      SYNTHESIZING TELEMETRY…
-                    </span>
-                  </div>
-                </motion.div>
+                      <div
+                        className="rf-telemetry-tag"
+                        style={{
+                          marginBottom: 4,
+                          fontSize: "0.66rem",
+                          color: isUser ? "var(--rf-cyan)" : "var(--rf-violet)",
+                        }}
+                      >
+                        {isUser ? "LIFTER" : "COACH"}
+                      </div>
+                      <div
+                        style={{
+                          color: "var(--rf-text-pure)",
+                          fontSize: "0.92rem",
+                          lineHeight: 1.6,
+                        }}
+                      >
+                        {formatCoachReply(msg.text)}
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+
+              {chatLoading && (
+                <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--rf-text-sub)" }}>
+                  <span className="rf-spin" style={{ color: "var(--rf-cyan)" }}>
+                    ◈
+                  </span>
+                  <span style={{ fontSize: "0.85rem" }}>Synthesizing session diagnostics...</span>
+                </div>
               )}
-            </AnimatePresence>
-
-            {chatError && (
-              <div
-                style={{
-                  alignSelf: "center",
-                  color: "var(--rf-ember)",
-                  fontSize: "0.82rem",
-                  background: "rgba(255, 51, 102, 0.08)",
-                  padding: "8px 16px",
-                  borderRadius: "var(--rf-radius-pill)",
-                  border: "1px solid rgba(255, 51, 102, 0.3)",
-                  cursor: "pointer",
-                }}
-                onClick={triggerInitialCheckin}
-              >
-                {chatError}
-              </div>
-            )}
+            </CoachErrorBoundary>
           </div>
-        </AIErrorBoundary>
 
-        {/* Quick Tactical Prompt Chips */}
-        <div className="rf-prompt-chips">
-          {QUICK_PROMPTS.map((prompt) => (
-            <button
-              key={prompt}
-              type="button"
-              className="rf-prompt-chip"
-              onClick={() => handleSendMessage(prompt)}
-              disabled={chatLoading}
-            >
-              ◈ {prompt}
-            </button>
-          ))}
-        </div>
+          {/* Quick Action Chips */}
+          <div
+            style={{
+              padding: "10px 18px",
+              borderTop: "1px solid rgba(255, 255, 255, 0.04)",
+              background: "rgba(10, 10, 20, 0.4)",
+              display: "flex",
+              gap: 8,
+              overflowX: "auto",
+              scrollbarWidth: "none",
+            }}
+          >
+            {QUICK_PROMPTS.map((prompt) => (
+              <button
+                key={prompt}
+                type="button"
+                onClick={() => handleSendMessage(prompt)}
+                disabled={chatLoading || isStreaming}
+                className="rf-badge"
+                style={{
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  background: "rgba(255, 255, 255, 0.04)",
+                  borderColor: "rgba(255, 255, 255, 0.1)",
+                  color: "var(--rf-text-sub)",
+                  fontSize: "0.75rem",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
 
-        {/* Tactical Input Bar */}
-        <div
-          style={{
-            padding: "14px 20px",
-            background: "rgba(8, 8, 16, 0.96)",
-            borderTop: "1px solid var(--rf-border-subtle)",
-            paddingBottom: "max(14px, env(safe-area-inset-bottom))",
-          }}
-        >
+          {/* Input Box */}
           <form
             onSubmit={(e) => {
               e.preventDefault();
               handleSendMessage();
             }}
-            style={{ display: "flex", alignItems: "center", gap: 10 }}
+            style={{
+              padding: 14,
+              borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+              display: "flex",
+              gap: 10,
+              background: "rgba(8, 8, 16, 0.95)",
+            }}
           >
             <input
               type="text"
               className="rf-input"
-              style={{ borderRadius: "var(--rf-radius-pill)" }}
-              placeholder="Ask coach for overload targets, volume diagnostics, or recovery cues…"
+              placeholder="Ask coach (e.g. 'Can I add 5kg to bench next week?', 'Am I training legs enough?')..."
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
-              disabled={chatLoading}
+              disabled={chatLoading || isStreaming}
+              style={{ flex: 1 }}
             />
             <PrimaryButton
               type="submit"
-              disabled={!chatInput.trim() || chatLoading}
-              style={{ borderRadius: "var(--rf-radius-pill)", minWidth: 84 }}
+              disabled={!chatInput.trim() || chatLoading || isStreaming}
+              className="rf-btn--sm"
             >
               Send
             </PrimaryButton>
           </form>
+        </div>
+
+        {/* Right Column: Live Telemetry Briefing Cards */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Volume Velocity */}
+          <div
+            className="rf-pod"
+            style={{
+              padding: 18,
+              border: "1px solid rgba(0, 242, 254, 0.25)",
+              background: "rgba(10, 10, 20, 0.7)",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <div className="rf-telemetry-tag" style={{ color: "var(--rf-cyan)" }}>
+                VOLUME LOAD VELOCITY
+              </div>
+              <span className={`rf-badge rf-badge--${actionableInsights.volume.badgeType}`}>
+                {actionableInsights.volume.status}
+              </span>
+            </div>
+            <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#fff", marginBottom: 4 }}>
+              {actionableInsights.volume.metric}
+            </div>
+            <p style={{ margin: 0, fontSize: "0.84rem", color: "var(--rf-text-sub)", lineHeight: 1.4 }}>
+              {actionableInsights.volume.recommendation}
+            </p>
+          </div>
+
+          {/* Progressive Overload Target */}
+          <div
+            className="rf-pod"
+            style={{
+              padding: 18,
+              border: "1px solid rgba(255, 51, 102, 0.25)",
+              background: "rgba(10, 10, 20, 0.7)",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <div className="rf-telemetry-tag" style={{ color: "var(--rf-ember)" }}>
+                PROGRESSIVE OVERLOAD VECTOR
+              </div>
+              <span className={`rf-badge rf-badge--${actionableInsights.overload.badgeType}`}>
+                {actionableInsights.overload.status}
+              </span>
+            </div>
+            <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#fff", marginBottom: 4 }}>
+              {actionableInsights.overload.target}
+            </div>
+            <p style={{ margin: 0, fontSize: "0.84rem", color: "var(--rf-text-sub)", lineHeight: 1.4 }}>
+              {actionableInsights.overload.recommendation}
+            </p>
+          </div>
+
+          {/* CNS Recovery & Frequency */}
+          <div
+            className="rf-pod"
+            style={{
+              padding: 18,
+              border: "1px solid rgba(138, 92, 246, 0.25)",
+              background: "rgba(10, 10, 20, 0.7)",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <div className="rf-telemetry-tag" style={{ color: "var(--rf-violet)" }}>
+                RECOVERY & MUSCLE BALANCE
+              </div>
+              <span className={`rf-badge rf-badge--${actionableInsights.recovery.badgeType}`}>
+                {actionableInsights.recovery.status}
+              </span>
+            </div>
+            <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#fff", marginBottom: 4 }}>
+              {actionableInsights.recovery.state}
+            </div>
+            <p style={{ margin: 0, fontSize: "0.84rem", color: "var(--rf-text-sub)", lineHeight: 1.4 }}>
+              {actionableInsights.recovery.recommendation}
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -456,54 +582,7 @@ export function AIAnalysis() {
 }
 
 /**
- * Compact Tactical Telemetry Insight Card for top HUD
- */
-function TelemetryInsightCard({ label, badge, badgeType, title, cue, onClick }) {
-  const badgeClass =
-    badgeType === "emerald"
-      ? "rf-badge--emerald"
-      : badgeType === "ember"
-        ? "rf-badge--ember"
-        : badgeType === "violet"
-          ? "rf-badge--violet"
-          : "rf-badge--cyan";
-
-  return (
-    <div
-      className="rf-pod"
-      onClick={onClick}
-      style={{
-        padding: "12px 14px",
-        cursor: "pointer",
-        transition: "all var(--rf-transition-fast)",
-        display: "flex",
-        flexDirection: "column",
-        gap: 6,
-        background: "rgba(10, 10, 22, 0.7)",
-      }}
-      title="Click to query coach about this metric"
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span className="rf-telemetry-tag" style={{ fontSize: "0.68rem" }}>
-          {label}
-        </span>
-        <span
-          className={`rf-badge ${badgeClass}`}
-          style={{ fontSize: "0.68rem", padding: "1px 6px" }}
-        >
-          {badge}
-        </span>
-      </div>
-      <div style={{ fontSize: "0.92rem", fontWeight: 700, color: "var(--rf-text-pure)" }}>
-        {title}
-      </div>
-      <div style={{ fontSize: "0.78rem", color: "var(--rf-text-sub)", lineHeight: 1.4 }}>{cue}</div>
-    </div>
-  );
-}
-
-/**
- * Compute actionable insights directly from the user's verified workout telemetry.
+ * Compute actionable insights directly from verified workout telemetry.
  */
 function computeActionableInsights(statsData, analyticsData) {
   const stats = statsData?.stats || {};
@@ -514,7 +593,6 @@ function computeActionableInsights(statsData, analyticsData) {
     ? analyticsData.frequency_by_type
     : [];
 
-  // 1. Volume Trend Insight
   let volume = {
     status: "Baseline",
     badgeType: "cyan",
@@ -559,7 +637,6 @@ function computeActionableInsights(statsData, analyticsData) {
     };
   }
 
-  // 2. Progressive Overload Target
   let overload = {
     status: "Linear +2.5kg",
     badgeType: "cyan",
@@ -586,7 +663,6 @@ function computeActionableInsights(statsData, analyticsData) {
     };
   }
 
-  // 3. Recovery & CNS Split Balance
   let recovery = {
     status: "CNS Primed",
     badgeType: "cyan",
@@ -616,9 +692,6 @@ function computeActionableInsights(statsData, analyticsData) {
   return { volume, overload, recovery };
 }
 
-/**
- * Safely extracts clean string reply from any AI payload shape.
- */
 function extractReplyText(data) {
   if (typeof data === "string") return data;
   if (typeof data?.reply === "string") return data.reply;
@@ -627,9 +700,6 @@ function extractReplyText(data) {
   return "Biomechanical telemetry received and verified.";
 }
 
-/**
- * Fallback synthesizer for initial check-in when external AI is offline/unconfigured.
- */
 function generateSyntheticCheckin(insights) {
   return [
     `### TACTICAL PERFORMANCE BRIEFING`,
@@ -641,9 +711,6 @@ function generateSyntheticCheckin(insights) {
   ].join("\n\n");
 }
 
-/**
- * Fallback synthesizer for specific user prompt topics.
- */
 function generateTacticalReply(text, insights) {
   const lower = text.toLowerCase();
   if (lower.includes("volume") || lower.includes("fatigue")) {
@@ -679,9 +746,6 @@ function generateTacticalReply(text, insights) {
   ].join("\n\n");
 }
 
-/**
- * Clean, safe parser for coach replies with markdown styling and fallbacks.
- */
 function formatCoachReply(text) {
   try {
     let cleanText = "";
@@ -706,7 +770,6 @@ function formatCoachReply(text) {
     return (
       <div style={{ lineHeight: 1.65, display: "flex", flexDirection: "column", gap: 10 }}>
         {paragraphs.map((paragraph, pIdx) => {
-          // Tactical Header
           if (paragraph.startsWith("### ") || paragraph.startsWith("## ")) {
             const title = paragraph.replace(/^#+\s+/, "");
             return (
@@ -726,7 +789,6 @@ function formatCoachReply(text) {
             );
           }
 
-          // Bullet List
           if (
             paragraph.includes("\n- ") ||
             paragraph.includes("\n* ") ||
@@ -750,7 +812,7 @@ function formatCoachReply(text) {
                 }}
               >
                 {items.map((item, iIdx) => (
-                  <li key={iIdx} style={{ fontSize: "0.92rem", color: "var(--rf-text-bright)" }}>
+                  <li key={iIdx} style={{ color: "var(--rf-text-pure)" }}>
                     {renderFormattedInline(item)}
                   </li>
                 ))}
@@ -758,91 +820,29 @@ function formatCoachReply(text) {
             );
           }
 
-          // Numbered List
-          if (/^\d+\.\s+/.test(paragraph) || paragraph.includes("\n1. ")) {
-            const items = paragraph
-              .split(/\n(?=\d+\.\s+)/)
-              .map((it) => it.replace(/^\d+\.\s+/, "").trim())
-              .filter(Boolean);
-
-            return (
-              <ol
-                key={pIdx}
-                style={{
-                  margin: "4px 0",
-                  paddingLeft: 22,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 6,
-                }}
-              >
-                {items.map((item, iIdx) => (
-                  <li key={iIdx} style={{ fontSize: "0.92rem", color: "var(--rf-text-bright)" }}>
-                    {renderFormattedInline(item)}
-                  </li>
-                ))}
-              </ol>
-            );
-          }
-
           return (
-            <p
-              key={pIdx}
-              style={{
-                margin: 0,
-                color: "var(--rf-text-bright)",
-                fontSize: "0.92rem",
-                lineHeight: 1.6,
-              }}
-            >
+            <p key={pIdx} style={{ margin: 0, color: "var(--rf-text-bright)" }}>
               {renderFormattedInline(paragraph)}
             </p>
           );
         })}
       </div>
     );
-  } catch (err) {
-    console.error("formatCoachReply parsing fallback:", err);
-    return (
-      <div style={{ color: "var(--rf-text-bright)", fontSize: "0.92rem", whiteSpace: "pre-wrap" }}>
-        {typeof text === "string" ? text : JSON.stringify(text)}
-      </div>
-    );
+  } catch {
+    return <p style={{ margin: 0 }}>{String(text)}</p>;
   }
 }
 
 function renderFormattedInline(str) {
-  if (typeof str !== "string") return String(str || "");
-  try {
-    const parts = str.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
-    return parts.map((part, i) => {
-      if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
-        return (
-          <strong key={i} style={{ color: "var(--rf-cyan)", fontWeight: 700 }}>
-            {part.slice(2, -2)}
-          </strong>
-        );
-      }
-      if (part.startsWith("`") && part.endsWith("`") && part.length > 2) {
-        return (
-          <span
-            key={i}
-            style={{
-              fontFamily: "var(--rf-font-mono)",
-              background: "rgba(0, 242, 254, 0.12)",
-              color: "var(--rf-cyan)",
-              padding: "2px 6px",
-              borderRadius: 4,
-              fontSize: "0.85em",
-            }}
-          >
-            {part.slice(1, -1)}
-          </span>
-        );
-      }
-      return part;
-    });
-  } catch {
-    return str;
-  }
+  const parts = str.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, idx) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return (
+        <strong key={idx} style={{ color: "var(--rf-text-pure)", fontWeight: 700 }}>
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    return part;
+  });
 }
