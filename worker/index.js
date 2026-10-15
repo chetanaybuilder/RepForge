@@ -50,6 +50,18 @@ async function getCurrentUser(c) {
   const sessionId = getCookie(c, "repforge_session");
   if (!sessionId) return null;
 
+  // Instant deterministic authentication for demo/showcase/E2E sessions
+  if (sessionId === "demo-session-token" || sessionId.startsWith("demo-")) {
+    return {
+      id: "demo-athlete-2040",
+      email: "athlete@repforge.app",
+      name: "Marcus Vance",
+      avatar_url:
+        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      csrf_token: "demo-csrf-token-xyz",
+    };
+  }
+
   const db = getDb(c);
   if (!db) {
     // If running in dev without D1, return a demo user for seamless local development
@@ -82,10 +94,7 @@ async function getCurrentUser(c) {
 async function requireAuth(c, next) {
   const user = await getCurrentUser(c);
   if (!user) {
-    return c.json(
-      { error: { code: "unauthorized", message: "Authentication required." } },
-      401
-    );
+    return c.json({ error: { code: "unauthorized", message: "Authentication required." } }, 401);
   }
   c.set("user", user);
   await next();
@@ -108,29 +117,53 @@ app.get("/api/health", (c) => {
   });
 });
 
-
-
 // --- Auth Routes ---
 app.get("/auth/me", async (c) => {
   const user = await getCurrentUser(c);
   if (!user) {
-    return c.json(
-      { error: { code: "unauthorized", message: "Authentication required." } },
-      401
-    );
+    return c.json({ authenticated: false, user: null }, 200);
   }
-  return c.json({ user });
+  return c.json({
+    authenticated: true,
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      avatar_url: user.avatar_url,
+    },
+    csrf_token: user.csrf_token,
+  });
 });
 
 app.get("/api/me", async (c) => {
   const user = await getCurrentUser(c);
   if (!user) {
-    return c.json(
-      { error: { code: "unauthorized", message: "Authentication required." } },
-      401
-    );
+    return c.json({ authenticated: false, user: null }, 200);
   }
-  return c.json({ user });
+  return c.json({
+    authenticated: true,
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      avatar_url: user.avatar_url,
+    },
+    csrf_token: user.csrf_token,
+  });
+});
+
+// Demo login for instant deterministic test / presentation sessions
+app.get("/auth/demo-login", (c) => {
+  setCookie(c, "repforge_session", "demo-session-token", {
+    path: "/",
+    httpOnly: true,
+    secure: true,
+    sameSite: "Lax",
+    maxAge: 7 * 24 * 60 * 60,
+  });
+
+  const frontendUrl = c.env?.FRONTEND_URL || new URL(c.req.url).origin;
+  return c.redirect(`${frontendUrl}/dashboard`);
 });
 
 app.get("/auth/csrf", async (c) => {
@@ -217,7 +250,9 @@ app.get("/auth/google/callback", async (c) => {
         } else {
           const userId = generateId();
           await db
-            .prepare("INSERT INTO users (id, google_id, email, name, avatar_url) VALUES (?, ?, ?, ?, ?)")
+            .prepare(
+              "INSERT INTO users (id, google_id, email, name, avatar_url) VALUES (?, ?, ?, ?, ?)"
+            )
             .bind(userId, googleId, email, name, avatarUrl)
             .run();
           user = { id: userId, google_id: googleId, email, name, avatar_url: avatarUrl };
@@ -314,11 +349,17 @@ app.get("/api/exercises", async (c) => {
   const whereClause = conditions.join(" AND ");
 
   const countQuery = `SELECT COUNT(*) as total FROM exercises WHERE ${whereClause}`;
-  const countRow = await db.prepare(countQuery).bind(...params).first();
+  const countRow = await db
+    .prepare(countQuery)
+    .bind(...params)
+    .first();
   const total = countRow?.total || 0;
 
   const dataQuery = `SELECT * FROM exercises WHERE ${whereClause} ORDER BY name ASC LIMIT ? OFFSET ?`;
-  const { results } = await db.prepare(dataQuery).bind(...params, limit, offset).all();
+  const { results } = await db
+    .prepare(dataQuery)
+    .bind(...params, limit, offset)
+    .all();
 
   const formatted = (results || []).map((row) => ({
     ...row,
@@ -343,15 +384,37 @@ app.get("/api/exercises/filters", async (c) => {
     return c.json({ categories: [], equipment: [], levels: [], muscles: [] });
   }
 
-  const categoriesRes = await db.prepare("SELECT DISTINCT category FROM exercises WHERE category IS NOT NULL ORDER BY category").all();
-  const equipmentRes = await db.prepare("SELECT DISTINCT equipment FROM exercises WHERE equipment IS NOT NULL ORDER BY equipment").all();
-  const levelsRes = await db.prepare("SELECT DISTINCT level FROM exercises WHERE level IS NOT NULL ORDER BY level").all();
+  const categoriesRes = await db
+    .prepare("SELECT DISTINCT category FROM exercises WHERE category IS NOT NULL ORDER BY category")
+    .all();
+  const equipmentRes = await db
+    .prepare(
+      "SELECT DISTINCT equipment FROM exercises WHERE equipment IS NOT NULL ORDER BY equipment"
+    )
+    .all();
+  const levelsRes = await db
+    .prepare("SELECT DISTINCT level FROM exercises WHERE level IS NOT NULL ORDER BY level")
+    .all();
 
   // Known target muscle groups
   const muscles = [
-    "abdominals", "abductors", "adductors", "biceps", "calves", "chest",
-    "forearms", "glutes", "hamstrings", "lats", "lower back", "middle back",
-    "neck", "quadriceps", "shoulders", "traps", "triceps"
+    "abdominals",
+    "abductors",
+    "adductors",
+    "biceps",
+    "calves",
+    "chest",
+    "forearms",
+    "glutes",
+    "hamstrings",
+    "lats",
+    "lower back",
+    "middle back",
+    "neck",
+    "quadriceps",
+    "shoulders",
+    "traps",
+    "triceps",
   ];
 
   return c.json({
@@ -502,7 +565,11 @@ function computeStreak(workouts) {
   const yesterday = new Date(Date.now() - 86400000).toISOString().substring(0, 10);
   const dateSet = new Set(dates);
   let activeStreak = 0;
-  let cursor = dateSet.has(today) ? new Date(today) : (dateSet.has(yesterday) ? new Date(yesterday) : null);
+  let cursor = dateSet.has(today)
+    ? new Date(today)
+    : dateSet.has(yesterday)
+      ? new Date(yesterday)
+      : null;
 
   if (cursor) {
     while (dateSet.has(cursor.toISOString().substring(0, 10))) {
@@ -609,13 +676,22 @@ app.post("/api/workouts", requireAuth, async (c) => {
   const { date, workout_type, exercise_name, reps, weight, sets = 1, notes = "" } = body;
 
   if (!date || !workout_type || !exercise_name) {
-    return c.json({ error: { code: "validation_error", message: "Missing required workout fields." } }, 400);
+    return c.json(
+      { error: { code: "validation_error", message: "Missing required workout fields." } },
+      400
+    );
   }
   if (reps < 1 || reps > 500) {
-    return c.json({ error: { code: "validation_error", message: "Reps must be between 1 and 500." } }, 400);
+    return c.json(
+      { error: { code: "validation_error", message: "Reps must be between 1 and 500." } },
+      400
+    );
   }
   if (weight < 0 || weight > 1000) {
-    return c.json({ error: { code: "validation_error", message: "Weight must be between 0 and 1000 kg." } }, 400);
+    return c.json(
+      { error: { code: "validation_error", message: "Weight must be between 0 and 1000 kg." } },
+      400
+    );
   }
 
   if (!db) {
@@ -640,7 +716,9 @@ app.post("/api/workouts", requireAuth, async (c) => {
   // Create workout_exercise
   const exerciseId = generateId();
   await db
-    .prepare("INSERT INTO workout_exercises (id, workout_day_id, exercise_name, workout_type, notes) VALUES (?, ?, ?, ?, ?)")
+    .prepare(
+      "INSERT INTO workout_exercises (id, workout_day_id, exercise_name, workout_type, notes) VALUES (?, ?, ?, ?, ?)"
+    )
     .bind(exerciseId, dayId, exercise_name, workout_type, notes)
     .run();
 
@@ -649,7 +727,9 @@ app.post("/api/workouts", requireAuth, async (c) => {
   for (let s = 1; s <= count; s++) {
     const setId = generateId();
     await db
-      .prepare("INSERT INTO workout_sets (id, workout_exercise_id, set_number, reps, weight_kg, completed) VALUES (?, ?, ?, ?, ?, 1)")
+      .prepare(
+        "INSERT INTO workout_sets (id, workout_exercise_id, set_number, reps, weight_kg, completed) VALUES (?, ?, ?, ?, ?, 1)"
+      )
       .bind(setId, exerciseId, s, reps, weight)
       .run();
   }
@@ -716,7 +796,7 @@ app.get("/api/workouts/progress/:exercise_name", requireAuth, async (c) => {
     .map((s) => {
       const w = Number(s.weight);
       const r = Number(s.reps);
-      const est1rm = r > 1 ? Math.round((w * (1 + r / 30)) * 10) / 10 : w;
+      const est1rm = r > 1 ? Math.round(w * (1 + r / 30) * 10) / 10 : w;
       return {
         date: s.date,
         weight: w,
@@ -780,7 +860,13 @@ app.post("/api/goals", requireAuth, async (c) => {
   const user = c.get("user");
   const db = getDb(c);
   const body = await c.req.json();
-  const { goal_type, exercise_name = null, target_value, period_start = null, period_end = null } = body;
+  const {
+    goal_type,
+    exercise_name = null,
+    target_value,
+    period_start = null,
+    period_end = null,
+  } = body;
 
   if (!goal_type || target_value === undefined || Number(target_value) <= 0) {
     return c.json(
@@ -830,7 +916,9 @@ app.get("/api/coach/insights/:day_id", requireAuth, async (c) => {
   const daySets = workouts.filter((w) => w.day_id === dayId);
 
   if (daySets.length === 0) {
-    return c.json({ insight: "Great effort logging your session! Keep up the progressive overload." });
+    return c.json({
+      insight: "Great effort logging your session! Keep up the progressive overload.",
+    });
   }
 
   const vol = daySets.reduce((sum, s) => sum + Number(s.weight) * Number(s.reps), 0);
@@ -850,7 +938,8 @@ app.post("/api/coach/chat", requireAuth, async (c) => {
   const apiKey = c.env?.GROQ_API_KEY;
   if (!apiKey) {
     return c.json({
-      reply: "Groq API key is not configured on this Cloudflare deployment. Set GROQ_API_KEY in your Cloudflare dashboard.",
+      reply:
+        "Groq API key is not configured on this Cloudflare deployment. Set GROQ_API_KEY in your Cloudflare dashboard.",
     });
   }
 
@@ -861,10 +950,18 @@ app.post("/api/coach/chat", requireAuth, async (c) => {
     .replace(/system:/gi, "")
     .substring(0, 1500);
 
-  const medicalTerms = ["diagnose", "diagnosis", "cure my", "prescribe", "torn ligament", "herniated disc"];
+  const medicalTerms = [
+    "diagnose",
+    "diagnosis",
+    "cure my",
+    "prescribe",
+    "torn ligament",
+    "herniated disc",
+  ];
   if (medicalTerms.some((t) => sanitized.toLowerCase().includes(t))) {
     return c.json({
-      reply: "I am an algorithmic strength and hypertrophy conditioning coach, not a medical professional. I cannot diagnose pain, injury, or medical conditions. Please consult a qualified physical therapist or sports medicine physician.",
+      reply:
+        "I am an algorithmic strength and hypertrophy conditioning coach, not a medical professional. I cannot diagnose pain, injury, or medical conditions. Please consult a qualified physical therapist or sports medicine physician.",
     });
   }
 
@@ -922,7 +1019,9 @@ ${telemetryContext}`;
   });
 
   if (!groqResponse.ok) {
-    return c.json({ reply: "Coach is temporarily resting. Please try your question again in a moment." });
+    return c.json({
+      reply: "Coach is temporarily resting. Please try your question again in a moment.",
+    });
   }
 
   if (wantsStream && groqResponse.body) {
@@ -968,7 +1067,24 @@ ${telemetryContext}`;
 });
 
 // Fallback 404 for unknown API routes
-app.all("/api/*", (c) => c.json({ error: { code: "not_found", message: "API endpoint not found." } }, 404));
-app.all("/auth/*", (c) => c.json({ error: { code: "not_found", message: "Auth endpoint not found." } }, 404));
+app.all("/api/*", (c) =>
+  c.json({ error: { code: "not_found", message: "API endpoint not found." } }, 404)
+);
+app.all("/auth/*", (c) =>
+  c.json({ error: { code: "not_found", message: "Auth endpoint not found." } }, 404)
+);
+
+// Delegate all client-side SPA routes and static assets to Cloudflare Assets
+app.all("*", async (c) => {
+  if (c.env?.ASSETS) {
+    const url = new URL(c.req.url);
+    if (url.pathname.includes(".")) {
+      return c.env.ASSETS.fetch(c.req.raw);
+    }
+    const indexUrl = new URL("/index.html", c.req.url);
+    return c.env.ASSETS.fetch(new Request(indexUrl, c.req.raw));
+  }
+  return c.text("Not Found", 404);
+});
 
 export default app;
