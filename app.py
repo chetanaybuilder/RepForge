@@ -36,6 +36,7 @@ from database.db import init_pool
 from extensions import cors, limiter
 from routes.ai_routes import ai_bp
 from routes.auth_routes import auth_bp
+from routes.exercise_routes import exercise_bp
 from routes.goals_routes import goals_bp
 from routes.misc_routes import misc_bp
 from routes.workout_routes import workout_bp
@@ -106,6 +107,7 @@ def create_app(config_class: type[Config] = Config) -> Flask:
     # --- Register blueprints ---
     app.register_blueprint(auth_bp)
     app.register_blueprint(workout_bp)
+    app.register_blueprint(exercise_bp)
     app.register_blueprint(goals_bp)
     app.register_blueprint(ai_bp)
     app.register_blueprint(misc_bp)

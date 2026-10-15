@@ -10,6 +10,7 @@ import { Landing } from "./pages/Landing";
 import { Login } from "./pages/Login";
 import { Dashboard } from "./pages/Dashboard";
 import { Workouts } from "./pages/Workouts";
+import { ExerciseLibrary } from "./pages/ExerciseLibrary";
 import { AIAnalysis } from "./pages/AIAnalysis";
 import { Progress } from "./pages/Progress";
 import { Goals } from "./pages/Goals";
@@ -71,6 +72,14 @@ export default function App() {
                     element={
                       <PageErrorBoundary>
                         <Workouts />
+                      </PageErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/exercises"
+                    element={
+                      <PageErrorBoundary>
+                        <ExerciseLibrary />
                       </PageErrorBoundary>
                     }
                   />

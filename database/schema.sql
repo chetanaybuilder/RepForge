@@ -211,4 +211,54 @@ BEGIN
         CREATE POLICY service_role_all_oauth_states ON oauth_states
             FOR ALL TO service_role USING (true) WITH CHECK (true);
     END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE tablename = 'exercises' AND policyname = 'service_role_all_exercises'
+    ) THEN
+        CREATE POLICY service_role_all_exercises ON exercises
+            FOR ALL TO service_role USING (true) WITH CHECK (true);
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE tablename = 'user_favorite_exercises' AND policyname = 'service_role_all_user_fav_exercises'
+    ) THEN
+        CREATE POLICY service_role_all_user_fav_exercises ON user_favorite_exercises
+            FOR ALL TO service_role USING (true) WITH CHECK (true);
+    END IF;
 END $$;
+
+-- ---------------------------------------------------------------------
+-- Exercises Library (seeded from open-source free-exercise-db)
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS exercises (
+    id                  TEXT PRIMARY KEY,
+    name                TEXT NOT NULL,
+    force               TEXT,
+    level               TEXT,
+    mechanic            TEXT,
+    equipment           TEXT,
+    primary_muscles     TEXT[] NOT NULL DEFAULT '{}',
+    secondary_muscles   TEXT[] NOT NULL DEFAULT '{}',
+    instructions        TEXT[] NOT NULL DEFAULT '{}',
+    category            TEXT,
+    images              TEXT[] NOT NULL DEFAULT '{}',
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_exercises_name_lower ON exercises (lower(name));
+CREATE INDEX IF NOT EXISTS idx_exercises_category ON exercises (category);
+CREATE INDEX IF NOT EXISTS idx_exercises_equipment ON exercises (equipment);
+
+-- ---------------------------------------------------------------------
+-- User Favorite Exercises
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS user_favorite_exercises (
+    user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    exercise_id     TEXT NOT NULL REFERENCES exercises(id) ON DELETE CASCADE,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (user_id, exercise_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_fav_exercises_user ON user_favorite_exercises (user_id);
+
+ALTER TABLE exercises ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_favorite_exercises ENABLE ROW LEVEL SECURITY;
+

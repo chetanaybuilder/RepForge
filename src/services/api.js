@@ -122,6 +122,16 @@ export const api = {
   post: (path, body) => request(path, { method: "POST", body: body ?? {} }),
   put: (path, body) => request(path, { method: "PUT", body: body ?? {} }),
   delete: (path) => request(path, { method: "DELETE" }),
+  getExerciseImageUrl: (imagePath) => {
+    if (!imagePath) return "";
+    return `${API_URL}/api/exercises/images/${imagePath}`;
+  },
 };
 
+export function getExerciseImageUrl(imagePath) {
+  if (!imagePath) return "";
+  return `${API_URL}/api/exercises/images/${imagePath}`;
+}
+
 export { ApiError, API_URL };
+

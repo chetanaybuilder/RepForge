@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { PrimaryButton } from "./PrimaryButton";
+import { ExercisePickerModal } from "./ExercisePickerModal";
 
 export const DAY_WORKOUT_TYPES = [
   { value: "push", label: "Push (Chest/Shoulders/Triceps)" },
@@ -28,21 +29,28 @@ const EMPTY_FORM = {
   exercises: [{ ...EMPTY_EXERCISE }],
 };
 
-export function DayFormModal({ open, onSave, onClose }) {
+export function DayFormModal({ open, onSave, onClose, initialExercise }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
+  const [pickerActiveIndex, setPickerActiveIndex] = useState(null);
 
   useEffect(() => {
     if (open) {
       setForm({
         ...EMPTY_FORM,
         date: new Date().toISOString().slice(0, 10),
-        exercises: [{ ...EMPTY_EXERCISE, sets: [{ ...EMPTY_SET }] }],
+        exercises: [
+          {
+            ...EMPTY_EXERCISE,
+            exercise_name: initialExercise || "",
+            sets: [{ ...EMPTY_SET }],
+          },
+        ],
       });
       setErrors({});
     }
-  }, [open]);
+  }, [open, initialExercise]);
 
   if (!open) return null;
 
@@ -99,6 +107,23 @@ export function DayFormModal({ open, onSave, onClose }) {
       { weight: lastSet.weight, reps: lastSet.reps, completed: true },
     ];
     setField("exercises", newExs);
+  };
+
+  const handleSelectFromPicker = (selectedEx) => {
+    if (pickerActiveIndex !== null && pickerActiveIndex < form.exercises.length) {
+      updateExercise(pickerActiveIndex, "exercise_name", selectedEx.name);
+      const muscle = (selectedEx.primary_muscles?.[0] || "").toLowerCase();
+      if (["chest", "shoulders", "triceps"].includes(muscle)) {
+        updateExercise(pickerActiveIndex, "workout_type", "push");
+      } else if (["back", "lats", "biceps", "traps", "forearms"].includes(muscle)) {
+        updateExercise(pickerActiveIndex, "workout_type", "pull");
+      } else if (["quadriceps", "hamstrings", "glutes", "calves"].includes(muscle)) {
+        updateExercise(pickerActiveIndex, "workout_type", "legs");
+      } else if (["abdominals"].includes(muscle)) {
+        updateExercise(pickerActiveIndex, "workout_type", "core");
+      }
+    }
+    setPickerActiveIndex(null);
   };
 
   const removeSet = (eIdx, sIdx) => {
@@ -308,9 +333,33 @@ export function DayFormModal({ open, onSave, onClose }) {
                     </div>
 
                     <div className="rf-field">
-                      <label className="rf-label" style={{ fontSize: "0.72rem" }}>
-                        Exercise Name
-                      </label>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          marginBottom: 4,
+                        }}
+                      >
+                        <label className="rf-label" style={{ fontSize: "0.72rem", margin: 0 }}>
+                          Exercise Name
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setPickerActiveIndex(eIdx)}
+                          className="rf-telemetry-tag"
+                          style={{
+                            background: "transparent",
+                            border: "none",
+                            color: "var(--rf-cyan)",
+                            cursor: "pointer",
+                            fontSize: "0.68rem",
+                            padding: "0 2px",
+                          }}
+                        >
+                          ✦ Choose from Library
+                        </button>
+                      </div>
                       <input
                         type="text"
                         className="rf-input rf-input--compact"
@@ -481,6 +530,12 @@ export function DayFormModal({ open, onSave, onClose }) {
             </PrimaryButton>
           </div>
         </form>
+
+        <ExercisePickerModal
+          open={pickerActiveIndex !== null}
+          onSelect={handleSelectFromPicker}
+          onClose={() => setPickerActiveIndex(null)}
+        />
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useWorkouts } from "../hooks/useWorkouts";
 import { useToast } from "../context/ToastContext";
 import { ErrorState, EmptyState } from "../components/StateViews";
@@ -12,6 +13,8 @@ import { AnimatePresence, motion } from "framer-motion";
 
 export function Workouts() {
   const [search, setSearch] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [initialExercise, setInitialExercise] = useState("");
 
   const filters = useMemo(() => ({ search: search || undefined }), [search]);
 
@@ -26,6 +29,22 @@ export function Workouts() {
 
   const [aiLoading, setAiLoading] = useState({});
   const [aiResults, setAiResults] = useState({});
+
+  useEffect(() => {
+    const addEx = searchParams.get("add_exercise");
+    if (addEx) {
+      setInitialExercise(addEx);
+      setDayModalOpen(true);
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete("add_exercise");
+          return next;
+        },
+        { replace: true }
+      );
+    }
+  }, [searchParams, setSearchParams]);
 
   const openCreateDay = () => setDayModalOpen(true);
   const openEditExercise = (ex) => {
@@ -420,8 +439,12 @@ export function Workouts() {
       {/* Modals */}
       <DayFormModal
         open={dayModalOpen}
+        initialExercise={initialExercise}
         onSave={handleSaveDay}
-        onClose={() => setDayModalOpen(false)}
+        onClose={() => {
+          setDayModalOpen(false);
+          setInitialExercise("");
+        }}
       />
 
       <ExerciseEditModal
