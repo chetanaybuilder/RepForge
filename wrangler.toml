@@ -9,4 +9,4 @@ database_name = "repforge-db"
 database_id = "a70eb32e-c5e0-46c6-bf38-b8223047dd25"
 
 [vars]
-GROQ_MODEL = "llama-3.3-70b-versatile"
+GROQ_MODEL = "qwen/qwen3.8-27b"

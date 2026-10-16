@@ -88,8 +88,9 @@ export function ExerciseLibrary() {
       if (favoritesOnly) params.favorites_only = true;
 
       const res = await api.get("/api/exercises", params);
-      setExercises(res?.items || []);
-      setTotalCount(res?.total || 0);
+      const items = res?.items || res?.exercises || [];
+      setExercises(items);
+      setTotalCount(res?.total || items.length || 0);
     } catch (err) {
       setError(err?.message || "Failed to load exercise catalog.");
     } finally {

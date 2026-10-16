@@ -309,17 +309,35 @@ app.post("/auth/logout", async (c) => {
 // --- Exercise Library Routes ---
 app.get("/api/exercises", async (c) => {
   const db = getDb(c);
+  const user = await getCurrentUser(c);
   const category = c.req.query("category");
   const muscle = c.req.query("muscle");
   const equipment = c.req.query("equipment");
   const level = c.req.query("level");
   const search = c.req.query("search");
+  const favoritesOnly = c.req.query("favorites_only") === "true";
   const page = Math.max(1, parseInt(c.req.query("page") || "1", 10));
   const limit = Math.min(100, Math.max(1, parseInt(c.req.query("limit") || "24", 10)));
-  const offset = (page - 1) * limit;
+  const offset =
+    c.req.query("offset") !== undefined
+      ? Math.max(0, parseInt(c.req.query("offset"), 10))
+      : (page - 1) * limit;
 
   if (!db) {
-    return c.json({ exercises: [], total: 0, page, limit, total_pages: 0 });
+    return c.json({ items: [], exercises: [], total: 0, page, limit, offset, total_pages: 0 });
+  }
+
+  let favoriteIds = new Set();
+  if (user && db) {
+    try {
+      const favRes = await db
+        .prepare("SELECT exercise_id FROM user_favorite_exercises WHERE user_id = ?")
+        .bind(user.id)
+        .all();
+      favoriteIds = new Set((favRes.results || []).map((r) => r.exercise_id));
+    } catch {
+      // ignore table query errors if unmigrated
+    }
   }
 
   let conditions = ["1=1"];
@@ -345,6 +363,10 @@ app.get("/api/exercises", async (c) => {
     conditions.push("name LIKE ?");
     params.push(`%${search}%`);
   }
+  if (favoritesOnly && user) {
+    conditions.push("id IN (SELECT exercise_id FROM user_favorite_exercises WHERE user_id = ?)");
+    params.push(user.id);
+  }
 
   const whereClause = conditions.join(" AND ");
 
@@ -363,6 +385,7 @@ app.get("/api/exercises", async (c) => {
 
   const formatted = (results || []).map((row) => ({
     ...row,
+    is_favorite: favoriteIds.has(row.id),
     primary_muscles: JSON.parse(row.primary_muscles || "[]"),
     secondary_muscles: JSON.parse(row.secondary_muscles || "[]"),
     instructions: JSON.parse(row.instructions || "[]"),
@@ -370,10 +393,12 @@ app.get("/api/exercises", async (c) => {
   }));
 
   return c.json({
+    items: formatted,
     exercises: formatted,
     total,
     page,
     limit,
+    offset,
     total_pages: Math.ceil(total / limit),
   });
 });
@@ -661,11 +686,104 @@ function detectPlateaus(workouts) {
   return plateaus;
 }
 
+async function fetchHierarchicalWorkouts(db, userId, search = null, limit = 50, offset = 0) {
+  if (!db) return [];
+
+  let dayQuery = `
+    SELECT d.id, d.date, d.day_label, d.day_number, d.created_at
+    FROM workout_days d
+    WHERE d.user_id = ?
+  `;
+  const dayParams = [userId];
+  if (search) {
+    dayQuery += `
+      AND (
+        d.day_label LIKE ?
+        OR EXISTS (
+          SELECT 1 FROM workout_exercises e
+          WHERE e.workout_day_id = d.id
+          AND (e.exercise_name LIKE ? OR e.notes LIKE ? OR e.workout_type LIKE ?)
+        )
+      )
+    `;
+    const s = `%${search}%`;
+    dayParams.push(s, s, s, s);
+  }
+  dayQuery += ` ORDER BY d.date DESC, d.created_at DESC LIMIT ? OFFSET ?`;
+  dayParams.push(limit, offset);
+
+  const { results: days } = await db.prepare(dayQuery).bind(...dayParams).all();
+  if (!days || days.length === 0) return [];
+
+  const dayIds = days.map((d) => d.id);
+  const placeholders = dayIds.map(() => "?").join(",");
+
+  const exQuery = `
+    SELECT id, workout_day_id, exercise_name, workout_type, notes, order_index
+    FROM workout_exercises
+    WHERE workout_day_id IN (${placeholders})
+    ORDER BY order_index ASC
+  `;
+  const { results: exercises } = await db.prepare(exQuery).bind(...dayIds).all();
+  const exerciseIds = (exercises || []).map((e) => e.id);
+
+  let sets = [];
+  if (exerciseIds.length > 0) {
+    const setPlaceholders = exerciseIds.map(() => "?").join(",");
+    const setQuery = `
+      SELECT id, workout_exercise_id, set_number, reps, weight_kg as weight, completed
+      FROM workout_sets
+      WHERE workout_exercise_id IN (${setPlaceholders})
+      ORDER BY set_number ASC
+    `;
+    const setRes = await db.prepare(setQuery).bind(...exerciseIds).all();
+    sets = setRes.results || [];
+  }
+
+  const setsByEx = {};
+  for (const s of sets) {
+    if (!setsByEx[s.workout_exercise_id]) setsByEx[s.workout_exercise_id] = [];
+    setsByEx[s.workout_exercise_id].push({
+      id: s.id,
+      set_number: s.set_number,
+      reps: s.reps,
+      weight: Number(s.weight),
+      weight_kg: Number(s.weight),
+      completed: Boolean(s.completed),
+    });
+  }
+
+  const exercisesByDay = {};
+  for (const e of exercises || []) {
+    if (!exercisesByDay[e.workout_day_id]) exercisesByDay[e.workout_day_id] = [];
+    exercisesByDay[e.workout_day_id].push({
+      id: e.id,
+      exercise_name: e.exercise_name,
+      workout_type: e.workout_type,
+      notes: e.notes || "",
+      order_index: e.order_index,
+      sets: setsByEx[e.id] || [],
+    });
+  }
+
+  return days.map((d) => ({
+    id: d.id,
+    date: d.date,
+    day: d.day_label,
+    day_number: d.day_number,
+    exercises: exercisesByDay[d.id] || [],
+  }));
+}
+
 app.get("/api/workouts", requireAuth, async (c) => {
   const user = c.get("user");
   const db = getDb(c);
-  const workouts = await fetchUserWorkouts(db, user.id);
-  return c.json({ workouts });
+  const search = c.req.query("search");
+  const limit = Math.min(500, Math.max(1, parseInt(c.req.query("limit") || "50", 10)));
+  const offset = Math.max(0, parseInt(c.req.query("offset") || "0", 10));
+
+  const days = await fetchHierarchicalWorkouts(db, user.id, search, limit, offset);
+  return c.json({ workouts: days, count: days.length });
 });
 
 app.post("/api/workouts", requireAuth, async (c) => {
@@ -673,68 +791,236 @@ app.post("/api/workouts", requireAuth, async (c) => {
   const db = getDb(c);
   const body = await c.req.json();
 
-  const { date, workout_type, exercise_name, reps, weight, sets = 1, notes = "" } = body;
+  const { date, day: dayLabel = null } = body;
+  if (!date) {
+    return c.json({ error: { code: "validation_error", message: "Date is required." } }, 400);
+  }
 
-  if (!date || !workout_type || !exercise_name) {
+  // Normalize exercises list (supports both modal payload and flat logger)
+  let exercisesList = [];
+  if (Array.isArray(body.exercises) && body.exercises.length > 0) {
+    exercisesList = body.exercises;
+  } else if (body.exercise_name && body.workout_type) {
+    const reps = Math.max(1, parseInt(body.reps || 10, 10));
+    const weight = Math.max(0, Number(body.weight || 0));
+    const setCount = Math.max(1, Math.min(50, parseInt(body.sets || 1, 10)));
+    const sets = [];
+    for (let i = 1; i <= setCount; i++) {
+      sets.push({ reps, weight, completed: true });
+    }
+    exercisesList = [
+      {
+        exercise_name: body.exercise_name,
+        workout_type: body.workout_type,
+        notes: body.notes || "",
+        sets,
+      },
+    ];
+  } else {
     return c.json(
-      { error: { code: "validation_error", message: "Missing required workout fields." } },
-      400
-    );
-  }
-  if (reps < 1 || reps > 500) {
-    return c.json(
-      { error: { code: "validation_error", message: "Reps must be between 1 and 500." } },
-      400
-    );
-  }
-  if (weight < 0 || weight > 1000) {
-    return c.json(
-      { error: { code: "validation_error", message: "Weight must be between 0 and 1000 kg." } },
+      { error: { code: "validation_error", message: "At least one exercise is required." } },
       400
     );
   }
 
   if (!db) {
-    return c.json({ success: true, id: generateId() });
+    return c.json({
+      success: true,
+      workout: { id: generateId(), date, day: dayLabel, exercises: exercisesList },
+    });
   }
 
-  // Find or create workout_day
-  let day = await db
-    .prepare("SELECT id FROM workout_days WHERE user_id = ? AND date = ?")
-    .bind(user.id, date)
+  // Determine next day_number
+  const maxDayRow = await db
+    .prepare("SELECT COALESCE(MAX(day_number), 0) AS max_day FROM workout_days WHERE user_id = ?")
+    .bind(user.id)
     .first();
+  const nextDayNum = (maxDayRow?.max_day || 0) + 1;
 
-  let dayId = day?.id;
-  if (!dayId) {
-    dayId = generateId();
-    await db
-      .prepare("INSERT INTO workout_days (id, user_id, date) VALUES (?, ?, ?)")
-      .bind(dayId, user.id, date)
-      .run();
-  }
-
-  // Create workout_exercise
-  const exerciseId = generateId();
+  // Insert workout day
+  const dayId = generateId();
   await db
     .prepare(
-      "INSERT INTO workout_exercises (id, workout_day_id, exercise_name, workout_type, notes) VALUES (?, ?, ?, ?, ?)"
+      "INSERT INTO workout_days (id, user_id, date, day_label, day_number) VALUES (?, ?, ?, ?, ?)"
     )
-    .bind(exerciseId, dayId, exercise_name, workout_type, notes)
+    .bind(dayId, user.id, date, dayLabel, nextDayNum)
     .run();
 
-  // Create sets
-  const count = Math.max(1, Math.min(100, Number(sets)));
-  for (let s = 1; s <= count; s++) {
-    const setId = generateId();
+  const createdExercises = [];
+
+  for (let eIdx = 0; eIdx < exercisesList.length; eIdx++) {
+    const ex = exercisesList[eIdx];
+    const exerciseId = generateId();
     await db
       .prepare(
-        "INSERT INTO workout_sets (id, workout_exercise_id, set_number, reps, weight_kg, completed) VALUES (?, ?, ?, ?, ?, 1)"
+        "INSERT INTO workout_exercises (id, workout_day_id, exercise_name, workout_type, notes, order_index) VALUES (?, ?, ?, ?, ?, ?)"
       )
-      .bind(setId, exerciseId, s, reps, weight)
+      .bind(exerciseId, dayId, ex.exercise_name, ex.workout_type, ex.notes || "", eIdx)
       .run();
+
+    const createdSets = [];
+    const setsArray =
+      Array.isArray(ex.sets) && ex.sets.length > 0
+        ? ex.sets
+        : [{ reps: 10, weight: 60, completed: true }];
+
+    for (let sIdx = 0; sIdx < setsArray.length; sIdx++) {
+      const s = setsArray[sIdx];
+      const setId = generateId();
+      const reps = Math.max(1, parseInt(s.reps || 10, 10));
+      const weight = Math.max(0, Number(s.weight !== undefined ? s.weight : s.weight_kg || 0));
+      const completed = s.completed !== false ? 1 : 0;
+
+      await db
+        .prepare(
+          "INSERT INTO workout_sets (id, workout_exercise_id, set_number, reps, weight_kg, completed) VALUES (?, ?, ?, ?, ?, ?)"
+        )
+        .bind(setId, exerciseId, sIdx + 1, reps, weight, completed)
+        .run();
+
+      createdSets.push({
+        id: setId,
+        set_number: sIdx + 1,
+        reps,
+        weight,
+        weight_kg: weight,
+        completed: Boolean(completed),
+      });
+    }
+
+    createdExercises.push({
+      id: exerciseId,
+      exercise_name: ex.exercise_name,
+      workout_type: ex.workout_type,
+      notes: ex.notes || "",
+      order_index: eIdx,
+      sets: createdSets,
+    });
   }
 
-  return c.json({ success: true, day_id: dayId, exercise_id: exerciseId });
+  const createdWorkout = {
+    id: dayId,
+    user_id: user.id,
+    date,
+    day: dayLabel,
+    day_number: nextDayNum,
+    exercises: createdExercises,
+  };
+
+  return c.json({ success: true, workout: createdWorkout }, 201);
+});
+
+app.put("/api/workouts/exercises/:exercise_id", requireAuth, async (c) => {
+  const user = c.get("user");
+  const exerciseId = c.req.param("exercise_id");
+  const db = getDb(c);
+  const body = await c.req.json();
+
+  if (!db) {
+    return c.json({ exercise: { id: exerciseId, ...body } });
+  }
+
+  // Tenant check
+  const existing = await db
+    .prepare(
+      `SELECT e.id, e.workout_day_id FROM workout_exercises e
+       JOIN workout_days d ON e.workout_day_id = d.id
+       WHERE e.id = ? AND d.user_id = ?`
+    )
+    .bind(exerciseId, user.id)
+    .first();
+
+  if (!existing) {
+    return c.json({ error: { code: "not_found", message: "Exercise not found." } }, 404);
+  }
+
+  const { exercise_name, workout_type, notes = "", sets = [] } = body;
+  await db
+    .prepare(
+      `UPDATE workout_exercises SET exercise_name = ?, workout_type = ?, notes = ?, updated_at = datetime('now')
+       WHERE id = ?`
+    )
+    .bind(exercise_name, workout_type, notes, exerciseId)
+    .run();
+
+  // Delete existing sets and reinsert
+  await db.prepare("DELETE FROM workout_sets WHERE workout_exercise_id = ?").bind(exerciseId).run();
+
+  const insertedSets = [];
+  for (let s = 0; s < sets.length; s++) {
+    const sItem = sets[s];
+    const setId = sItem.id || generateId();
+    const w = Math.max(0, Number(sItem.weight !== undefined ? sItem.weight : sItem.weight_kg || 0));
+    const r = Math.max(1, parseInt(sItem.reps || 1, 10));
+    const completed = sItem.completed !== false ? 1 : 0;
+    await db
+      .prepare(
+        "INSERT INTO workout_sets (id, workout_exercise_id, set_number, reps, weight_kg, completed) VALUES (?, ?, ?, ?, ?, ?)"
+      )
+      .bind(setId, exerciseId, s + 1, r, w, completed)
+      .run();
+    insertedSets.push({
+      id: setId,
+      set_number: s + 1,
+      reps: r,
+      weight: w,
+      weight_kg: w,
+      completed: Boolean(completed),
+    });
+  }
+
+  return c.json({
+    exercise: {
+      id: exerciseId,
+      workout_day_id: existing.workout_day_id,
+      exercise_name,
+      workout_type,
+      notes,
+      sets: insertedSets,
+    },
+  });
+});
+
+app.delete("/api/workouts/exercises/:exercise_id", requireAuth, async (c) => {
+  const user = c.get("user");
+  const exerciseId = c.req.param("exercise_id");
+  const db = getDb(c);
+
+  if (!db) {
+    return c.json({ message: "Exercise deleted." });
+  }
+
+  // Tenant check
+  const existing = await db
+    .prepare(
+      `SELECT e.id, e.workout_day_id FROM workout_exercises e
+       JOIN workout_days d ON e.workout_day_id = d.id
+       WHERE e.id = ? AND d.user_id = ?`
+    )
+    .bind(exerciseId, user.id)
+    .first();
+
+  if (!existing) {
+    return c.json({ error: { code: "not_found", message: "Exercise not found." } }, 404);
+  }
+
+  const dayId = existing.workout_day_id;
+
+  // Delete sets and exercise
+  await db.prepare("DELETE FROM workout_sets WHERE workout_exercise_id = ?").bind(exerciseId).run();
+  await db.prepare("DELETE FROM workout_exercises WHERE id = ?").bind(exerciseId).run();
+
+  // If no exercises remain in this day, clean up day
+  const remaining = await db
+    .prepare("SELECT COUNT(*) as count FROM workout_exercises WHERE workout_day_id = ?")
+    .bind(dayId)
+    .first();
+
+  if (!remaining || remaining.count === 0) {
+    await db.prepare("DELETE FROM workout_days WHERE id = ?").bind(dayId).run();
+  }
+
+  return c.json({ message: "Exercise deleted." });
 });
 
 app.get("/api/workouts/stats", requireAuth, async (c) => {
@@ -903,12 +1189,12 @@ app.get("/api/coach/status", (c) => {
   const apiKey = c.env?.GROQ_API_KEY;
   return c.json({
     available: Boolean(apiKey),
-    model: c.env?.GROQ_MODEL || "llama-3.3-70b-versatile",
+    model: c.env?.GROQ_MODEL || "qwen/qwen3.8-27b",
     provider: "groq",
   });
 });
 
-app.get("/api/coach/insights/:day_id", requireAuth, async (c) => {
+async function handleCoachInsight(c) {
   const user = c.get("user");
   const dayId = c.req.param("day_id");
   const db = getDb(c);
@@ -916,17 +1202,57 @@ app.get("/api/coach/insights/:day_id", requireAuth, async (c) => {
   const daySets = workouts.filter((w) => w.day_id === dayId);
 
   if (daySets.length === 0) {
-    return c.json({
-      insight: "Great effort logging your session! Keep up the progressive overload.",
-    });
+    const msg = "Great effort logging your session! Keep up the progressive overload.";
+    return c.json({ insight: msg, insights: msg });
   }
 
   const vol = daySets.reduce((sum, s) => sum + Number(s.weight) * Number(s.reps), 0);
   const exercises = Array.from(new Set(daySets.map((s) => s.exercise_name))).join(", ");
-  return c.json({
-    insight: `Session Complete: ${daySets.length} sets logged across ${exercises}. Gross tonnage: ${vol.toFixed(1)} kg. Focus on sleep and 1.6-2.2g/kg protein intake for optimal recovery!`,
-  });
-});
+
+  const apiKey = c.env?.GROQ_API_KEY;
+  if (apiKey) {
+    try {
+      const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: c.env?.GROQ_MODEL || "qwen/qwen3.8-27b",
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are RepForge Coach. Give a concise 2-sentence tactical review of the athlete's completed workout session. Direct, scientific, motivating.",
+            },
+            {
+              role: "user",
+              content: `Athlete: ${user.name}. Exercises: ${exercises}. Total sets: ${daySets.length}. Total volume: ${vol.toFixed(1)} kg.`,
+            },
+          ],
+          temperature: 0.6,
+          max_tokens: 160,
+        }),
+      });
+      if (groqRes.ok) {
+        const groqData = await groqRes.json();
+        const text = groqData.choices?.[0]?.message?.content?.trim();
+        if (text) {
+          return c.json({ insight: text, insights: text });
+        }
+      }
+    } catch (e) {
+      console.warn("Groq insight error:", e);
+    }
+  }
+
+  const fallbackMsg = `Session Complete: ${daySets.length} sets logged across ${exercises}. Gross tonnage: ${vol.toFixed(1)} kg. Focus on progressive overload and post-workout protein for recovery!`;
+  return c.json({ insight: fallbackMsg, insights: fallbackMsg });
+}
+
+app.get("/api/coach/insights/:day_id", requireAuth, handleCoachInsight);
+app.post("/api/coach/insights/:day_id", requireAuth, handleCoachInsight);
 
 app.post("/api/coach/chat", requireAuth, async (c) => {
   const user = c.get("user");
@@ -983,7 +1309,7 @@ app.post("/api/coach/chat", requireAuth, async (c) => {
     })),
   });
 
-  const systemPrompt = `You are RepForge Coach, an elite, scientific strength and conditioning coach powered by Groq LLaMA 3.3.
+  const systemPrompt = `You are RepForge Coach, an elite, scientific strength and conditioning coach powered by Groq AI.
 You speak with authoritative, concise, and motivating expertise in progressive overload, biomechanics, and recovery.
 Strict Invariants:
 1. Ground your advice strictly in the athlete's verified telemetry provided below.
@@ -1003,22 +1329,47 @@ ${telemetryContext}`;
   const acceptHeader = c.req.header("Accept") || "";
   const wantsStream = acceptHeader.includes("text/event-stream");
 
-  const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: c.env?.GROQ_MODEL || "llama-3.3-70b-versatile",
-      messages,
-      temperature: 0.6,
-      max_tokens: 800,
-      stream: wantsStream,
-    }),
-  });
+  // Candidates for high-availability Groq invocation
+  const primaryModel = c.env?.GROQ_MODEL || "qwen/qwen3.8-27b";
+  const candidateModels = [
+    primaryModel,
+    "qwen/qwen3.8-27b",
+    "openai/gpt-oss-120b",
+    "openai/gpt-oss-20b",
+  ].filter((m, idx, arr) => arr.indexOf(m) === idx);
 
-  if (!groqResponse.ok) {
+  let groqResponse = null;
+
+  for (const modelName of candidateModels) {
+    try {
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: modelName,
+          messages,
+          temperature: 0.6,
+          max_tokens: 800,
+          stream: wantsStream,
+        }),
+      });
+
+      if (res.ok) {
+        groqResponse = res;
+        break;
+      } else {
+        const errText = await res.text();
+        console.warn(`Model ${modelName} returned status ${res.status}: ${errText}`);
+      }
+    } catch (err) {
+      console.warn(`Fetch error for model ${modelName}:`, err);
+    }
+  }
+
+  if (!groqResponse || !groqResponse.ok) {
     return c.json({
       reply: "Coach is temporarily resting. Please try your question again in a moment.",
     });

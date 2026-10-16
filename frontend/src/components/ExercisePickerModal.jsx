@@ -45,7 +45,7 @@ export function ExercisePickerModal({ open, onSelect, onClose }) {
 
         const data = await api.get("/api/exercises", params);
         if (!isCancelled) {
-          setExercises(data?.items || []);
+          setExercises(data?.items || data?.exercises || []);
         }
       } catch {
         if (!isCancelled) setExercises([]);

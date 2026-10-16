@@ -46,7 +46,7 @@ graph TD
         
         subgraph Storage & Upstream
             D1[("Cloudflare D1 Database<br/>repforge-db (SQLite Edge)")]
-            Groq["Groq Cloud API<br/>llama-3.3-70b-versatile"]
+            Groq["Groq Cloud API<br/>qwen/qwen3.8-27b"]
             RawCDN["Exercise Image Upstream CDN<br/>(Cached for 1 Year Immutable)"]
         end
     end
