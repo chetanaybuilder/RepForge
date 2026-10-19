@@ -114,6 +114,8 @@ export function DashboardHero2D() {
           stroke="#a4eeff"
           strokeWidth="1.5"
         />
+        <path d="M184 109l-10-12 15 7-2-17 12 15 8-18 4 20 14-11-8 18" fill="#9eeaff" stroke="#e0faff" strokeWidth="1.5" strokeLinejoin="round" />
+        <path d="M188 119l7-3-4 5m15-5 7 3-4-4m-14 13q6 4 12 0" fill="none" stroke="#d7f7ff" strokeWidth="2.5" strokeLinecap="round" />
         <path
           d="M180 144c-11 4-18 15-20 31l-9 34 14 4 14-27 7 26-16 43 17 7 20-37 20 37 17-7-16-43 7-26 14 27 14-4-9-34c-2-16-9-27-20-31-15 8-29 8-44 0Z"
           fill="#0b1d2a"
@@ -123,6 +125,7 @@ export function DashboardHero2D() {
         />
         <path d="M160 157l-24 31 9 8 25-22m50-17 23 12 18-23" fill="none" stroke="#65ddff" strokeWidth="9" strokeLinecap="round" />
         <path d="M132 163v-10m-7 10v-10m-7 10v-10m-7 10v-10m21 5h-24" fill="none" stroke="#d7f7ff" strokeWidth="3" strokeLinecap="round" />
+        <path d="M75 135l36 21m-45 1 31 19m227-53-28 23m44-3-34 20" fill="none" stroke="#49caff" strokeWidth="2" strokeLinecap="round" opacity="0.85" />
         <path d="M177 227l-6 32m52-32 6 32" fill="none" stroke="#65ddff" strokeWidth="8" strokeLinecap="round" />
         <path d="M166 262l-4 26m69-26 4 26" fill="none" stroke="#d7f7ff" strokeWidth="6" strokeLinecap="round" />
       </svg>

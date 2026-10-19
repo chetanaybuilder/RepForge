@@ -31,7 +31,7 @@ export const APP_SECTIONS = [
     to: "/coach",
     number: "04",
     label: "COACH",
-    desc: "Groq-powered training intelligence & diagnostics",
+    desc: "Ask a strength coach about your training",
     icon: "◈",
   },
   {

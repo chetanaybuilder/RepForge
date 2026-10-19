@@ -1,27 +1,22 @@
 /**
- * RepForge - Coach (Groq AI Strength Intelligence)
+ * RepForge - conversational strength coach
  *
  * Responsibilities:
- * - Real-time conversational strength coaching powered by Groq (LLaMA 3.3 70B Versatile).
+ * - Conversational strength coaching powered by the secured Groq backend.
  * - Live Server-Sent Events (SSE) streaming token accumulation.
- * - Ingestion and display of actionable user volume, overload, and CNS recovery telemetry.
- * - Interactive 3D Coach Avatar with streaming telemetry state indicator.
- * - Quick-action prompt chips and instant tactical check-ins.
+ * - Conversation history stored locally per athlete.
  */
 
 import { useState, useEffect, useRef, Component } from "react";
-import { api, API_URL, getCsrfToken } from "../services/api";
+import { API_URL, getCsrfToken } from "../services/api";
 import { useAuth } from "../context/AuthContext";
-import { useFetch } from "../hooks/useFetch";
-import { AnimatePresence, motion } from "framer-motion";
-import { CoachAvatar3D } from "../components/3d/CoachAvatar3D";
+import { motion } from "framer-motion";
 import { PrimaryButton } from "../components/PrimaryButton";
 
 const QUICK_PROMPTS = [
-  "Analyze my volume & fatigue trends",
-  "Recommend next progressive overload",
-  "Review my recovery & split balance",
-  "Diagnose plateaus & sticking points",
+  "How should I progress my bench?",
+  "Help me plan a leg day",
+  "How many reps should I do for strength?",
 ];
 
 /**
@@ -57,22 +52,21 @@ class CoachErrorBoundary extends Component {
             background: "rgba(255, 51, 102, 0.06)",
           }}
         >
-          <div className="rf-telemetry-tag" style={{ color: "var(--rf-ember)", marginBottom: 8 }}>
-            COACH TELEMETRY SAFEGUARD
+          <div className="rf-coach-kicker rf-coach-kicker--error">
+            CHAT DISPLAY ERROR
           </div>
           <h3 style={{ margin: "0 0 8px 0", color: "var(--rf-text-pure)", fontSize: "1.05rem" }}>
-            Telemetry Presentation Guard Triggered
+            This reply could not be displayed
           </h3>
           <p style={{ margin: "0 0 16px 0", color: "var(--rf-text-sub)", fontSize: "0.88rem" }}>
-            An unexpected format in the incoming telemetry payload was safely caught. Your logged
-            training history remains fully protected.
+            Your conversation is still here. Reset the chat display to continue.
           </p>
           <button
             type="button"
             className="rf-btn rf-btn--sm rf-btn--ghost"
             onClick={this.handleReset}
           >
-            ↺ Reset Stream Presentation
+            ↺ Reset chat display
           </button>
         </div>
       );
@@ -89,7 +83,6 @@ export function Coach() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [chatError, setChatError] = useState(null);
   const [retryMessage, setRetryMessage] = useState(null);
-  const [mobileTab, setMobileTab] = useState("chat");
   const [copiedIdx, setCopiedIdx] = useState(null);
   const scrollRef = useRef(null);
 
@@ -103,25 +96,7 @@ export function Coach() {
     }
   };
 
-  // Fetch verified user workout telemetry
-  const { data: statsData } = useFetch(
-    () => api.get("/api/workouts/stats"),
-    [],
-    () => false,
-    null,
-    { stats: {}, recent_prs: [], recent_workouts: [] }
-  );
-  const { data: analyticsData } = useFetch(
-    () => api.get("/api/workouts/analytics"),
-    [],
-    () => false,
-    null,
-    { volume_trend: [], frequency_by_type: [], plateaus: [] }
-  );
-
-  const actionableInsights = computeActionableInsights(statsData, analyticsData);
-
-  // Load chat history from local storage on mount
+  // Restore saved conversation when the athlete opens Coach.
   useEffect(() => {
     if (!user?.id) return;
     const saved = localStorage.getItem(`rf_coach_${user.id}`);
@@ -136,7 +111,6 @@ export function Coach() {
         // ignore storage parse error
       }
     }
-    triggerInitialCheckin();
   }, [user?.id]);
 
   // Save to local storage whenever history changes (bounded to last 20 messages)
@@ -151,24 +125,6 @@ export function Coach() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [chatHistory, chatLoading, isStreaming]);
-
-  const triggerInitialCheckin = async () => {
-    setChatLoading(true);
-    setChatError(null);
-    try {
-      const data = await api.post("/api/coach/chat", {
-        message: "_INIT_CHECKIN_",
-        history: [],
-      });
-      const replyText = extractReplyText(data);
-      setChatHistory([{ role: "assistant", text: replyText }]);
-      setRetryMessage(null);
-    } catch {
-      setChatError("Coach could not connect to the training service. Check your connection and retry.");
-    } finally {
-      setChatLoading(false);
-    }
-  };
 
   const handleSendMessage = async (msgOverride) => {
     const textToSend = (msgOverride || chatInput).trim();
@@ -221,24 +177,35 @@ export function Coach() {
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let accumulatedReply = "";
+        let streamBuffer = "";
+        let streamFinished = false;
 
         // Add empty assistant turn to stream tokens into
         setChatHistory((prev) => [...prev, { role: "assistant", text: "" }]);
 
-        while (true) {
+        while (!streamFinished) {
           const { done, value } = await reader.read();
-          if (done) break;
-          const chunkStr = decoder.decode(value, { stream: true });
-          const lines = chunkStr.split("\n");
+          if (done) {
+            streamBuffer += decoder.decode();
+            streamFinished = true;
+          } else {
+            streamBuffer += decoder.decode(value, { stream: true });
+          }
+          const lines = streamBuffer.split("\n");
+          streamBuffer = lines.pop() || "";
 
           for (const line of lines) {
             if (line.startsWith("data: ")) {
               const dataStr = line.slice(6).trim();
-              if (dataStr === "[DONE]") break;
+              if (dataStr === "[DONE]") {
+                streamFinished = true;
+                break;
+              }
               try {
                 const parsed = JSON.parse(dataStr);
-                if (parsed.chunk) {
-                  accumulatedReply += parsed.chunk;
+                const tokenText = parsed.text || parsed.chunk || "";
+                if (tokenText) {
+                  accumulatedReply += tokenText;
                   setChatHistory((prev) => {
                     const next = [...prev];
                     if (next.length > 0) {
@@ -280,16 +247,6 @@ export function Coach() {
     }
   };
 
-  const startNewCheckin = () => {
-    if (window.confirm("Start a new check-in? This will clear the current conversation.")) {
-      setChatHistory([]);
-      if (user?.id) {
-        localStorage.removeItem(`rf_coach_${user.id}`);
-      }
-      triggerInitialCheckin();
-    }
-  };
-
   return (
     <div
       style={{
@@ -303,54 +260,21 @@ export function Coach() {
       {/* Header */}
       <div className="rf-page-header" style={{ marginBottom: 16 }}>
         <div>
-          <div className="rf-telemetry-tag" style={{ marginBottom: 4 }}>
-            04 — COACH
+          <div className="rf-coach-kicker">
+            STRENGTH COACH
           </div>
           <h1 className="rf-page-title">
             RepForge <span className="rf-gradient-text">Coach</span>
           </h1>
           <p className="rf-page-subtitle">
-            Evidence-based strength coaching powered by Groq LLaMA 3.3. Grounded exclusively in your real training logs.
+            Ask about lifting, programming, recovery, or your logged training.
           </p>
         </div>
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <button
-            type="button"
-            className="rf-btn rf-btn--outline rf-btn--sm"
-            onClick={startNewCheckin}
-            disabled={chatLoading || isStreaming}
-          >
-            ↻ New Check-In
-          </button>
-        </div>
       </div>
 
-      {/* Mobile Segmented Switcher for Chat vs Telemetry */}
-      <div className="rf-coach-mobile-tabs">
-        <button
-          type="button"
-          className={`rf-coach-mobile-tab-btn ${
-            mobileTab === "chat" ? "rf-coach-mobile-tab-btn--active" : ""
-          }`}
-          onClick={() => setMobileTab("chat")}
-        >
-          💬 Coach Terminal
-        </button>
-        <button
-          type="button"
-          className={`rf-coach-mobile-tab-btn ${
-            mobileTab === "telemetry" ? "rf-coach-mobile-tab-btn--active" : ""
-          }`}
-          onClick={() => setMobileTab("telemetry")}
-        >
-          📊 Live Telemetry Briefing
-        </button>
-      </div>
-
-      {/* Main Responsive Grid */}
-      <div className="rf-coach-layout">
+      <div className="rf-coach-layout rf-coach-layout--chat-only">
         {/* Left Column: Conversational Terminal */}
-        <div className={`rf-coach-terminal-box${mobileTab === "chat" ? " rf-coach-terminal-box--visible" : ""}`}>
+        <div className="rf-coach-terminal-box rf-coach-terminal-box--visible">
           {/* Terminal Sub-Header */}
           <div
             style={{
@@ -364,24 +288,24 @@ export function Coach() {
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <CoachAvatar3D size={32} />
+              <div className="rf-coach-mark" aria-hidden="true">RF</div>
               <div>
                 <div style={{ fontSize: "0.86rem", fontWeight: 700, color: "var(--rf-text-pure)" }}>
-                  RepForge Strength Coach
+                  RepForge Coach
                 </div>
-                <div className="rf-telemetry-tag" style={{ fontSize: "0.65rem", color: "var(--rf-cyan)" }}>
-                  GROQ · REAL-TIME BIOMECHANICAL TELEMETRY
+                <div className="rf-coach-provider">
+                  STRENGTH TRAINING · GROQ
                 </div>
               </div>
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               {(chatLoading || isStreaming) && (
-                <span className="rf-telemetry-tag" style={{ color: "var(--rf-cyan)" }}>
+                <span className="rf-coach-provider rf-coach-provider--active">
                   <span className="rf-spin" style={{ display: "inline-block", marginRight: 4 }}>
                     ◈
                   </span>
-                  {isStreaming ? "STREAMING TOKENS..." : "ANALYZING SETS..."}
+                  {isStreaming ? "Replying..." : "Thinking..."}
                 </span>
               )}
             </div>
@@ -402,6 +326,13 @@ export function Coach() {
             }}
           >
             <CoachErrorBoundary>
+              {chatHistory.length === 0 && !chatLoading && (
+                <div className="rf-coach-empty-state">
+                  <div className="rf-coach-mark rf-coach-mark--large" aria-hidden="true">RF</div>
+                  <h2>What are you working on?</h2>
+                  <p>Ask about lifting, programming, recovery, or your training history.</p>
+                </div>
+              )}
               {chatHistory.map((msg, idx) => {
                 const isUser = msg.role === "user";
                 return (
@@ -442,13 +373,13 @@ export function Coach() {
                         }}
                       >
                         <div
-                          className="rf-telemetry-tag"
+                          className="rf-coach-message-label"
                           style={{
                             fontSize: "0.68rem",
                             color: isUser ? "var(--rf-cyan)" : "var(--rf-violet)",
                           }}
                         >
-                          {isUser ? "🦾 LIFTER" : "⚡ NEURAL COACH"}
+                          {isUser ? "YOU" : "COACH"}
                         </div>
 
                         {!isUser && (
@@ -482,7 +413,7 @@ export function Coach() {
                   <span className="rf-spin" style={{ color: "var(--rf-cyan)" }}>
                     ◈
                   </span>
-                  <span style={{ fontSize: "0.85rem" }}>Synthesizing session diagnostics...</span>
+                  <span style={{ fontSize: "0.85rem" }}>Coach is thinking...</span>
                 </div>
               )}
               {chatError && (
@@ -492,7 +423,7 @@ export function Coach() {
                     type="button"
                     className="rf-btn rf-btn--outline rf-btn--sm"
                     disabled={chatLoading || isStreaming}
-                    onClick={() => (retryMessage ? handleSendMessage(retryMessage) : triggerInitialCheckin())}
+                    onClick={() => retryMessage && handleSendMessage(retryMessage)}
                   >
                     Retry
                   </button>
@@ -501,8 +432,8 @@ export function Coach() {
             </CoachErrorBoundary>
           </div>
 
-          {/* Quick Action Chips Bar */}
-          <div
+          {/* Natural-language conversation starters */}
+          {chatHistory.length === 0 && <div
             style={{
               padding: "8px 14px",
               borderTop: "1px solid rgba(255, 255, 255, 0.05)",
@@ -536,7 +467,7 @@ export function Coach() {
                 {prompt}
               </button>
             ))}
-          </div>
+          </div>}
 
           {/* Sticky Mobile Input Pinned to Viewport Bottom */}
           <form
@@ -560,7 +491,8 @@ export function Coach() {
             <input
               type="text"
               className="rf-input"
-              placeholder="Ask Coach (e.g. 'Can I add 5kg?', '3 plates cable curl reps')..."
+              placeholder="Message your strength coach..."
+              aria-label="Message your strength coach"
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               disabled={chatLoading || isStreaming}
@@ -583,197 +515,9 @@ export function Coach() {
           </form>
         </div>
 
-        {/* Right Column: Live Telemetry Briefing Cards */}
-        <div className={`rf-coach-telemetry-col ${mobileTab === "telemetry" ? "rf-coach-telemetry-col--visible" : ""}`}>
-          {/* Volume Velocity */}
-          <div
-            className="rf-pod"
-            style={{
-              padding: 18,
-              border: "1px solid rgba(0, 242, 254, 0.25)",
-              background: "rgba(10, 10, 20, 0.75)",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-              <div className="rf-telemetry-tag" style={{ color: "var(--rf-cyan)" }}>
-                VOLUME LOAD VELOCITY
-              </div>
-              <span className={`rf-badge rf-badge--${actionableInsights.volume.badgeType}`}>
-                {actionableInsights.volume.status}
-              </span>
-            </div>
-            <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#fff", marginBottom: 4 }}>
-              {actionableInsights.volume.metric}
-            </div>
-            <p style={{ margin: 0, fontSize: "0.84rem", color: "var(--rf-text-sub)", lineHeight: 1.4 }}>
-              {actionableInsights.volume.recommendation}
-            </p>
-          </div>
-
-          {/* Progressive Overload Target */}
-          <div
-            className="rf-pod"
-            style={{
-              padding: 18,
-              border: "1px solid rgba(255, 51, 102, 0.25)",
-              background: "rgba(10, 10, 20, 0.75)",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-              <div className="rf-telemetry-tag" style={{ color: "var(--rf-ember)" }}>
-                PROGRESSIVE OVERLOAD VECTOR
-              </div>
-              <span className={`rf-badge rf-badge--${actionableInsights.overload.badgeType}`}>
-                {actionableInsights.overload.status}
-              </span>
-            </div>
-            <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#fff", marginBottom: 4 }}>
-              {actionableInsights.overload.target}
-            </div>
-            <p style={{ margin: 0, fontSize: "0.84rem", color: "var(--rf-text-sub)", lineHeight: 1.4 }}>
-              {actionableInsights.overload.recommendation}
-            </p>
-          </div>
-
-          {/* CNS Recovery & Frequency */}
-          <div
-            className="rf-pod"
-            style={{
-              padding: 18,
-              border: "1px solid rgba(138, 92, 246, 0.25)",
-              background: "rgba(10, 10, 20, 0.75)",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-              <div className="rf-telemetry-tag" style={{ color: "var(--rf-violet)" }}>
-                RECOVERY & MUSCLE BALANCE
-              </div>
-              <span className={`rf-badge rf-badge--${actionableInsights.recovery.badgeType}`}>
-                {actionableInsights.recovery.status}
-              </span>
-            </div>
-            <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#fff", marginBottom: 4 }}>
-              {actionableInsights.recovery.state}
-            </div>
-            <p style={{ margin: 0, fontSize: "0.84rem", color: "var(--rf-text-sub)", lineHeight: 1.4 }}>
-              {actionableInsights.recovery.recommendation}
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   );
-}
-
-/**
- * Compute actionable insights directly from verified workout telemetry.
- */
-function computeActionableInsights(statsData, analyticsData) {
-  const stats = statsData?.stats || {};
-  const recentPrs = Array.isArray(statsData?.recent_prs) ? statsData.recent_prs : [];
-  const volumeTrend = Array.isArray(analyticsData?.volume_trend) ? analyticsData.volume_trend : [];
-  const plateaus = Array.isArray(analyticsData?.plateaus) ? analyticsData.plateaus : [];
-  const frequency = Array.isArray(analyticsData?.frequency_by_type)
-    ? analyticsData.frequency_by_type
-    : [];
-
-  let volume = {
-    status: "Baseline",
-    badgeType: "cyan",
-    metric: "Calibrating",
-    recommendation: "Log 2-3 sessions to establish volume velocity curve.",
-  };
-
-  if (volumeTrend.length >= 2) {
-    const latest = volumeTrend[volumeTrend.length - 1]?.volume || 0;
-    const prev = volumeTrend[volumeTrend.length - 2]?.volume || 0;
-    const diff = latest - prev;
-    const pct = prev > 0 ? Math.round((diff / prev) * 100) : 0;
-
-    if (diff > 0) {
-      volume = {
-        status: `+${pct}% Surge`,
-        badgeType: "emerald",
-        metric: `${Math.round(latest).toLocaleString()} kg Weekly Load`,
-        recommendation: "Progressive mechanical load active. Stimulus is increasing.",
-      };
-    } else if (diff < 0) {
-      volume = {
-        status: `${pct}% Load Dip`,
-        badgeType: "ember",
-        metric: `${Math.round(latest).toLocaleString()} kg Weekly Load`,
-        recommendation: "Fatigue or volume dip. Recommended: add 1-2 back-off sets.",
-      };
-    } else {
-      volume = {
-        status: "Equilibrium",
-        badgeType: "cyan",
-        metric: `${Math.round(latest).toLocaleString()} kg Steady`,
-        recommendation: "Load is steady. Add 2.5kg to primary compound sets.",
-      };
-    }
-  } else if (Number(stats?.total_volume) > 0) {
-    volume = {
-      status: "Accumulating",
-      badgeType: "cyan",
-      metric: `${Math.round(Number(stats.total_volume)).toLocaleString()} kg Total Load`,
-      recommendation: `${stats?.total_workouts ?? 1} sessions logged. Mechanical accumulation stable.`,
-    };
-  }
-
-  let overload = {
-    status: "Linear +2.5kg",
-    badgeType: "cyan",
-    target: "Primary Compound Lift",
-    recommendation: "Increase working weight by 2.5kg or add 1 rep per set.",
-  };
-
-  if (plateaus.length > 0) {
-    const p = plateaus[0];
-    overload = {
-      status: "Plateau Flagged",
-      badgeType: "ember",
-      target: `${p?.exercise_name || "Lift"} (${p?.weight ?? 0} kg)`,
-      recommendation: `Deload by 5% (${Math.round((p?.weight || 50) * 0.95)} kg) next session, then re-attack.`,
-    };
-  } else if (recentPrs.length > 0) {
-    const topPr = recentPrs[0];
-    const nextWeight = (Number(topPr?.weight) || 0) + 2.5;
-    overload = {
-      status: "PR Ready",
-      badgeType: "emerald",
-      target: `${topPr?.exercise_name || "Compound"}: ${nextWeight} kg`,
-      recommendation: `Target ${nextWeight} kg for ${topPr?.reps ?? 5} reps on next session.`,
-    };
-  }
-
-  let recovery = {
-    status: "CNS Primed",
-    badgeType: "cyan",
-    state: "Recovery Optimal",
-    recommendation: "Supercompensation window open. Primed for heavy output.",
-  };
-
-  const streak = Number(stats?.current_streak) || 0;
-  if (streak >= 4) {
-    recovery = {
-      status: "High Fatigue",
-      badgeType: "ember",
-      state: `${streak} Day Streak`,
-      recommendation: "Consecutive daily volume elevated. Schedule 24h rest.",
-    };
-  } else if (frequency.length > 0) {
-    const topSplit = frequency[0];
-    const topName = (topSplit?.workout_type || "Training").replace("_", " ");
-    recovery = {
-      status: "Split Symmetry",
-      badgeType: "violet",
-      state: `${topName} Dominant`,
-      recommendation: `Balance with equal antagonistic weekly sets for joint health.`,
-    };
-  }
-
-  return { volume, overload, recovery };
 }
 
 function extractReplyText(data) {
@@ -793,7 +537,7 @@ function formatCoachReply(text) {
       cleanText =
         text?.reply || text?.message || text?.deep_review || text?.text || JSON.stringify(text);
     } else {
-      cleanText = String(text ?? "Biomechanical telemetry verified.");
+      cleanText = String(text ?? "");
     }
 
     // Split text by markdown code blocks (``` ... ```)

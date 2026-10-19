@@ -1309,26 +1309,11 @@ app.post("/api/coach/chat", requireAuth, async (c) => {
     })),
   });
 
-  const systemPrompt = `You are RepForge Neural Coach, an elite biomechanical strength & conditioning AI with the sharp intellect, laser precision, and brevity of Claude 3.5 Sonnet.
+  const systemPrompt = `You are RepForge Coach, a friendly, practical strength-training coach. Speak naturally, like a helpful person at the gym. Answer the question directly in a few concise sentences; avoid fixed headings, telemetry jargon, ASCII cards, and unnecessary emojis. Ask one short follow-up only when important details are missing.
 
-CLAUDE-STYLE OPERATIONAL DIRECTIVES:
-1. BREVITY & SIGNAL: ZERO throat-clearing, zero pleasantries ("Hello athlete", "Certainly!", "I can help you"). Deliver the tactical answer immediately in 100-160 words max.
-2. STRUCTURE & RICH EMOJIS: Always organize responses into 2 to 3 compact sections with emojis:
-   - 🎯 **TACTICAL VERDICT**: Immediate direct answer to the athlete's question.
-   - ⚡ **BIOMECHANICS & CUE**: Precision technique, cable path, elbow tuck, or tempo cue.
-   - 🦾 **TARGET LOAD & REPS**: Concrete recommendations (e.g. "3 Plates (15kg) · 3×10 reps · RPE 8.5" or "+2.5kg next session").
-   - 📈 **PROGRESSION VECTOR**: The exact milestone rule for when to increase weight.
-3. VISUAL TELEMETRY CARDS: When suggesting workouts or cable movements, include a clean ASCII/markdown visual card:
-   \`\`\`
-   ⚡ [EXERCISE TARGET]
-   ├─ Load: 3 Plates (15 kg)
-   ├─ Volume: 3 Sets × 10 Reps (RPE 8)
-   └─ Cue: 2s eccentric stretch, drive through elbows
-   \`\`\`
-4. GROUNDED IN ATHLETE LOGS: Use the verified telemetry below for context. If user asks about their progress, reference their actual PRs or streak.
-5. MEDICAL REFUSAL: Refuse pain/injury diagnoses and direct them to a licensed sports physical therapist.
+Use the athlete's verified workout history below only when it is relevant. Never invent lifts, progress, or personal records. If there is not enough history to answer a personal-progress question, say so plainly. For general training questions, answer normally without pretending to have personal data. Do not diagnose injuries or prescribe treatment; suggest a qualified clinician for pain or injury concerns.
 
-Verified Athlete Telemetry:
+Verified workout history:
 ${telemetryContext}`;
 
   const messages = [
@@ -1341,18 +1326,15 @@ ${telemetryContext}`;
   const acceptHeader = c.req.header("Accept") || "";
   const wantsStream = acceptHeader.includes("text/event-stream");
 
-  // Candidates for high-availability Groq invocation
+  // Keep first-token latency bounded; model fallbacks can be selected through GROQ_MODEL.
   const primaryModel = c.env?.GROQ_MODEL || "qwen/qwen3.8-27b";
-  const candidateModels = [
-    primaryModel,
-    "qwen/qwen3.8-27b",
-    "openai/gpt-oss-120b",
-    "openai/gpt-oss-20b",
-  ].filter((m, idx, arr) => arr.indexOf(m) === idx);
+  const candidateModels = [primaryModel];
 
   let groqResponse = null;
 
   for (const modelName of candidateModels) {
+    const upstreamController = new AbortController();
+    const upstreamTimeout = setTimeout(() => upstreamController.abort(), 4500);
     try {
       const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
@@ -1363,11 +1345,13 @@ ${telemetryContext}`;
         body: JSON.stringify({
           model: modelName,
           messages,
-          temperature: 0.6,
-          max_tokens: 800,
+          temperature: 0.45,
+          max_tokens: 320,
           stream: wantsStream,
         }),
+        signal: upstreamController.signal,
       });
+      clearTimeout(upstreamTimeout);
 
       if (res.ok) {
         groqResponse = res;
@@ -1377,14 +1361,18 @@ ${telemetryContext}`;
         console.warn(`Model ${modelName} returned status ${res.status}: ${errText}`);
       }
     } catch (err) {
+      clearTimeout(upstreamTimeout);
       console.warn(`Fetch error for model ${modelName}:`, err);
     }
   }
 
   if (!groqResponse || !groqResponse.ok) {
     return c.json({
-      reply: "Coach is temporarily resting. Please try your question again in a moment.",
-    });
+      error: {
+        code: "coach_unavailable",
+        message: "Coach could not get a reply in time. Please try again.",
+      },
+    }, 503);
   }
 
   if (wantsStream && groqResponse.body) {
