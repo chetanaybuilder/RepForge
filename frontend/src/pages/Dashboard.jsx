@@ -104,8 +104,8 @@ export function Dashboard() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-                gap: 28,
+                gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 260px), 1fr))",
+                gap: "clamp(12px, 3vw, 28px)",
                 alignItems: "center",
                 position: "relative",
                 zIndex: 2,

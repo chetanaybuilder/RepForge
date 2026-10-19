@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { PrimaryButton } from "./PrimaryButton";
 import { ExercisePickerModal } from "./ExercisePickerModal";
+import { WeightScrollInput } from "./WeightScrollInput";
+import { RestTimer } from "./RestTimer";
 import { PlateCalculatorModal } from "./PlateCalculatorModal";
-import { formatPlatesSummary } from "../utils/plates";
 
 export const DAY_WORKOUT_TYPES = [
   { value: "push", label: "Push (Chest/Shoulders/Triceps)" },
@@ -17,7 +18,7 @@ export const DAY_WORKOUT_TYPES = [
   { value: "other", label: "Custom Protocol" },
 ];
 
-const EMPTY_SET = { reps: 10, weight: 60, completed: true };
+const EMPTY_SET = { reps: 10, weight: 0, completed: true };
 const EMPTY_EXERCISE = {
   workout_type: "push",
   exercise_name: "",
@@ -36,15 +37,10 @@ export function DayFormModal({ open, onSave, onClose, initialExercise }) {
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [pickerActiveIndex, setPickerActiveIndex] = useState(null);
+  const [showRestTimer, setShowRestTimer] = useState(false);
+  const [weightMode, setWeightMode] = useState("total");
+  const [barWeight, setBarWeight] = useState("");
   const [plateModalTarget, setPlateModalTarget] = useState(null);
-
-  const handleApplyPlate = (newWeight, plateSummary) => {
-    if (plateModalTarget) {
-      const { eIdx, sIdx } = plateModalTarget;
-      updateSet(eIdx, sIdx, "weight", newWeight);
-      setPlateModalTarget(null);
-    }
-  };
 
   useEffect(() => {
     if (open) {
@@ -60,6 +56,9 @@ export function DayFormModal({ open, onSave, onClose, initialExercise }) {
         ],
       });
       setErrors({});
+      setWeightMode("total");
+      setBarWeight("");
+      setPlateModalTarget(null);
     }
   }, [open, initialExercise]);
 
@@ -416,12 +415,57 @@ export function DayFormModal({ open, onSave, onClose, initialExercise }) {
                     />
                   </div>
 
+                  <div className="rf-weight-entry-controls">
+                    <div className="rf-weight-entry-modes" role="group" aria-label="Weight entry mode">
+                      <button
+                        type="button"
+                        className={`rf-weight-mode${weightMode === "total" ? " rf-weight-mode--active" : ""}`}
+                        aria-pressed={weightMode === "total"}
+                        onClick={() => setWeightMode("total")}
+                      >
+                        Total Weight (kg)
+                      </button>
+                      <button
+                        type="button"
+                        className={`rf-weight-mode${weightMode === "per-side" ? " rf-weight-mode--active" : ""}`}
+                        aria-pressed={weightMode === "per-side"}
+                        onClick={() => setWeightMode("per-side")}
+                      >
+                        Plates per side
+                      </button>
+                    </div>
+                    {weightMode === "per-side" && (
+                      <div className="rf-bar-weight-control">
+                        <label className="rf-label" htmlFor={`bar-weight-${eIdx}`}>
+                          Bar weight (kg)
+                        </label>
+                        <input
+                          id={`bar-weight-${eIdx}`}
+                          className="rf-input rf-input--compact"
+                          type="number"
+                          min="0"
+                          step="0.5"
+                          value={barWeight}
+                          onChange={(event) => {
+                            const nextBarWeight = event.target.value === "" ? null : Math.max(0, Number(event.target.value));
+                            setBarWeight(nextBarWeight);
+                          }}
+                        />
+                        <span className="rf-weight-mode-help">
+                          Enter the plates loaded on one side. The bar weight is added separately.
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Clean Set Table Architecture */}
                   <div className="rf-set-table">
                     <div className="rf-set-table-head">
                       <span className="rf-set-th rf-set-th--idx">SET</span>
                       <span className="rf-set-th rf-set-th--prev">PREV</span>
-                      <span className="rf-set-th rf-set-th--weight">KG</span>
+                      <span className="rf-set-th rf-set-th--weight">
+                        {weightMode === "total" ? "KG TOTAL" : "KG / SIDE"}
+                      </span>
                       <span className="rf-set-th rf-set-th--reps">REPS</span>
                       <span className="rf-set-th rf-set-th--check">✓</span>
                       <span className="rf-set-th rf-set-th--action"></span>
@@ -448,72 +492,30 @@ export function DayFormModal({ open, onSave, onClose, initialExercise }) {
                               <span className="rf-set-prev-label">{prevRef}</span>
                             </div>
 
-                            {/* Minimal Weight Input with KG Indicator and Optional Plate Pill */}
-                            <div className="rf-set-cell rf-set-cell--weight" style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                              <div style={{ position: "relative", width: "100%", display: "flex", alignItems: "center" }}>
-                                <input
-                                  type="number"
-                                  step="0.5"
-                                  min="0"
-                                  className="rf-set-input"
-                                  value={set.weight === 0 ? "" : set.weight}
-                                  placeholder="0"
-                                  onChange={(e) =>
-                                    updateSet(
-                                      eIdx,
-                                      sIdx,
-                                      "weight",
-                                      e.target.value === "" ? 0 : Number(e.target.value)
-                                    )
-                                  }
-                                  aria-label={`Set ${sIdx + 1} weight (kg)`}
-                                  style={{ paddingRight: 22 }}
-                                />
-                                <span
-                                  style={{
-                                    position: "absolute",
-                                    right: 5,
-                                    fontSize: "0.62rem",
-                                    color: "var(--rf-cyan)",
-                                    pointerEvents: "none",
-                                    fontWeight: 700,
-                                    fontFamily: "var(--rf-font-mono)",
-                                  }}
-                                >
-                                  kg
-                                </span>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setPlateModalTarget({
+                            {/* Precision Weight Input with Mousewheel Scroll-over & Cable Plate support */}
+                            <div className="rf-set-cell rf-set-cell--weight">
+                              <WeightScrollInput
+                                value={weightMode === "total" ? set.weight : barWeight === "" ? "" : Math.max(0, (set.weight - Number(barWeight)) / 2)}
+                                onChange={(val) =>
+                                  updateSet(
                                     eIdx,
                                     sIdx,
-                                    initialWeight: set.weight || 60,
-                                  })
+                                    "weight",
+                                    weightMode === "total" || barWeight === "" ? val : Number(barWeight) + val * 2
+                                  )
                                 }
-                                style={{
-                                  background: "rgba(0, 242, 254, 0.08)",
-                                  border: "1px solid rgba(0, 242, 254, 0.2)",
-                                  color: "var(--rf-cyan)",
-                                  fontSize: "0.56rem",
-                                  padding: "1px 3px",
-                                  cursor: "pointer",
-                                  borderRadius: 2,
-                                  fontFamily: "var(--rf-font-mono)",
-                                  lineHeight: 1.2,
-                                  textAlign: "center",
-                                  whiteSpace: "nowrap",
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                  width: "100%",
-                                }}
-                                title="Open Plate Calculator (Optional)"
-                              >
-                                {set.weight > 20
-                                  ? `🝙 ${(set.weight - 20) / 2}k/side`
-                                  : "🝙 Plate"}
-                              </button>
+                                caption={
+                                  weightMode === "total"
+                                    ? `${set.weight} kg total`
+                                    : `${Math.max(0, (set.weight - (Number(barWeight) || 0)) / 2)} kg/side · ${set.weight} kg total`
+                                }
+                                ariaLabel={
+                                  weightMode === "total"
+                                    ? `Set ${sIdx + 1} total weight (kg)`
+                                    : `Set ${sIdx + 1} plates per side (kg)`
+                                }
+                                disabled={weightMode === "per-side" && barWeight === ""}
+                              />
                             </div>
 
                             {/* Minimal Reps Input */}
@@ -537,13 +539,19 @@ export function DayFormModal({ open, onSave, onClose, initialExercise }) {
                               />
                             </div>
 
-                            {/* Low-profile Checkmark */}
+                            {/* Low-profile Checkmark (triggers Rest Timer upon set completion) */}
                             <div className="rf-set-cell rf-set-cell--check">
                               <button
                                 type="button"
                                 className={`rf-set-check-btn ${set.completed ? "rf-set-check-btn--active" : ""}`}
-                                onClick={() => updateSet(eIdx, sIdx, "completed", !set.completed)}
-                                title={set.completed ? "Mark set incomplete" : "Mark set completed"}
+                                onClick={() => {
+                                  const nextCompleted = !set.completed;
+                                  updateSet(eIdx, sIdx, "completed", nextCompleted);
+                                  if (nextCompleted) {
+                                    setShowRestTimer(true);
+                                  }
+                                }}
+                                title={set.completed ? "Mark set incomplete" : "Mark completed & start Rest Timer"}
                                 aria-label={`Toggle set ${sIdx + 1} completion`}
                               >
                                 ✓
@@ -616,11 +624,19 @@ export function DayFormModal({ open, onSave, onClose, initialExercise }) {
         />
 
         <PlateCalculatorModal
-          open={Boolean(plateModalTarget)}
-          initialWeight={plateModalTarget?.initialWeight || 60}
-          onApply={handleApplyPlate}
+          open={plateModalTarget !== null}
+          initialWeight={plateModalTarget?.initialWeight}
+          onApply={(totalWeight) => {
+            if (plateModalTarget) {
+              updateSet(plateModalTarget.eIdx, plateModalTarget.sIdx, "weight", totalWeight);
+            }
+          }}
           onClose={() => setPlateModalTarget(null)}
         />
+
+        {showRestTimer && (
+          <RestTimer onClose={() => setShowRestTimer(false)} />
+        )}
       </div>
     </div>
   );

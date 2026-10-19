@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { DAY_WORKOUT_TYPES } from "./DayFormModal";
 import { PrimaryButton } from "./PrimaryButton";
-import { PlateCalculatorModal } from "./PlateCalculatorModal";
-import { formatPlatesSummary } from "../utils/plates";
+import { WeightScrollInput } from "./WeightScrollInput";
+import { RestTimer } from "./RestTimer";
 
 const EMPTY_SET = { reps: 10, weight: 60, completed: true };
 const EMPTY_EXERCISE = {
@@ -16,14 +16,7 @@ export function ExerciseEditModal({ open, initialValue, onSave, onClose }) {
   const [form, setForm] = useState(EMPTY_EXERCISE);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
-  const [plateModalTarget, setPlateModalTarget] = useState(null);
-
-  const handleApplyPlate = (newWeight, plateSummary) => {
-    if (plateModalTarget !== null) {
-      updateSet(plateModalTarget, "weight", newWeight);
-      setPlateModalTarget(null);
-    }
-  };
+  const [showRestTimer, setShowRestTimer] = useState(false);
 
   useEffect(() => {
     if (open && initialValue) {
@@ -215,65 +208,13 @@ export function ExerciseEditModal({ open, initialValue, onSave, onClose }) {
                         <span className="rf-set-prev-label">{prevRef}</span>
                       </div>
 
-                      {/* Minimal Weight Input with KG Indicator and Optional Plate Pill */}
-                      <div className="rf-set-cell rf-set-cell--weight" style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                        <div style={{ position: "relative", width: "100%", display: "flex", alignItems: "center" }}>
-                          <input
-                            type="number"
-                            step="0.5"
-                            min="0"
-                            className="rf-set-input"
-                            value={set.weight === 0 ? "" : set.weight}
-                            placeholder="0"
-                            onChange={(e) =>
-                              updateSet(
-                                sIdx,
-                                "weight",
-                                e.target.value === "" ? 0 : Number(e.target.value)
-                              )
-                            }
-                            aria-label={`Set ${sIdx + 1} weight (kg)`}
-                            style={{ paddingRight: 22 }}
-                          />
-                          <span
-                            style={{
-                              position: "absolute",
-                              right: 5,
-                              fontSize: "0.62rem",
-                              color: "var(--rf-cyan)",
-                              pointerEvents: "none",
-                              fontWeight: 700,
-                              fontFamily: "var(--rf-font-mono)",
-                            }}
-                          >
-                            kg
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setPlateModalTarget(sIdx)}
-                          style={{
-                            background: "rgba(0, 242, 254, 0.08)",
-                            border: "1px solid rgba(0, 242, 254, 0.2)",
-                            color: "var(--rf-cyan)",
-                            fontSize: "0.56rem",
-                            padding: "1px 3px",
-                            cursor: "pointer",
-                            borderRadius: 2,
-                            fontFamily: "var(--rf-font-mono)",
-                            lineHeight: 1.2,
-                            textAlign: "center",
-                            whiteSpace: "nowrap",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            width: "100%",
-                          }}
-                          title="Open Plate Calculator (Optional)"
-                        >
-                          {set.weight > 20
-                            ? `🝙 ${(set.weight - 20) / 2}k/side`
-                            : "🝙 Plate"}
-                        </button>
+                      {/* Precision Weight Input with Mousewheel Scroll-over & Cable Plate support */}
+                      <div className="rf-set-cell rf-set-cell--weight">
+                        <WeightScrollInput
+                          value={set.weight}
+                          onChange={(val) => updateSet(sIdx, "weight", val)}
+                          ariaLabel={`Set ${sIdx + 1} weight (kg)`}
+                        />
                       </div>
 
                       {/* Minimal Reps Input */}
@@ -296,13 +237,19 @@ export function ExerciseEditModal({ open, initialValue, onSave, onClose }) {
                         />
                       </div>
 
-                      {/* Low-profile Checkmark */}
+                      {/* Low-profile Checkmark (triggers Rest Timer upon set completion) */}
                       <div className="rf-set-cell rf-set-cell--check">
                         <button
                           type="button"
                           className={`rf-set-check-btn ${set.completed ? "rf-set-check-btn--active" : ""}`}
-                          onClick={() => updateSet(sIdx, "completed", !set.completed)}
-                          title={set.completed ? "Mark set incomplete" : "Mark set completed"}
+                          onClick={() => {
+                            const nextCompleted = !set.completed;
+                            updateSet(sIdx, "completed", nextCompleted);
+                            if (nextCompleted) {
+                              setShowRestTimer(true);
+                            }
+                          }}
+                          title={set.completed ? "Mark set incomplete" : "Mark completed & start Rest Timer"}
                           aria-label={`Toggle set ${sIdx + 1} completion`}
                         >
                           ✓
@@ -356,12 +303,9 @@ export function ExerciseEditModal({ open, initialValue, onSave, onClose }) {
           </div>
         </form>
 
-        <PlateCalculatorModal
-          open={plateModalTarget !== null}
-          initialWeight={plateModalTarget !== null ? (form.sets[plateModalTarget]?.weight || 60) : 60}
-          onApply={handleApplyPlate}
-          onClose={() => setPlateModalTarget(null)}
-        />
+        {showRestTimer && (
+          <RestTimer onClose={() => setShowRestTimer(false)} />
+        )}
       </div>
     </div>
   );

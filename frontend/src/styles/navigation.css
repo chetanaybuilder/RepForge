@@ -182,6 +182,11 @@
 }
 
 .rf-menu-card {
+  width: 100%;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: space-between;

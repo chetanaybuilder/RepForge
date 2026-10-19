@@ -240,3 +240,206 @@
   align-items: center;
   gap: 10px;
 }
+
+/* ==========================================================================
+   ELITE RESPONSIVE COACH TERMINAL LAYOUT
+   ========================================================================== */
+
+.rf-coach-layout {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  gap: 16px;
+}
+
+.rf-coach-telemetry-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.rf-coach-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 184, 0, 0.4);
+  border-radius: var(--rf-radius-sm);
+  background: rgba(255, 184, 0, 0.08);
+  color: var(--rf-amber);
+  font-size: 0.84rem;
+}
+
+@media (min-width: 960px) {
+  .rf-coach-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 20px;
+    align-items: start;
+  }
+}
+
+.rf-coach-terminal-box {
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - 165px);
+  min-height: 480px;
+  min-width: 0;
+  background: rgba(10, 10, 22, 0.88);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid rgba(0, 242, 254, 0.22);
+  border-radius: var(--rf-radius-lg);
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.65), 0 0 24px -6px rgba(0, 242, 254, 0.12);
+}
+
+@media (max-width: 959px) {
+  .rf-coach-terminal-box {
+    display: none;
+    height: min(68dvh, 620px);
+    min-height: 280px;
+  }
+
+  .rf-coach-terminal-box--visible {
+    display: flex;
+  }
+
+  .rf-coach-telemetry-col {
+    display: none;
+    min-width: 0;
+  }
+
+  .rf-coach-telemetry-col--visible {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+
+@media (min-width: 960px) {
+  .rf-coach-terminal-box {
+    height: calc(100vh - 190px);
+    height: calc(100dvh - 190px);
+  }
+}
+
+/* Mobile Segmented Switcher for Chat vs Telemetry */
+.rf-coach-mobile-tabs {
+  display: flex;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--rf-radius-md);
+  padding: 4px;
+  gap: 6px;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+@media (min-width: 960px) {
+  .rf-coach-mobile-tabs {
+    display: none;
+  }
+}
+
+.rf-coach-mobile-tab-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: var(--rf-radius-sm);
+  font-family: var(--rf-font-display);
+  font-weight: 700;
+  font-size: 0.84rem;
+  color: var(--rf-text-sub);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.rf-coach-mobile-tab-btn--active {
+  background: linear-gradient(135deg, rgba(0, 242, 254, 0.18), rgba(138, 92, 246, 0.18));
+  color: var(--rf-cyan);
+  border: 1px solid rgba(0, 242, 254, 0.35);
+  box-shadow: 0 0 16px -2px rgba(0, 242, 254, 0.3);
+}
+
+/* Claude-style Visual Telemetry & ASCII Card */
+.rf-coach-visual-card {
+  background: rgba(4, 4, 10, 0.92);
+  border: 1px solid rgba(0, 242, 254, 0.3);
+  border-left: 3px solid var(--rf-cyan);
+  border-radius: var(--rf-radius-sm);
+  padding: 10px 14px;
+  margin: 6px 0;
+  font-family: var(--rf-font-mono);
+  font-size: 0.8rem;
+  color: #00f2fe;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.45;
+  box-shadow: inset 0 0 16px rgba(0, 242, 254, 0.05);
+}
+
+.rf-coach-terminal-box input,
+.rf-coach-terminal-box button,
+.rf-coach-terminal-box [class*="message"] {
+  min-width: 0;
+}
+
+.rf-coach-terminal-box form {
+  padding-bottom: max(10px, env(safe-area-inset-bottom)) !important;
+}
+
+.rf-coach-terminal-box p,
+.rf-coach-terminal-box pre,
+.rf-coach-terminal-box code {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.rf-coach-section-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--rf-font-display);
+  font-weight: 700;
+  font-size: 0.86rem;
+  color: var(--rf-cyan);
+  letter-spacing: 0.02em;
+  margin-top: 10px;
+  margin-bottom: 2px;
+}
+
+/* Chat Action Copy Button */
+.rf-copy-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--rf-text-faint);
+  font-size: 0.7rem;
+  font-family: var(--rf-font-mono);
+  padding: 2px 8px;
+  border-radius: var(--rf-radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rf-copy-btn:hover {
+  background: rgba(0, 242, 254, 0.15);
+  border-color: rgba(0, 242, 254, 0.35);
+  color: var(--rf-cyan);
+}
+

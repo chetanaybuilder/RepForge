@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { AmbientBackground3D } from "./3d/AmbientBackground3D";
 import { AnimatePresence, motion } from "framer-motion";
+import { RestTimer } from "./RestTimer";
 
 export const APP_SECTIONS = [
   {
@@ -45,6 +46,7 @@ export const APP_SECTIONS = [
 export function AppShell() {
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showGlobalTimer, setShowGlobalTimer] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -178,6 +180,19 @@ export function AppShell() {
 
           <button
             type="button"
+            className="rf-btn rf-btn--outline rf-btn--sm rf-btn--full"
+            onClick={() => setShowGlobalTimer((prev) => !prev)}
+            style={{
+              borderColor: "rgba(0, 242, 254, 0.3)",
+              color: "var(--rf-cyan)",
+              fontSize: "0.78rem",
+            }}
+          >
+            ⏱️ Rest Timer
+          </button>
+
+          <button
+            type="button"
             className="rf-btn rf-btn--ghost rf-btn--sm rf-btn--full"
             onClick={logout}
           >
@@ -188,7 +203,7 @@ export function AppShell() {
 
       {/* ====================================================================
           MOBILE TOP BAR (< 768px)
-          Includes Three-Line Hamburger Menu Button (☰)
+          Includes Three-Line Hamburger Menu Button (☰) & Rest Timer
           ==================================================================== */}
       <header className="rf-topbar">
         <div className="rf-brand-group">
@@ -201,14 +216,37 @@ export function AppShell() {
           </div>
         </div>
 
-        <button
-          type="button"
-          className="rf-hamburger-btn"
-          onClick={() => setMenuOpen(true)}
-          aria-label="Open Navigation Menu"
-        >
-          ☰
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button
+            type="button"
+            onClick={() => setShowGlobalTimer((prev) => !prev)}
+            style={{
+              padding: "6px 10px",
+              fontFamily: "var(--rf-font-mono)",
+              fontSize: "0.75rem",
+              borderRadius: "var(--rf-radius-sm)",
+              border: "1px solid rgba(0, 242, 254, 0.3)",
+              background: "rgba(0, 242, 254, 0.08)",
+              color: "var(--rf-cyan)",
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              cursor: "pointer",
+            }}
+            title="Open Inter-Set Rest Timer"
+          >
+            ⏱️ Rest
+          </button>
+
+          <button
+            type="button"
+            className="rf-hamburger-btn"
+            onClick={() => setMenuOpen(true)}
+            aria-label="Open Navigation Menu"
+          >
+            ☰
+          </button>
+        </div>
       </header>
 
       {/* ====================================================================
@@ -264,16 +302,10 @@ export function AppShell() {
                       delay: idx * 0.06,
                     }}
                   >
-                    <div
-                      role="button"
-                      tabIndex={0}
+                    <button
+                      type="button"
                       className={`rf-menu-card${isActive ? " rf-menu-card--active" : ""}`}
                       onClick={() => handleSelectDestination(sec.to)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          handleSelectDestination(sec.to);
-                        }
-                      }}
                     >
                       <div>
                         <div className="rf-menu-num">
@@ -284,7 +316,7 @@ export function AppShell() {
                       </div>
 
                       <div className="rf-menu-arrow">→</div>
-                    </div>
+                    </button>
                   </motion.div>
                 );
               })}
@@ -354,20 +386,23 @@ export function AppShell() {
           ==================================================================== */}
       <main className="rf-shell-main">
         <div className="rf-page-canvas">
-          <AnimatePresence mode="wait">
+          <AnimatePresence initial={false}>
             <motion.div
               key={location.pathname}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ type: "spring", stiffness: 280, damping: 24 }}
-              style={{ width: "100%", flex: 1, display: "flex", flexDirection: "column" }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
+              style={{ width: "100%", flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}
             >
               <Outlet />
             </motion.div>
           </AnimatePresence>
         </div>
       </main>
+
+      {showGlobalTimer && (
+        <RestTimer onClose={() => setShowGlobalTimer(false)} />
+      )}
     </div>
   );
 }

@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 import {
-  BAR_TYPES,
-  STANDARD_PLATES_KG,
   PLATE_THEMES,
   calculateBarbellPlates,
   formatPlatesSummary,
@@ -10,39 +8,45 @@ import { PrimaryButton } from "./PrimaryButton";
 
 export function PlateCalculatorModal({
   open,
-  initialWeight = 60,
+  initialWeight = 0,
   onApply,
   onClose,
 }) {
-  const [barWeight, setBarWeight] = useState(20);
-  const [weight, setWeight] = useState(initialWeight || 60);
+  const [barWeight, setBarWeight] = useState("");
+  const [plateInventoryText, setPlateInventoryText] = useState("");
+  const [weight, setWeight] = useState(initialWeight ?? 0);
+  const availablePlates = [...new Set(plateInventoryText
+    .split(",")
+    .map((plate) => Number(plate.trim()))
+    .filter((plate) => Number.isFinite(plate) && plate > 0))];
 
   useEffect(() => {
     if (open) {
-      setWeight(initialWeight || 60);
+      setWeight(initialWeight ?? 0);
     }
   }, [open, initialWeight]);
 
   if (!open) return null;
 
-  const result = calculateBarbellPlates(weight, barWeight);
+  const result = barWeight === "" ? null : calculateBarbellPlates(weight, Number(barWeight), availablePlates);
 
   // Quick-add plate to both sides
   const handleAddPlatePair = (plateKg) => {
-    setWeight((prev) => Math.max(barWeight, Math.round((prev + plateKg * 2) * 100) / 100));
+    if (barWeight !== "") setWeight((prev) => Math.max(Number(barWeight), Math.round((prev + plateKg * 2) * 100) / 100));
   };
 
   // Quick-subtract plate from both sides
   const handleRemovePlatePair = (plateKg) => {
-    setWeight((prev) => Math.max(barWeight, Math.round((prev - plateKg * 2) * 100) / 100));
+    if (barWeight !== "") setWeight((prev) => Math.max(Number(barWeight), Math.round((prev - plateKg * 2) * 100) / 100));
   };
 
   const handleResetToBar = () => {
-    setWeight(barWeight);
+    if (barWeight !== "") setWeight(Number(barWeight));
   };
 
   const handleApply = () => {
-    const summary = formatPlatesSummary(weight, barWeight);
+    if (barWeight === "" || !result?.isExact) return;
+    const summary = formatPlatesSummary(weight, Number(barWeight), availablePlates);
     if (onApply) {
       onApply(weight, summary);
     }
@@ -132,31 +136,36 @@ export function PlateCalculatorModal({
           {/* Bar Type Selector */}
           <div>
             <label className="rf-label" style={{ fontSize: "0.74rem", marginBottom: 6 }}>
-              Barbell / Equipment Base Weight
+              Barbell weight (kg)
             </label>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 8 }}>
-              {BAR_TYPES.map((bt) => (
-                <button
-                  key={bt.value}
-                  type="button"
-                  onClick={() => {
-                    setBarWeight(bt.value);
-                    if (weight < bt.value) setWeight(bt.value);
-                  }}
-                  className={`rf-btn rf-btn--sm ${
-                    barWeight === bt.value ? "rf-btn--primary" : "rf-btn--ghost"
-                  }`}
-                  style={{
-                    fontSize: "0.76rem",
-                    padding: "6px 8px",
-                    height: "auto",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {bt.label}
-                </button>
-              ))}
-            </div>
+            <input
+              className="rf-input"
+              type="number"
+              min="0"
+              step="0.5"
+              value={barWeight}
+              placeholder="Enter actual bar weight"
+              onChange={(event) => setBarWeight(event.target.value === "" ? "" : Math.max(0, Number(event.target.value)))}
+            />
+          </div>
+
+          <div>
+            <label className="rf-label" htmlFor="plate-inventory">
+              Plate denominations at your gym (kg)
+            </label>
+            <input
+              id="plate-inventory"
+              className="rf-input"
+              type="text"
+              inputMode="decimal"
+              value={plateInventoryText}
+              onChange={(event) => setPlateInventoryText(event.target.value)}
+              placeholder="Enter actual sizes, e.g. 25, 20, 15, 10, 5, 2.5"
+              aria-describedby="plate-inventory-help"
+            />
+            <span id="plate-inventory-help" className="rf-weight-mode-help">
+              Enter the available plate weights separated by commas. No inventory is assumed.
+            </span>
           </div>
 
           {/* Visual Barbell Loading Sleeve */}
@@ -174,10 +183,10 @@ export function PlateCalculatorModal({
           >
             <div style={{ display: "flex", justifyContent: "space-between", width: "100%", fontSize: "0.78rem" }}>
               <span style={{ color: "var(--rf-text-sub)" }}>
-                Load Per Side: <strong style={{ color: "var(--rf-cyan)" }}>{result.perSideWeight} kg</strong>
+                Plates per side: <strong style={{ color: "var(--rf-cyan)" }}>{result?.perSideWeight ?? "--"} kg</strong>
               </span>
               <span style={{ color: "var(--rf-text-faint)" }}>
-                {result.platesPerSide.length} plates / side
+                {result?.platesPerSide.length ?? 0} plates / side
               </span>
             </div>
 
@@ -223,13 +232,19 @@ export function PlateCalculatorModal({
 
               {/* Plates On Sleeve */}
               <div style={{ display: "flex", alignItems: "center", gap: 3, zIndex: 3, minWidth: 20 }}>
-                {result.platesPerSide.length === 0 ? (
+                {!result || result.platesPerSide.length === 0 ? (
                   <span style={{ color: "var(--rf-text-faint)", fontSize: "0.78rem", fontStyle: "italic" }}>
-                    No plates loaded (Empty Bar)
+                    {result ? "No plates loaded (bar only)" : "Enter bar weight and select available plates"}
                   </span>
                 ) : (
                   result.platesPerSide.map((p, idx) => {
-                    const theme = PLATE_THEMES[p] || PLATE_THEMES[5];
+                    const theme = PLATE_THEMES[p] || {
+                      bg: "#475569",
+                      border: "#94a3b8",
+                      text: "#ffffff",
+                      width: 10,
+                      height: 40,
+                    };
                     return (
                       <div
                         key={idx}
@@ -261,9 +276,9 @@ export function PlateCalculatorModal({
 
             {/* Text Breakdown of Plates */}
             <div style={{ width: "100%", display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center" }}>
-              {Object.keys(result.plateCounts).length === 0 ? (
+              {!result || Object.keys(result.plateCounts).length === 0 ? (
                 <span style={{ fontSize: "0.75rem", color: "var(--rf-text-faint)" }}>
-                  Total weight equals barbell base weight ({barWeight} kg).
+                  {result ? `Total weight equals bar weight (${barWeight} kg).` : "Plate breakdown appears after selecting equipment."}
                 </span>
               ) : (
                 Object.entries(result.plateCounts)
@@ -279,13 +294,25 @@ export function PlateCalculatorModal({
                   ))
               )}
             </div>
+            {result?.isExact && (
+              <p className="rf-plate-calculator-total">
+                {weight} kg total = {barWeight} kg bar + {result.perSideWeight} kg of plates per side × 2
+              </p>
+            )}
+            {result && !result.isExact && (
+              <p className="rf-plate-calculator-warning" role="status">
+                {weight < Number(barWeight)
+                  ? `The ${weight} kg target is below the selected ${barWeight} kg bar weight.`
+                  : `This target cannot be loaded exactly with the selected plates. The requested load needs ${result.perSideWeight} kg per side, with ${result.remainder} kg per side not represented.`}
+              </p>
+            )}
           </div>
 
           {/* Quick-Tap Plate Buttons */}
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
               <label className="rf-label" style={{ fontSize: "0.74rem", margin: 0 }}>
-                Tap to Add / Remove Plates (+2 per pair)
+                Optional plate pairs (+2 plates per selected plate weight)
               </label>
               <button
                 type="button"
@@ -303,9 +330,13 @@ export function PlateCalculatorModal({
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(65px, 1fr))", gap: 8 }}>
-              {STANDARD_PLATES_KG.map((p) => {
-                const count = result.plateCounts[p] || 0;
-                const theme = PLATE_THEMES[p];
+                {availablePlates.map((p) => {
+                const count = result?.plateCounts[p] || 0;
+                const theme = PLATE_THEMES[p] || {
+                  bg: "#475569",
+                  border: "#94a3b8",
+                  text: "#ffffff",
+                };
                 return (
                   <div
                     key={p}
@@ -367,7 +398,7 @@ export function PlateCalculatorModal({
           <button type="button" className="rf-btn rf-btn--ghost" onClick={onClose}>
             Cancel
           </button>
-          <PrimaryButton onClick={handleApply}>
+          <PrimaryButton onClick={handleApply} disabled={!result?.isExact}>
             Apply {weight} KG to Set
           </PrimaryButton>
         </div>

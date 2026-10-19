@@ -88,7 +88,20 @@ export function Coach() {
   const [chatLoading, setChatLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [chatError, setChatError] = useState(null);
+  const [retryMessage, setRetryMessage] = useState(null);
+  const [mobileTab, setMobileTab] = useState("chat");
+  const [copiedIdx, setCopiedIdx] = useState(null);
   const scrollRef = useRef(null);
+
+  const handleCopy = (text, idx) => {
+    try {
+      navigator.clipboard.writeText(typeof text === "string" ? text : JSON.stringify(text));
+      setCopiedIdx(idx);
+      setTimeout(() => setCopiedIdx(null), 2000);
+    } catch {
+      // ignore
+    }
+  };
 
   // Fetch verified user workout telemetry
   const { data: statsData } = useFetch(
@@ -149,9 +162,9 @@ export function Coach() {
       });
       const replyText = extractReplyText(data);
       setChatHistory([{ role: "assistant", text: replyText }]);
+      setRetryMessage(null);
     } catch {
-      const syntheticCheckin = generateSyntheticCheckin(actionableInsights);
-      setChatHistory([{ role: "assistant", text: syntheticCheckin }]);
+      setChatError("Coach could not connect to the training service. Check your connection and retry.");
     } finally {
       setChatLoading(false);
     }
@@ -166,8 +179,9 @@ export function Coach() {
     setChatLoading(true);
 
     const userMessage = { role: "user", text: textToSend };
-    const historyForRequest = [...chatHistory];
-    const updatedHistory = [...chatHistory, userMessage];
+    const hasPendingMessage = chatHistory.at(-1)?.role === "user" && chatHistory.at(-1)?.text === textToSend;
+    const historyForRequest = hasPendingMessage ? chatHistory.slice(0, -1) : [...chatHistory];
+    const updatedHistory = hasPendingMessage ? chatHistory : [...chatHistory, userMessage];
     setChatHistory(updatedHistory);
 
     try {
@@ -189,7 +203,13 @@ export function Coach() {
       });
 
       if (!response.ok) {
-        throw new Error("Coach stream connection failed");
+        if (response.status === 429) {
+          throw new Error("Coach is rate limited right now. Wait briefly, then retry.");
+        }
+        if (response.status === 401 || response.status === 403) {
+          throw new Error("Your session has expired. Sign in again to continue with Coach.");
+        }
+        throw new Error(`Coach request failed (${response.status}). Retry when your connection is ready.`);
       }
 
       setChatLoading(false);
@@ -236,15 +256,24 @@ export function Coach() {
             }
           }
         }
+        if (!accumulatedReply.trim()) {
+          throw new Error("Coach returned an empty response. Please retry.");
+        }
       } else {
         const data = await response.json();
         const replyText = extractReplyText(data);
+        if (!replyText.trim()) {
+          throw new Error("Coach returned an empty response. Please retry.");
+        }
         setChatHistory([...updatedHistory, { role: "assistant", text: replyText }]);
       }
-    } catch {
-      // Tactical data-driven fallback when AI service is rate-limited or offline
-      const syntheticReply = generateTacticalReply(textToSend, actionableInsights);
-      setChatHistory([...updatedHistory, { role: "assistant", text: syntheticReply }]);
+      setRetryMessage(null);
+    } catch (error) {
+      setChatHistory(updatedHistory);
+      setRetryMessage(textToSend);
+      setChatError(
+        error?.message || "Coach could not complete this request. Check your connection and retry."
+      );
     } finally {
       setChatLoading(false);
       setIsStreaming(false);
@@ -296,30 +325,32 @@ export function Coach() {
         </div>
       </div>
 
-      {/* Main Terminal Grid */}
-      <div
-        className="rf-coach-grid"
-        style={{
-          display: "grid",
-          gridTemplateColumns: "minmax(0, 1fr) minmax(280px, 340px)",
-          gap: 20,
-          flex: 1,
-          minHeight: 0,
-        }}
-      >
-        {/* Left Column: Conversational Terminal */}
-        <div
-          className="rf-pod"
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            minHeight: "520px",
-            maxHeight: "calc(100vh - 200px)",
-            padding: 0,
-            overflow: "hidden",
-            position: "relative",
-          }}
+      {/* Mobile Segmented Switcher for Chat vs Telemetry */}
+      <div className="rf-coach-mobile-tabs">
+        <button
+          type="button"
+          className={`rf-coach-mobile-tab-btn ${
+            mobileTab === "chat" ? "rf-coach-mobile-tab-btn--active" : ""
+          }`}
+          onClick={() => setMobileTab("chat")}
         >
+          💬 Coach Terminal
+        </button>
+        <button
+          type="button"
+          className={`rf-coach-mobile-tab-btn ${
+            mobileTab === "telemetry" ? "rf-coach-mobile-tab-btn--active" : ""
+          }`}
+          onClick={() => setMobileTab("telemetry")}
+        >
+          📊 Live Telemetry Briefing
+        </button>
+      </div>
+
+      {/* Main Responsive Grid */}
+      <div className="rf-coach-layout">
+        {/* Left Column: Conversational Terminal */}
+        <div className={`rf-coach-terminal-box${mobileTab === "chat" ? " rf-coach-terminal-box--visible" : ""}`}>
           {/* Terminal Sub-Header */}
           <div
             style={{
@@ -328,7 +359,8 @@ export function Coach() {
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              background: "rgba(10, 10, 20, 0.6)",
+              background: "rgba(10, 10, 20, 0.7)",
+              flexShrink: 0,
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -338,7 +370,7 @@ export function Coach() {
                   RepForge Strength Coach
                 </div>
                 <div className="rf-telemetry-tag" style={{ fontSize: "0.65rem", color: "var(--rf-cyan)" }}>
-                  GROQ · LLAMA-3.3-70B · REAL-TIME TELEMETRY
+                  GROQ · REAL-TIME BIOMECHANICAL TELEMETRY
                 </div>
               </div>
             </div>
@@ -355,16 +387,18 @@ export function Coach() {
             </div>
           </div>
 
-          {/* Dialogue Scroll Stage */}
+          {/* Dialogue Scroll Stage with Touch Momentum */}
           <div
             ref={scrollRef}
             style={{
               flex: 1,
+              minHeight: 0,
               overflowY: "auto",
-              padding: "18px 20px",
+              WebkitOverflowScrolling: "touch",
+              padding: "16px clamp(12px, 3vw, 20px)",
               display: "flex",
               flexDirection: "column",
-              gap: 16,
+              gap: 14,
             }}
           >
             <CoachErrorBoundary>
@@ -373,43 +407,65 @@ export function Coach() {
                 return (
                   <motion.div
                     key={idx}
-                    initial={{ opacity: 0, y: 8 }}
+                    initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.2 }}
+                    transition={{ duration: 0.15 }}
                     style={{
                       display: "flex",
                       justifyContent: isUser ? "flex-end" : "flex-start",
+                      width: "100%",
                     }}
                   >
                     <div
                       style={{
-                        maxWidth: "85%",
+                        maxWidth: isUser ? "85%" : "94%",
                         padding: "12px 16px",
                         borderRadius: "var(--rf-radius-md)",
                         background: isUser
-                          ? "linear-gradient(135deg, rgba(0, 242, 254, 0.15) 0%, rgba(138, 92, 246, 0.15) 100%)"
-                          : "rgba(14, 14, 26, 0.8)",
+                          ? "linear-gradient(135deg, rgba(0, 242, 254, 0.16) 0%, rgba(138, 92, 246, 0.16) 100%)"
+                          : "rgba(12, 12, 24, 0.92)",
                         border: isUser
                           ? "1px solid rgba(0, 242, 254, 0.4)"
-                          : "1px solid rgba(255, 255, 255, 0.08)",
+                          : "1px solid rgba(0, 242, 254, 0.2)",
                         boxShadow: isUser
                           ? "0 4px 20px rgba(0, 242, 254, 0.1)"
-                          : "0 4px 20px rgba(0, 0, 0, 0.5)",
+                          : "0 6px 24px rgba(0, 0, 0, 0.55)",
                       }}
                     >
                       <div
-                        className="rf-telemetry-tag"
                         style={{
-                          marginBottom: 4,
-                          fontSize: "0.66rem",
-                          color: isUser ? "var(--rf-cyan)" : "var(--rf-violet)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          marginBottom: 6,
+                          gap: 10,
                         }}
                       >
-                        {isUser ? "LIFTER" : "COACH"}
+                        <div
+                          className="rf-telemetry-tag"
+                          style={{
+                            fontSize: "0.68rem",
+                            color: isUser ? "var(--rf-cyan)" : "var(--rf-violet)",
+                          }}
+                        >
+                          {isUser ? "🦾 LIFTER" : "⚡ NEURAL COACH"}
+                        </div>
+
+                        {!isUser && (
+                          <button
+                            type="button"
+                            onClick={() => handleCopy(msg.text, idx)}
+                            className="rf-copy-btn"
+                            title="Copy advice"
+                          >
+                            {copiedIdx === idx ? "✓ Copied" : "📋 Copy"}
+                          </button>
+                        )}
                       </div>
+
                       <div
                         style={{
-                          color: "var(--rf-text-pure)",
+                          color: "#ffffff",
                           fontSize: "0.92rem",
                           lineHeight: 1.6,
                         }}
@@ -429,19 +485,34 @@ export function Coach() {
                   <span style={{ fontSize: "0.85rem" }}>Synthesizing session diagnostics...</span>
                 </div>
               )}
+              {chatError && (
+                <div className="rf-coach-error" role="alert">
+                  <span>{chatError}</span>
+                  <button
+                    type="button"
+                    className="rf-btn rf-btn--outline rf-btn--sm"
+                    disabled={chatLoading || isStreaming}
+                    onClick={() => (retryMessage ? handleSendMessage(retryMessage) : triggerInitialCheckin())}
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
             </CoachErrorBoundary>
           </div>
 
-          {/* Quick Action Chips */}
+          {/* Quick Action Chips Bar */}
           <div
             style={{
-              padding: "10px 18px",
-              borderTop: "1px solid rgba(255, 255, 255, 0.04)",
-              background: "rgba(10, 10, 20, 0.4)",
+              padding: "8px 14px",
+              borderTop: "1px solid rgba(255, 255, 255, 0.05)",
+              background: "rgba(8, 8, 16, 0.6)",
               display: "flex",
               gap: 8,
               overflowX: "auto",
+              WebkitOverflowScrolling: "touch",
               scrollbarWidth: "none",
+              flexShrink: 0,
             }}
           >
             {QUICK_PROMPTS.map((prompt) => (
@@ -455,10 +526,11 @@ export function Coach() {
                   cursor: "pointer",
                   whiteSpace: "nowrap",
                   background: "rgba(255, 255, 255, 0.04)",
-                  borderColor: "rgba(255, 255, 255, 0.1)",
+                  borderColor: "rgba(255, 255, 255, 0.12)",
                   color: "var(--rf-text-sub)",
                   fontSize: "0.75rem",
                   transition: "all 0.15s ease",
+                  flexShrink: 0,
                 }}
               >
                 {prompt}
@@ -466,33 +538,45 @@ export function Coach() {
             ))}
           </div>
 
-          {/* Input Box */}
+          {/* Sticky Mobile Input Pinned to Viewport Bottom */}
           <form
             onSubmit={(e) => {
               e.preventDefault();
               handleSendMessage();
             }}
             style={{
-              padding: 14,
-              borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+              padding: "10px 14px",
+              paddingBottom: "max(12px, env(safe-area-inset-bottom))",
+              borderTop: "1px solid rgba(0, 242, 254, 0.2)",
               display: "flex",
-              gap: 10,
-              background: "rgba(8, 8, 16, 0.95)",
+              gap: 8,
+              background: "rgba(8, 8, 18, 0.98)",
+              position: "sticky",
+              bottom: 0,
+              zIndex: 30,
+              flexShrink: 0,
             }}
           >
             <input
               type="text"
               className="rf-input"
-              placeholder="Ask coach (e.g. 'Can I add 5kg to bench next week?', 'Am I training legs enough?')..."
+              placeholder="Ask Coach (e.g. 'Can I add 5kg?', '3 plates cable curl reps')..."
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               disabled={chatLoading || isStreaming}
-              style={{ flex: 1 }}
+              style={{
+                flex: 1,
+                fontSize: "0.92rem",
+                background: "rgba(255, 255, 255, 0.05)",
+                borderColor: "rgba(255, 255, 255, 0.15)",
+                color: "#ffffff",
+              }}
             />
             <PrimaryButton
               type="submit"
               disabled={!chatInput.trim() || chatLoading || isStreaming}
               className="rf-btn--sm"
+              style={{ flexShrink: 0 }}
             >
               Send
             </PrimaryButton>
@@ -500,14 +584,14 @@ export function Coach() {
         </div>
 
         {/* Right Column: Live Telemetry Briefing Cards */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <div className={`rf-coach-telemetry-col ${mobileTab === "telemetry" ? "rf-coach-telemetry-col--visible" : ""}`}>
           {/* Volume Velocity */}
           <div
             className="rf-pod"
             style={{
               padding: 18,
               border: "1px solid rgba(0, 242, 254, 0.25)",
-              background: "rgba(10, 10, 20, 0.7)",
+              background: "rgba(10, 10, 20, 0.75)",
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
@@ -532,7 +616,7 @@ export function Coach() {
             style={{
               padding: 18,
               border: "1px solid rgba(255, 51, 102, 0.25)",
-              background: "rgba(10, 10, 20, 0.7)",
+              background: "rgba(10, 10, 20, 0.75)",
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
@@ -557,7 +641,7 @@ export function Coach() {
             style={{
               padding: 18,
               border: "1px solid rgba(138, 92, 246, 0.25)",
-              background: "rgba(10, 10, 20, 0.7)",
+              background: "rgba(10, 10, 20, 0.75)",
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
@@ -697,53 +781,7 @@ function extractReplyText(data) {
   if (typeof data?.reply === "string") return data.reply;
   if (typeof data?.message === "string") return data.message;
   if (typeof data?.insights?.deep_review === "string") return data.insights.deep_review;
-  return "Biomechanical telemetry received and verified.";
-}
-
-function generateSyntheticCheckin(insights) {
-  return [
-    `### TACTICAL PERFORMANCE BRIEFING`,
-    `Biomechanical telemetry verified across your training log. Here is your targeted directive:`,
-    `- **Volume Velocity**: ${insights.volume.metric} (${insights.volume.status}). ${insights.volume.recommendation}`,
-    `- **Progressive Overload Target**: ${insights.overload.target} (${insights.overload.status}). ${insights.overload.recommendation}`,
-    `- **Recovery & Split Cue**: ${insights.recovery.state} (${insights.recovery.status}). ${insights.recovery.recommendation}`,
-    `Standing by for your next training query or session analysis.`,
-  ].join("\n\n");
-}
-
-function generateTacticalReply(text, insights) {
-  const lower = text.toLowerCase();
-  if (lower.includes("volume") || lower.includes("fatigue")) {
-    return [
-      `### VOLUME & FATIGUE TELEMETRY`,
-      `- **Current Load**: ${insights.volume.metric} (${insights.volume.status})`,
-      `- **Tactical Vector**: ${insights.volume.recommendation}`,
-      `- **Recovery Safeguard**: ${insights.recovery.recommendation}`,
-    ].join("\n\n");
-  }
-  if (lower.includes("overload") || lower.includes("plateau") || lower.includes("pr")) {
-    return [
-      `### PROGRESSIVE OVERLOAD DIRECTIVE`,
-      `- **Primary Vector**: ${insights.overload.target} (${insights.overload.status})`,
-      `- **Target Protocol**: ${insights.overload.recommendation}`,
-      `- **Load Baseline**: ${insights.volume.metric}`,
-    ].join("\n\n");
-  }
-  if (lower.includes("recovery") || lower.includes("balance") || lower.includes("split")) {
-    return [
-      `### RECOVERY & SPLIT TELEMETRY`,
-      `- **Neuromuscular State**: ${insights.recovery.state} (${insights.recovery.status})`,
-      `- **Recovery Directive**: ${insights.recovery.recommendation}`,
-      `- **Volume Context**: ${insights.volume.metric}`,
-    ].join("\n\n");
-  }
-  return [
-    `### TACTICAL TELEMETRY RESPONSE`,
-    `Telemetry verified for "${text}".`,
-    `- **Target Vector**: ${insights.overload.target}`,
-    `- **Load Volume**: ${insights.volume.metric}`,
-    `- **Systemic Cue**: ${insights.recovery.recommendation}`,
-  ].join("\n\n");
+  return "";
 }
 
 function formatCoachReply(text) {
@@ -758,73 +796,100 @@ function formatCoachReply(text) {
       cleanText = String(text ?? "Biomechanical telemetry verified.");
     }
 
-    const paragraphs = cleanText
-      .split(/\n{2,}/)
-      .map((p) => p.trim())
-      .filter(Boolean);
+    // Split text by markdown code blocks (``` ... ```)
+    const codeBlockRegex = /```([\s\S]*?)```/g;
+    const segments = [];
+    let lastIndex = 0;
+    let match;
 
-    if (paragraphs.length === 0) {
-      return <p style={{ margin: 0 }}>Biomechanical telemetry verified.</p>;
+    while ((match = codeBlockRegex.exec(cleanText)) !== null) {
+      if (match.index > lastIndex) {
+        segments.push({ type: "text", content: cleanText.substring(lastIndex, match.index) });
+      }
+      segments.push({ type: "code", content: match[1].trim() });
+      lastIndex = match.index + match[0].length;
+    }
+    if (lastIndex < cleanText.length) {
+      segments.push({ type: "text", content: cleanText.substring(lastIndex) });
     }
 
     return (
-      <div style={{ lineHeight: 1.65, display: "flex", flexDirection: "column", gap: 10 }}>
-        {paragraphs.map((paragraph, pIdx) => {
-          if (paragraph.startsWith("### ") || paragraph.startsWith("## ")) {
-            const title = paragraph.replace(/^#+\s+/, "");
+      <div style={{ lineHeight: 1.6, display: "flex", flexDirection: "column", gap: 10 }}>
+        {segments.map((segment, segIdx) => {
+          if (segment.type === "code") {
             return (
-              <div
-                key={pIdx}
-                className="rf-telemetry-tag"
-                style={{
-                  color: "var(--rf-cyan)",
-                  fontSize: "0.78rem",
-                  letterSpacing: "0.08em",
-                  marginTop: pIdx > 0 ? 8 : 0,
-                  marginBottom: 2,
-                }}
-              >
-                {title}
-              </div>
+              <pre key={segIdx} className="rf-coach-visual-card">
+                {segment.content}
+              </pre>
             );
           }
 
-          if (
-            paragraph.includes("\n- ") ||
-            paragraph.includes("\n* ") ||
-            paragraph.startsWith("- ") ||
-            paragraph.startsWith("* ")
-          ) {
-            const items = paragraph
-              .split(/\n(?=[-*\u2022]\s+)/)
-              .map((it) => it.replace(/^[-*\u2022]\s+/, "").trim())
-              .filter(Boolean);
+          const paragraphs = segment.content
+            .split(/\n{2,}/)
+            .map((p) => p.trim())
+            .filter(Boolean);
+
+          return paragraphs.map((paragraph, pIdx) => {
+            // Header with emojis or ###
+            if (
+              paragraph.startsWith("### ") ||
+              paragraph.startsWith("## ") ||
+              paragraph.startsWith("# ")
+            ) {
+              const title = paragraph.replace(/^#+\s+/, "");
+              return (
+                <div key={`${segIdx}-${pIdx}`} className="rf-coach-section-header">
+                  {title}
+                </div>
+              );
+            }
+
+            // Bullet points
+            if (
+              paragraph.includes("\n- ") ||
+              paragraph.includes("\n* ") ||
+              paragraph.startsWith("- ") ||
+              paragraph.startsWith("* ")
+            ) {
+              const items = paragraph
+                .split(/\n(?=[-*\u2022]\s+)/)
+                .map((it) => it.replace(/^[-*\u2022]\s+/, "").trim())
+                .filter(Boolean);
+
+              return (
+                <ul
+                  key={`${segIdx}-${pIdx}`}
+                  style={{
+                    margin: "4px 0",
+                    paddingLeft: 18,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 6,
+                  }}
+                >
+                  {items.map((item, iIdx) => (
+                    <li key={iIdx} style={{ color: "var(--rf-text-pure)", fontSize: "0.92rem" }}>
+                      {renderFormattedInline(item)}
+                    </li>
+                  ))}
+                </ul>
+              );
+            }
 
             return (
-              <ul
-                key={pIdx}
+              <p
+                key={`${segIdx}-${pIdx}`}
                 style={{
-                  margin: "4px 0",
-                  paddingLeft: 20,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 6,
+                  margin: 0,
+                  color: "#ffffff",
+                  fontSize: "0.92rem",
+                  lineHeight: 1.6,
                 }}
               >
-                {items.map((item, iIdx) => (
-                  <li key={iIdx} style={{ color: "var(--rf-text-pure)" }}>
-                    {renderFormattedInline(item)}
-                  </li>
-                ))}
-              </ul>
+                {renderFormattedInline(paragraph)}
+              </p>
             );
-          }
-
-          return (
-            <p key={pIdx} style={{ margin: 0, color: "var(--rf-text-bright)" }}>
-              {renderFormattedInline(paragraph)}
-            </p>
-          );
+          });
         })}
       </div>
     );
@@ -838,7 +903,7 @@ function renderFormattedInline(str) {
   return parts.map((part, idx) => {
     if (part.startsWith("**") && part.endsWith("**")) {
       return (
-        <strong key={idx} style={{ color: "var(--rf-text-pure)", fontWeight: 700 }}>
+        <strong key={idx} style={{ color: "var(--rf-cyan)", fontWeight: 700 }}>
           {part.slice(2, -2)}
         </strong>
       );
