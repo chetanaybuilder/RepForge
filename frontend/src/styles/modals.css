@@ -15,7 +15,7 @@
   align-items: flex-end; /* Bottom sheet on mobile */
   justify-content: center;
   z-index: var(--rf-z-modal-backdrop);
-  padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  padding: max(12px, env(safe-area-inset-top)) 0 max(0px, env(safe-area-inset-bottom));
   overflow: hidden;
   animation: rf-fade-in 0.2s var(--rf-ease-smooth);
 }

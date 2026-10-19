@@ -3,7 +3,6 @@ import { PrimaryButton } from "./PrimaryButton";
 import { ExercisePickerModal } from "./ExercisePickerModal";
 import { WeightScrollInput } from "./WeightScrollInput";
 import { RestTimer } from "./RestTimer";
-import { PlateCalculatorModal } from "./PlateCalculatorModal";
 
 export const DAY_WORKOUT_TYPES = [
   { value: "push", label: "Push (Chest/Shoulders/Triceps)" },
@@ -38,9 +37,6 @@ export function DayFormModal({ open, onSave, onClose, initialExercise }) {
   const [saving, setSaving] = useState(false);
   const [pickerActiveIndex, setPickerActiveIndex] = useState(null);
   const [showRestTimer, setShowRestTimer] = useState(false);
-  const [weightMode, setWeightMode] = useState("total");
-  const [barWeight, setBarWeight] = useState("");
-  const [plateModalTarget, setPlateModalTarget] = useState(null);
 
   useEffect(() => {
     if (open) {
@@ -56,9 +52,6 @@ export function DayFormModal({ open, onSave, onClose, initialExercise }) {
         ],
       });
       setErrors({});
-      setWeightMode("total");
-      setBarWeight("");
-      setPlateModalTarget(null);
     }
   }, [open, initialExercise]);
 
@@ -114,7 +107,11 @@ export function DayFormModal({ open, onSave, onClose, initialExercise }) {
     const lastSet = newExs[eIdx].sets[newExs[eIdx].sets.length - 1] || EMPTY_SET;
     newExs[eIdx].sets = [
       ...newExs[eIdx].sets,
-      { weight: lastSet.weight, reps: lastSet.reps, completed: true },
+      {
+        weight: lastSet.weight,
+        reps: lastSet.reps,
+        completed: true,
+      },
     ];
     setField("exercises", newExs);
   };
@@ -288,26 +285,6 @@ export function DayFormModal({ open, onSave, onClose, initialExercise }) {
                     <div className="rf-exercise-card-actions">
                       <button
                         type="button"
-                        onClick={() => {
-                          const firstWeight = ex.sets[0]?.weight || 60;
-                          setPlateModalTarget({ eIdx, sIdx: 0, initialWeight: firstWeight });
-                        }}
-                        className="rf-telemetry-tag"
-                        style={{
-                          background: "rgba(138, 92, 246, 0.12)",
-                          border: "1px solid rgba(138, 92, 246, 0.3)",
-                          color: "var(--rf-violet)",
-                          fontSize: "0.68rem",
-                          padding: "3px 8px",
-                          cursor: "pointer",
-                          borderRadius: "var(--rf-radius-sm)",
-                        }}
-                        title="Calculate barbell plates for this exercise (Optional)"
-                      >
-                        🝙 Plate Calc
-                      </button>
-                      <button
-                        type="button"
                         className="rf-icon-btn rf-icon-btn--xs"
                         disabled={eIdx === 0}
                         onClick={() => moveExercise(eIdx, eIdx - 1)}
@@ -415,69 +392,17 @@ export function DayFormModal({ open, onSave, onClose, initialExercise }) {
                     />
                   </div>
 
-                  <div className="rf-weight-entry-controls">
-                    <div className="rf-weight-entry-modes" role="group" aria-label="Weight entry mode">
-                      <button
-                        type="button"
-                        className={`rf-weight-mode${weightMode === "total" ? " rf-weight-mode--active" : ""}`}
-                        aria-pressed={weightMode === "total"}
-                        onClick={() => setWeightMode("total")}
-                      >
-                        Total Weight (kg)
-                      </button>
-                      <button
-                        type="button"
-                        className={`rf-weight-mode${weightMode === "per-side" ? " rf-weight-mode--active" : ""}`}
-                        aria-pressed={weightMode === "per-side"}
-                        onClick={() => setWeightMode("per-side")}
-                      >
-                        Plates per side
-                      </button>
-                    </div>
-                    {weightMode === "per-side" && (
-                      <div className="rf-bar-weight-control">
-                        <label className="rf-label" htmlFor={`bar-weight-${eIdx}`}>
-                          Bar weight (kg)
-                        </label>
-                        <input
-                          id={`bar-weight-${eIdx}`}
-                          className="rf-input rf-input--compact"
-                          type="number"
-                          min="0"
-                          step="0.5"
-                          value={barWeight}
-                          onChange={(event) => {
-                            const nextBarWeight = event.target.value === "" ? null : Math.max(0, Number(event.target.value));
-                            setBarWeight(nextBarWeight);
-                          }}
-                        />
-                        <span className="rf-weight-mode-help">
-                          Enter the plates loaded on one side. The bar weight is added separately.
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
                   {/* Clean Set Table Architecture */}
                   <div className="rf-set-table">
                     <div className="rf-set-table-head">
                       <span className="rf-set-th rf-set-th--idx">SET</span>
-                      <span className="rf-set-th rf-set-th--prev">PREV</span>
-                      <span className="rf-set-th rf-set-th--weight">
-                        {weightMode === "total" ? "KG TOTAL" : "KG / SIDE"}
-                      </span>
+                      <span className="rf-set-th rf-set-th--weight">WEIGHT (KG)</span>
                       <span className="rf-set-th rf-set-th--reps">REPS</span>
-                      <span className="rf-set-th rf-set-th--check">✓</span>
-                      <span className="rf-set-th rf-set-th--action"></span>
+                      <span className="rf-set-th rf-set-th--check" aria-label="Complete">✓</span>
                     </div>
 
                     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      {ex.sets.map((set, sIdx) => {
-                        const prevRef =
-                          sIdx > 0
-                            ? `${ex.sets[sIdx - 1].weight} × ${ex.sets[sIdx - 1].reps}`
-                            : "—";
-                        return (
+                      {ex.sets.map((set, sIdx) => (
                           <div
                             key={sIdx}
                             className={`rf-set-row ${set.completed ? "rf-set-row--done" : ""}`}
@@ -487,34 +412,12 @@ export function DayFormModal({ open, onSave, onClose, initialExercise }) {
                               <span className="rf-set-num">{sIdx + 1}</span>
                             </div>
 
-                            {/* Previous / Target Reference */}
-                            <div className="rf-set-cell rf-set-cell--prev">
-                              <span className="rf-set-prev-label">{prevRef}</span>
-                            </div>
-
-                            {/* Precision Weight Input with Mousewheel Scroll-over & Cable Plate support */}
+                            {/* Total weight entered directly in kilograms */}
                             <div className="rf-set-cell rf-set-cell--weight">
                               <WeightScrollInput
-                                value={weightMode === "total" ? set.weight : barWeight === "" ? "" : Math.max(0, (set.weight - Number(barWeight)) / 2)}
-                                onChange={(val) =>
-                                  updateSet(
-                                    eIdx,
-                                    sIdx,
-                                    "weight",
-                                    weightMode === "total" || barWeight === "" ? val : Number(barWeight) + val * 2
-                                  )
-                                }
-                                caption={
-                                  weightMode === "total"
-                                    ? `${set.weight} kg total`
-                                    : `${Math.max(0, (set.weight - (Number(barWeight) || 0)) / 2)} kg/side · ${set.weight} kg total`
-                                }
-                                ariaLabel={
-                                  weightMode === "total"
-                                    ? `Set ${sIdx + 1} total weight (kg)`
-                                    : `Set ${sIdx + 1} plates per side (kg)`
-                                }
-                                disabled={weightMode === "per-side" && barWeight === ""}
+                                value={set.weight}
+                                onChange={(val) => updateSet(eIdx, sIdx, "weight", val)}
+                                ariaLabel={`Set ${sIdx + 1} weight (kg)`}
                               />
                             </div>
 
@@ -539,8 +442,8 @@ export function DayFormModal({ open, onSave, onClose, initialExercise }) {
                               />
                             </div>
 
-                            {/* Low-profile Checkmark (triggers Rest Timer upon set completion) */}
-                            <div className="rf-set-cell rf-set-cell--check">
+                            {/* Completion and removal share the final action column */}
+                            <div className="rf-set-cell rf-set-cell--actions">
                               <button
                                 type="button"
                                 className={`rf-set-check-btn ${set.completed ? "rf-set-check-btn--active" : ""}`}
@@ -556,10 +459,6 @@ export function DayFormModal({ open, onSave, onClose, initialExercise }) {
                               >
                                 ✓
                               </button>
-                            </div>
-
-                            {/* Delete Set */}
-                            <div className="rf-set-cell rf-set-cell--action">
                               {ex.sets.length > 1 ? (
                                 <button
                                   type="button"
@@ -570,13 +469,10 @@ export function DayFormModal({ open, onSave, onClose, initialExercise }) {
                                 >
                                   ✕
                                 </button>
-                              ) : (
-                                <span style={{ width: 26 }} />
-                              )}
+                              ) : null}
                             </div>
                           </div>
-                        );
-                      })}
+                        ))}
                     </div>
 
                     {/* + Add Set Action Button */}
@@ -621,17 +517,6 @@ export function DayFormModal({ open, onSave, onClose, initialExercise }) {
           open={pickerActiveIndex !== null}
           onSelect={handleSelectFromPicker}
           onClose={() => setPickerActiveIndex(null)}
-        />
-
-        <PlateCalculatorModal
-          open={plateModalTarget !== null}
-          initialWeight={plateModalTarget?.initialWeight}
-          onApply={(totalWeight) => {
-            if (plateModalTarget) {
-              updateSet(plateModalTarget.eIdx, plateModalTarget.sIdx, "weight", totalWeight);
-            }
-          }}
-          onClose={() => setPlateModalTarget(null)}
         />
 
         {showRestTimer && (

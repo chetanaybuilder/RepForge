@@ -26,7 +26,7 @@ export function ExerciseEditModal({ open, initialValue, onSave, onClose }) {
         notes: initialValue.notes || "",
         sets:
           initialValue.sets && initialValue.sets.length > 0
-            ? initialValue.sets.map((s) => ({ ...s }))
+            ? initialValue.sets.map(({ plate_count, ...set }) => set)
             : [{ ...EMPTY_SET }],
       });
       setErrors({});
@@ -49,7 +49,11 @@ export function ExerciseEditModal({ open, initialValue, onSave, onClose }) {
     const lastSet = form.sets[form.sets.length - 1] || EMPTY_SET;
     setField("sets", [
       ...form.sets,
-      { weight: lastSet.weight, reps: lastSet.reps, completed: true },
+      {
+        weight: lastSet.weight,
+        reps: lastSet.reps,
+        completed: true,
+      },
     ]);
   };
 
@@ -182,18 +186,13 @@ export function ExerciseEditModal({ open, initialValue, onSave, onClose }) {
             <div className="rf-set-table">
               <div className="rf-set-table-head">
                 <span className="rf-set-th rf-set-th--idx">SET</span>
-                <span className="rf-set-th rf-set-th--prev">PREV</span>
-                <span className="rf-set-th rf-set-th--weight">KG</span>
+                <span className="rf-set-th rf-set-th--weight">WEIGHT (KG)</span>
                 <span className="rf-set-th rf-set-th--reps">REPS</span>
-                <span className="rf-set-th rf-set-th--check">✓</span>
-                <span className="rf-set-th rf-set-th--action"></span>
+                <span className="rf-set-th rf-set-th--check" aria-label="Complete">✓</span>
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {form.sets.map((set, sIdx) => {
-                  const prevRef =
-                    sIdx > 0 ? `${form.sets[sIdx - 1].weight} × ${form.sets[sIdx - 1].reps}` : "—";
-                  return (
+                {form.sets.map((set, sIdx) => (
                     <div
                       key={sIdx}
                       className={`rf-set-row ${set.completed ? "rf-set-row--done" : ""}`}
@@ -203,12 +202,7 @@ export function ExerciseEditModal({ open, initialValue, onSave, onClose }) {
                         <span className="rf-set-num">{sIdx + 1}</span>
                       </div>
 
-                      {/* Previous / Target Reference */}
-                      <div className="rf-set-cell rf-set-cell--prev">
-                        <span className="rf-set-prev-label">{prevRef}</span>
-                      </div>
-
-                      {/* Precision Weight Input with Mousewheel Scroll-over & Cable Plate support */}
+                      {/* Total weight entered directly in kilograms */}
                       <div className="rf-set-cell rf-set-cell--weight">
                         <WeightScrollInput
                           value={set.weight}
@@ -237,8 +231,8 @@ export function ExerciseEditModal({ open, initialValue, onSave, onClose }) {
                         />
                       </div>
 
-                      {/* Low-profile Checkmark (triggers Rest Timer upon set completion) */}
-                      <div className="rf-set-cell rf-set-cell--check">
+                      {/* Completion and removal share the final action column */}
+                      <div className="rf-set-cell rf-set-cell--actions">
                         <button
                           type="button"
                           className={`rf-set-check-btn ${set.completed ? "rf-set-check-btn--active" : ""}`}
@@ -254,10 +248,6 @@ export function ExerciseEditModal({ open, initialValue, onSave, onClose }) {
                         >
                           ✓
                         </button>
-                      </div>
-
-                      {/* Delete Set */}
-                      <div className="rf-set-cell rf-set-cell--action">
                         {form.sets.length > 1 ? (
                           <button
                             type="button"
@@ -268,13 +258,10 @@ export function ExerciseEditModal({ open, initialValue, onSave, onClose }) {
                           >
                             ✕
                           </button>
-                        ) : (
-                          <span style={{ width: 26 }} />
-                        )}
+                        ) : null}
                       </div>
                     </div>
-                  );
-                })}
+                  ))}
               </div>
 
               {/* + Add Set Action Button */}
