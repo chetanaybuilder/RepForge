@@ -57,7 +57,7 @@ jobs:
       - name: Run ESLint
         run: npm run lint
 
-      - name: Run Prettier Check
+      - name: Check Cloudflare Build Configuration Formatting
         run: npm run format:check
 
       - name: Run Vitest Suite
@@ -66,5 +66,5 @@ jobs:
       - name: Build Production Frontend
         run: npm run build
 
-      - name: Verify Cloudflare Worker & Static Assets Build
-        run: npx wrangler deploy --dry-run
+      - name: Verify Cloudflare Pages Build Artifact
+        run: npm run check:cloudflare

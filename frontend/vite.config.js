@@ -28,7 +28,8 @@ export default defineConfig(({ mode }) => {
       },
     },
     build: {
-      outDir: "../dist",
+      outDir: process.env.CF_PAGES_OUTPUT_DIR || "../dist",
+      emptyOutDir: true,
       sourcemap: false,
       chunkSizeWarningLimit: 1200,
       rollupOptions: {

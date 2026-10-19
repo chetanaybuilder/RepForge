@@ -8,15 +8,19 @@
   ],
   "scripts": {
     "dev": "npm --prefix frontend run dev",
-    "build": "npm --prefix frontend run build && powershell -Command \"Copy-Item 'worker\\index.js' -Destination 'dist\\_worker.js' -Force\"",
+    "build": "npm --prefix frontend run build && npm run build:worker",
+    "build:worker": "node scripts/build-worker.mjs",
+    "check:cloudflare": "node scripts/verify-pages-build.mjs",
     "preview": "npm --prefix frontend run preview",
     "deploy": "npm run build && npx wrangler pages deploy dist --commit-dirty=true",
     "lint": "npm --prefix frontend run lint",
+    "format:check": "prettier --check package.json frontend/vite.config.js scripts/build-worker.mjs scripts/verify-pages-build.mjs",
     "format": "npm --prefix frontend run format",
     "test": "npm --prefix frontend run test",
     "test:backend": "pytest backend/tests"
   },
   "devDependencies": {
+    "esbuild": "^0.21.5",
     "wrangler": "^3.114.0 || ^4.0.0"
   }
 }
