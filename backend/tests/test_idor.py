@@ -83,4 +83,3 @@ def test_user_cannot_request_ai_insights_for_other_users_day(auth_client, auth_s
         )
         assert resp.status_code == 404
         assert resp.get_json()["error"]["code"] == "not_found"
-

@@ -10,25 +10,78 @@ import { cors } from "hono/cors";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import { streamSSE } from "hono/streaming";
 
+/**
+ * Cloudflare Worker API for authentication, training data, and AI coaching.
+ */
 const app = new Hono();
+const DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile";
+
+const ALLOWED_ORIGINS = [
+  "http://localhost:5173",
+  "http://localhost:4173",
+  "https://repforge-app.pages.dev",
+  "https://repforge.chetanaybatra03-8b2.workers.dev",
+];
+
+function getAllowedOrigin(origin) {
+  if (!origin) return null;
+  try {
+    const parsed = new URL(origin);
+    if (parsed.origin === "null") return null;
+    if (ALLOWED_ORIGINS.includes(parsed.origin)) return parsed.origin;
+    if (parsed.hostname === "localhost" || parsed.hostname.endsWith("pages.dev")) return parsed.origin;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function base64UrlDecode(value) {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const pad = normalized.length % 4 === 0 ? "" : "=".repeat(4 - (normalized.length % 4));
+  return atob(normalized + pad);
+}
+
+function validateCsrfToken(c, user) {
+  if (!user) return false;
+  const headerValue = c.req.header("X-CSRF-Token") || c.req.header("x-csrf-token");
+  const bodyValue = c.req.header("X-Csrf-Token");
+  const expected = user.csrf_token;
+  const provided = headerValue || bodyValue;
+  return Boolean(expected && provided && expected === provided);
+}
 
 // --- CORS & Security Headers ---
 app.use("*", async (c, next) => {
   const origin = c.req.header("Origin");
-  await next();
+  const allowedOrigin = getAllowedOrigin(origin);
   c.header("X-Content-Type-Options", "nosniff");
   c.header("X-Frame-Options", "DENY");
   c.header("Referrer-Policy", "strict-origin-when-cross-origin");
-  if (origin) {
-    c.header("Access-Control-Allow-Origin", origin);
+  c.header("Cross-Origin-Opener-Policy", "same-origin");
+  if (allowedOrigin) {
+    c.header("Access-Control-Allow-Origin", allowedOrigin);
     c.header("Access-Control-Allow-Credentials", "true");
-    c.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    c.header("Access-Control-Allow-Headers", "Content-Type, X-CSRF-Token, Authorization");
   }
-});
+  c.header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+  c.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-CSRF-Token");
 
-// Handle preflight OPTIONS
-app.options("*", (c) => c.text("", 204));
+  if (c.req.method === "OPTIONS") {
+    return c.text("", 204);
+  }
+
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(c.req.method)) {
+    const user = await getCurrentUser(c);
+    if (!user) {
+      return c.json({ error: { code: "unauthorized", message: "Authentication required." } }, 401);
+    }
+    if (!validateCsrfToken(c, user)) {
+      return c.json({ error: { code: "csrf_error", message: "Invalid or missing CSRF token." } }, 403);
+    }
+  }
+
+  await next();
+});
 
 // --- Helper Functions ---
 function getDb(c) {
@@ -37,6 +90,15 @@ function getDb(c) {
 
 function generateId() {
   return crypto.randomUUID();
+}
+
+async function parseJsonBody(c) {
+  try {
+    const body = await c.req.json();
+    return body && typeof body === "object" && !Array.isArray(body) ? body : null;
+  } catch {
+    return null;
+  }
 }
 
 function generateRandomToken(len = 32) {
@@ -50,27 +112,9 @@ async function getCurrentUser(c) {
   const sessionId = getCookie(c, "repforge_session");
   if (!sessionId) return null;
 
-  // Instant deterministic authentication for demo/showcase/E2E sessions
-  if (sessionId === "demo-session-token" || sessionId.startsWith("demo-")) {
-    return {
-      id: "demo-athlete-2040",
-      email: "athlete@repforge.app",
-      name: "Marcus Vance",
-      avatar_url:
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-      csrf_token: "demo-csrf-token-xyz",
-    };
-  }
-
   const db = getDb(c);
   if (!db) {
-    // If running in dev without D1, return a demo user for seamless local development
-    return {
-      id: "demo-user-001",
-      email: "athlete@repforge.local",
-      name: "RepForge Athlete",
-      avatar_url: "https://avatar.vercel.sh/repforge",
-    };
+    return null;
   }
 
   const query = `
@@ -152,18 +196,8 @@ app.get("/api/me", async (c) => {
   });
 });
 
-// Demo login for instant deterministic test / presentation sessions
 app.get("/auth/demo-login", (c) => {
-  setCookie(c, "repforge_session", "demo-session-token", {
-    path: "/",
-    httpOnly: true,
-    secure: true,
-    sameSite: "Lax",
-    maxAge: 7 * 24 * 60 * 60,
-  });
-
-  const frontendUrl = c.env?.FRONTEND_URL || new URL(c.req.url).origin;
-  return c.redirect(`${frontendUrl}/dashboard`);
+  return c.json({ error: { code: "disabled", message: "Demo login is disabled." } }, 403);
 });
 
 app.get("/auth/csrf", async (c) => {
@@ -204,72 +238,96 @@ app.get("/auth/google/callback", async (c) => {
   const db = getDb(c);
   const frontendUrl = c.env?.FRONTEND_URL || new URL(c.req.url).origin;
 
-  if (!code) {
+  if (!code || !state) {
     return c.redirect(`${frontendUrl}/login?error=access_denied`);
   }
 
-  let user = {
-    id: generateId(),
-    email: "athlete@repforge.app",
-    name: "RepForge Athlete",
-    avatar_url: "https://avatar.vercel.sh/repforge",
-  };
-
-  // If real Google OAuth is configured, exchange code for tokens
-  if (c.env?.GOOGLE_CLIENT_ID && c.env?.GOOGLE_CLIENT_SECRET && db) {
-    try {
-      const redirectUri = `${new URL(c.req.url).origin}/auth/google/callback`;
-      const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          code,
-          client_id: c.env.GOOGLE_CLIENT_ID,
-          client_secret: c.env.GOOGLE_CLIENT_SECRET,
-          redirect_uri: redirectUri,
-          grant_type: "authorization_code",
-        }),
-      });
-      const tokenData = await tokenRes.json();
-      if (tokenData.id_token) {
-        // Decode payload
-        const parts = tokenData.id_token.split(".");
-        const payload = JSON.parse(atob(parts[1]));
-        const googleId = payload.sub;
-        const email = payload.email;
-        const name = payload.name || "Athlete";
-        const avatarUrl = payload.picture || "";
-
-        // Upsert user
-        const existing = await db
-          .prepare("SELECT * FROM users WHERE google_id = ?")
-          .bind(googleId)
-          .first();
-        if (existing) {
-          user = existing;
-        } else {
-          const userId = generateId();
-          await db
-            .prepare(
-              "INSERT INTO users (id, google_id, email, name, avatar_url) VALUES (?, ?, ?, ?, ?)"
-            )
-            .bind(userId, googleId, email, name, avatarUrl)
-            .run();
-          user = { id: userId, google_id: googleId, email, name, avatar_url: avatarUrl };
-        }
-      }
-    } catch (e) {
-      console.error("Google OAuth token exchange error:", e);
-    }
+  if (!db || !c.env?.GOOGLE_CLIENT_ID || !c.env?.GOOGLE_CLIENT_SECRET) {
+    return c.redirect(`${frontendUrl}/login?error=oauth_unavailable`);
   }
 
-  // Create session
-  const sessionId = generateRandomToken(32);
-  const csrfToken = generateRandomToken(24);
-  const maxAge = 7 * 24 * 60 * 60; // 7 days
-  const expiresAt = new Date(Date.now() + maxAge * 1000).toISOString();
+  const stateRow = await db
+    .prepare("SELECT state, nonce, expires_at FROM oauth_states WHERE state = ?")
+    .bind(state)
+    .first();
 
-  if (db) {
+  if (!stateRow || new Date(stateRow.expires_at).getTime() <= Date.now()) {
+    return c.redirect(`${frontendUrl}/login?error=invalid_state`);
+  }
+
+  try {
+    const redirectUri = `${new URL(c.req.url).origin}/auth/google/callback`;
+    const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        code,
+        client_id: c.env.GOOGLE_CLIENT_ID,
+        client_secret: c.env.GOOGLE_CLIENT_SECRET,
+        redirect_uri: redirectUri,
+        grant_type: "authorization_code",
+      }),
+    });
+
+    if (!tokenRes.ok) {
+      return c.redirect(`${frontendUrl}/login?error=oauth_failed`);
+    }
+
+    const tokenData = await tokenRes.json();
+    if (!tokenData.id_token) {
+      return c.redirect(`${frontendUrl}/login?error=oauth_failed`);
+    }
+
+    const parts = tokenData.id_token.split(".");
+    if (parts.length < 2) {
+      return c.redirect(`${frontendUrl}/login?error=oauth_failed`);
+    }
+
+    const payloadJson = base64UrlDecode(parts[1]);
+    const payload = JSON.parse(payloadJson);
+    const nowSeconds = Math.floor(Date.now() / 1000);
+
+    if (!payload.sub || !payload.email || !payload.name) {
+      return c.redirect(`${frontendUrl}/login?error=oauth_failed`);
+    }
+    if (payload.aud !== c.env.GOOGLE_CLIENT_ID) {
+      return c.redirect(`${frontendUrl}/login?error=invalid_token`);
+    }
+    if (!["accounts.google.com", "https://accounts.google.com"].includes(payload.iss)) {
+      return c.redirect(`${frontendUrl}/login?error=invalid_token`);
+    }
+    if (payload.nonce !== stateRow.nonce || payload.exp <= nowSeconds) {
+      return c.redirect(`${frontendUrl}/login?error=invalid_token`);
+    }
+
+    const googleId = payload.sub;
+    const email = payload.email;
+    const name = payload.name || "Athlete";
+    const avatarUrl = payload.picture || "";
+
+    let user = await db
+      .prepare("SELECT * FROM users WHERE google_id = ?")
+      .bind(googleId)
+      .first();
+
+    if (!user) {
+      const userId = generateId();
+      await db
+        .prepare(
+          "INSERT INTO users (id, google_id, email, name, avatar_url) VALUES (?, ?, ?, ?, ?)"
+        )
+        .bind(userId, googleId, email, name, avatarUrl)
+        .run();
+      user = { id: userId, google_id: googleId, email, name, avatar_url: avatarUrl };
+    }
+
+    await db.prepare("DELETE FROM oauth_states WHERE state = ?").bind(state).run();
+
+    const sessionId = generateRandomToken(32);
+    const csrfToken = generateRandomToken(24);
+    const maxAge = 7 * 24 * 60 * 60;
+    const expiresAt = new Date(Date.now() + maxAge * 1000).toISOString();
+
     await db
       .prepare(
         "INSERT INTO sessions (id, user_id, csrf_token, user_agent, ip_address, expires_at) VALUES (?, ?, ?, ?, ?, ?)"
@@ -283,17 +341,20 @@ app.get("/auth/google/callback", async (c) => {
         expiresAt
       )
       .run();
+
+    setCookie(c, "repforge_session", sessionId, {
+      path: "/",
+      httpOnly: true,
+      secure: true,
+      sameSite: "Lax",
+      maxAge,
+    });
+
+    return c.redirect(`${frontendUrl}/dashboard`);
+  } catch (error) {
+    console.error("Google OAuth token exchange error:", error);
+    return c.redirect(`${frontendUrl}/login?error=oauth_failed`);
   }
-
-  setCookie(c, "repforge_session", sessionId, {
-    path: "/",
-    httpOnly: true,
-    secure: true,
-    sameSite: "Lax",
-    maxAge,
-  });
-
-  return c.redirect(`${frontendUrl}/dashboard`);
 });
 
 app.post("/auth/logout", async (c) => {
@@ -535,7 +596,7 @@ app.post("/api/exercises/:id/favorite", requireAuth, async (c) => {
       .bind(user.id, exerciseId)
       .run();
   }
-  return c.json({ success: true, exercise_id: exerciseId });
+  return c.json({ success: true, exercise_id: exerciseId, is_favorite: true });
 });
 
 app.delete("/api/exercises/:id/favorite", requireAuth, async (c) => {
@@ -789,7 +850,10 @@ app.get("/api/workouts", requireAuth, async (c) => {
 app.post("/api/workouts", requireAuth, async (c) => {
   const user = c.get("user");
   const db = getDb(c);
-  const body = await c.req.json();
+  const body = await parseJsonBody(c);
+  if (!body) {
+    return c.json({ error: { code: "validation_error", message: "Request body must be a JSON object." } }, 400);
+  }
 
   const { date, day: dayLabel = null } = body;
   if (!date) {
@@ -914,7 +978,17 @@ app.put("/api/workouts/exercises/:exercise_id", requireAuth, async (c) => {
   const user = c.get("user");
   const exerciseId = c.req.param("exercise_id");
   const db = getDb(c);
-  const body = await c.req.json();
+  const body = await parseJsonBody(c);
+  if (!body) {
+    return c.json({ error: { code: "validation_error", message: "Request body must be a JSON object." } }, 400);
+  }
+
+  if (!body.exercise_name || !body.workout_type) {
+    return c.json(
+      { error: { code: "validation_error", message: "exercise_name and workout_type are required." } },
+      400
+    );
+  }
 
   if (!db) {
     return c.json({ exercise: { id: exerciseId, ...body } });
@@ -1027,11 +1101,15 @@ app.get("/api/workouts/stats", requireAuth, async (c) => {
   const user = c.get("user");
   const db = getDb(c);
   const workouts = await fetchUserWorkouts(db, user.id);
+  const recentWorkouts = await fetchHierarchicalWorkouts(db, user.id, null, 10, 0);
 
   const streak = computeStreak(workouts);
   const prs = computePRs(workouts);
-  const totalVolume = workouts.reduce((sum, w) => sum + Number(w.weight) * Number(w.reps), 0);
-  const trainingDays = new Set(workouts.map((w) => w.date.substring(0, 10))).size;
+  const totalVolume = workouts.reduce(
+    (sum, w) => sum + (Number(w.weight) || 0) * (Number(w.reps) || 0),
+    0
+  );
+  const trainingDays = new Set(workouts.map((w) => (w.date || "").substring(0, 10))).size;
   const uniqueExercises = new Set(workouts.map((w) => w.exercise_name)).size;
 
   return c.json({
@@ -1045,7 +1123,7 @@ app.get("/api/workouts/stats", requireAuth, async (c) => {
       personal_records_count: prs.length,
     },
     recent_prs: prs.slice(0, 5),
-    recent_workouts: workouts.slice(0, 10),
+    recent_workouts: recentWorkouts,
   });
 });
 
@@ -1128,6 +1206,56 @@ app.delete("/api/workouts/day/:day_id", requireAuth, async (c) => {
   return c.json({ success: true, deleted_day_id: dayId });
 });
 
+function computeGoalProgress(goal, workouts) {
+  const target = Number(goal.target_value || 0);
+  const exerciseName = goal.exercise_name || null;
+  const workoutsForGoal = Array.isArray(workouts) ? workouts : [];
+
+  let current = 0;
+  let unit = "sessions";
+
+  if (goal.goal_type === "weekly_frequency") {
+    const today = new Date();
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+    monday.setHours(0, 0, 0, 0);
+    const sessionsThisWeek = new Set(
+      workoutsForGoal
+        .filter((w) => {
+          const d = new Date(w.date);
+          return d >= monday && (!Number.isNaN(d.getTime()));
+        })
+        .map((w) => w.date.substring(0, 10))
+    );
+    current = sessionsThisWeek.size;
+    unit = "sessions this week";
+  } else if (goal.goal_type === "exercise_pr") {
+    const best = workoutsForGoal
+      .filter((w) => !exerciseName || w.exercise_name === exerciseName)
+      .reduce((max, w) => Math.max(max, Number(w.weight) || 0), 0);
+    current = best;
+    unit = exerciseName ? `kg on ${exerciseName}` : "kg";
+  } else if (goal.goal_type === "volume") {
+    const startDate = goal.period_start ? new Date(goal.period_start) : null;
+    const relevant = workoutsForGoal.filter((w) => {
+      const d = new Date(w.date);
+      if (Number.isNaN(d.getTime())) return false;
+      return !startDate || d >= startDate;
+    });
+    current = relevant.reduce((sum, w) => sum + (Number(w.weight) || 0) * (Number(w.reps) || 0), 0);
+    unit = "kg total volume";
+  }
+
+  const progressPct = target > 0 ? Math.min(999.9, (current / target) * 100) : 0;
+  return {
+    current_value: Number(current) || 0,
+    target_value: Number(target) || 0,
+    progress_pct: Number(progressPct.toFixed(1)) || 0,
+    is_complete: current >= target,
+    unit,
+  };
+}
+
 // --- Goals Routes ---
 app.get("/api/goals", requireAuth, async (c) => {
   const user = c.get("user");
@@ -1139,13 +1267,60 @@ app.get("/api/goals", requireAuth, async (c) => {
     .bind(user.id)
     .all();
 
-  return c.json({ goals: results || [] });
+  const workouts = await fetchUserWorkouts(db, user.id);
+  const goals = (results || []).map((goal) => ({ ...goal, progress: computeGoalProgress(goal, workouts) }));
+  return c.json({ goals });
+});
+
+app.get("/api/goals/achievements", requireAuth, async (c) => {
+  const user = c.get("user");
+  const db = getDb(c);
+  if (!db) return c.json({ achievements: [] });
+
+  const workouts = await fetchUserWorkouts(db, user.id);
+  const uniqueWorkouts = new Set(workouts.map((w) => w.day_id)).size;
+  const byExercise = new Map();
+  for (const w of workouts) {
+    const key = w.exercise_name;
+    const prev = Number(byExercise.get(key) || 0);
+    byExercise.set(key, Math.max(prev, Number(w.weight) || 0));
+  }
+
+  const achievements = [
+    {
+      title: "First Rep Logged",
+      description: "Logged your first workout.",
+      unlocked: uniqueWorkouts >= 1,
+      progress: Math.min(uniqueWorkouts, 1),
+      target: 1,
+    },
+    {
+      title: "Building Momentum",
+      description: "Logged 10 workouts.",
+      unlocked: uniqueWorkouts >= 10,
+      progress: Math.min(uniqueWorkouts, 10),
+      target: 10,
+    },
+    {
+      title: "First PR",
+      description: "Set your first personal record.",
+      unlocked: byExercise.size >= 1,
+      progress: Math.min(byExercise.size, 1),
+      target: 1,
+    },
+  ];
+
+  return c.json({ achievements });
 });
 
 app.post("/api/goals", requireAuth, async (c) => {
   const user = c.get("user");
   const db = getDb(c);
-  const body = await c.req.json();
+  const body = await parseJsonBody(c);
+  if (!body) {
+    return c.json({ error: { code: "validation_error", message: "Request body must be a JSON object." } }, 400);
+  }
+
   const {
     goal_type,
     exercise_name = null,
@@ -1154,9 +1329,25 @@ app.post("/api/goals", requireAuth, async (c) => {
     period_end = null,
   } = body;
 
-  if (!goal_type || target_value === undefined || Number(target_value) <= 0) {
+  const allowedGoalTypes = new Set(["weekly_frequency", "exercise_pr", "volume"]);
+  if (!goal_type || !allowedGoalTypes.has(goal_type)) {
     return c.json(
-      { error: { code: "validation_error", message: "target_value must be a positive number." } },
+      { error: { code: "validation_error", message: "goal_type must be one of weekly_frequency, exercise_pr, or volume." } },
+      400
+    );
+  }
+
+  const parsedTarget = Number(target_value);
+  if (!Number.isFinite(parsedTarget) || parsedTarget <= 0 || parsedTarget > 1000000) {
+    return c.json(
+      { error: { code: "validation_error", message: "target_value must be a positive number under 1000000." } },
+      400
+    );
+  }
+
+  if (goal_type === "exercise_pr" && !exercise_name) {
+    return c.json(
+      { error: { code: "validation_error", message: "exercise_name is required for exercise_pr goals." } },
       400
     );
   }
@@ -1167,11 +1358,19 @@ app.post("/api/goals", requireAuth, async (c) => {
       .prepare(
         "INSERT INTO goals (id, user_id, goal_type, exercise_name, target_value, period_start, period_end) VALUES (?, ?, ?, ?, ?, ?, ?)"
       )
-      .bind(id, user.id, goal_type, exercise_name, Number(target_value), period_start, period_end)
+      .bind(id, user.id, goal_type, exercise_name, parsedTarget, period_start, period_end)
       .run();
   }
 
-  return c.json({ success: true, goal: { id, goal_type, exercise_name, target_value } });
+  const workouts = db ? await fetchUserWorkouts(db, user.id) : [];
+  const goal = {
+    id,
+    goal_type,
+    exercise_name,
+    target_value: parsedTarget,
+    progress: computeGoalProgress({ goal_type, target_value: parsedTarget, exercise_name, period_start, period_end }, workouts),
+  };
+  return c.json({ success: true, goal });
 });
 
 app.delete("/api/goals/:id", requireAuth, async (c) => {
@@ -1189,7 +1388,8 @@ app.get("/api/coach/status", (c) => {
   const apiKey = c.env?.GROQ_API_KEY;
   return c.json({
     available: Boolean(apiKey),
-    model: c.env?.GROQ_MODEL || "qwen/qwen3.8-27b",
+    configured: Boolean(apiKey),
+    model: c.env?.GROQ_MODEL || DEFAULT_GROQ_MODEL,
     provider: "groq",
   });
 });
@@ -1203,7 +1403,13 @@ async function handleCoachInsight(c) {
 
   if (daySets.length === 0) {
     const msg = "Great effort logging your session! Keep up the progressive overload.";
-    return c.json({ insight: msg, insights: msg });
+    return c.json({
+      deep_review: msg,
+      good_points: [msg],
+      critical_points: [],
+      insight: msg,
+      insights: msg,
+    });
   }
 
   const vol = daySets.reduce((sum, s) => sum + Number(s.weight) * Number(s.reps), 0);
@@ -1219,27 +1425,41 @@ async function handleCoachInsight(c) {
           Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: c.env?.GROQ_MODEL || "qwen/qwen3.8-27b",
+          model: c.env?.GROQ_MODEL || DEFAULT_GROQ_MODEL,
           messages: [
             {
               role: "system",
               content:
-                "You are RepForge Neural Coach. Deliver an elite, punchy, 2-bullet tactical post-workout breakdown in Claude style with rich emojis (🎯 ⚡ 🦾 📈). Maximum 45 words. Highlight gross tonnage, overload target, and recovery nutrition directly without filler.",
+                "You are RepForge Neural Coach. Deliver a concise review with deep_review, good_points, and critical_points in JSON format.",
             },
             {
               role: "user",
               content: `Athlete: ${user.name}. Exercises: ${exercises}. Total sets: ${daySets.length}. Total volume: ${vol.toFixed(1)} kg.`,
             },
           ],
-          temperature: 0.6,
-          max_tokens: 160,
+          temperature: 0.4,
+          max_tokens: 220,
         }),
       });
       if (groqRes.ok) {
         const groqData = await groqRes.json();
         const text = groqData.choices?.[0]?.message?.content?.trim();
         if (text) {
-          return c.json({ insight: text, insights: text });
+          try {
+            const parsed = JSON.parse(text.replace(/^```json\s*|```$/g, ""));
+            if (parsed && typeof parsed === "object") {
+              return c.json({
+                deep_review: parsed.deep_review || text,
+                good_points: parsed.good_points || [text],
+                critical_points: parsed.critical_points || [],
+                insight: parsed.deep_review || text,
+                insights: parsed.deep_review || text,
+              });
+            }
+          } catch {
+            // ignore malformed JSON and fall back below
+          }
+          return c.json({ deep_review: text, good_points: [text], critical_points: [], insight: text, insights: text });
         }
       }
     } catch (e) {
@@ -1248,7 +1468,13 @@ async function handleCoachInsight(c) {
   }
 
   const fallbackMsg = `Session Complete: ${daySets.length} sets logged across ${exercises}. Gross tonnage: ${vol.toFixed(1)} kg. Focus on progressive overload and post-workout protein for recovery!`;
-  return c.json({ insight: fallbackMsg, insights: fallbackMsg });
+  return c.json({
+    deep_review: fallbackMsg,
+    good_points: [fallbackMsg],
+    critical_points: [],
+    insight: fallbackMsg,
+    insights: fallbackMsg,
+  });
 }
 
 app.get("/api/coach/insights/:day_id", requireAuth, handleCoachInsight);
@@ -1257,9 +1483,16 @@ app.post("/api/coach/insights/:day_id", requireAuth, handleCoachInsight);
 app.post("/api/coach/chat", requireAuth, async (c) => {
   const user = c.get("user");
   const db = getDb(c);
-  const body = await c.req.json();
+  const body = await parseJsonBody(c);
+  if (!body) {
+    return c.json({ error: { code: "validation_error", message: "Request body must be a JSON object." } }, 400);
+  }
   const rawMessage = (body.message || "").trim();
-  const history = body.history || [];
+  const history = Array.isArray(body.history) ? body.history : [];
+
+  if (typeof body.message !== "string" || !rawMessage) {
+    return c.json({ error: { code: "validation_error", message: "message is required and must be a non-empty string." } }, 400);
+  }
 
   const apiKey = c.env?.GROQ_API_KEY;
   if (!apiKey) {
@@ -1295,23 +1528,43 @@ app.post("/api/coach/chat", requireAuth, async (c) => {
   const workouts = await fetchUserWorkouts(db, user.id);
   const streak = computeStreak(workouts);
   const prs = computePRs(workouts).slice(0, 5);
-  const recentWorkouts = workouts.slice(0, 8);
+  const sessions = new Map();
+  for (const workout of workouts) {
+    if (!sessions.has(workout.day_id)) {
+      sessions.set(workout.day_id, {
+        date: workout.date,
+        focus: workout.day_label,
+        exercises: new Map(),
+      });
+    }
+    const session = sessions.get(workout.day_id);
+    if (!session.exercises.has(workout.exercise_id)) {
+      session.exercises.set(workout.exercise_id, {
+        name: workout.exercise_name,
+        sets: [],
+      });
+    }
+    session.exercises.get(workout.exercise_id).sets.push({
+      reps: workout.reps,
+      weight_kg: workout.weight,
+    });
+  }
+  const recentSessions = [...sessions.values()].slice(0, 4).map((session) => ({
+    date: session.date,
+    focus: session.focus,
+    exercises: [...session.exercises.values()],
+  }));
 
   const telemetryContext = JSON.stringify({
     athlete_name: user.name,
     current_streak: streak.current_streak,
     personal_records: prs,
-    recent_training: recentWorkouts.map((w) => ({
-      date: w.date,
-      exercise: w.exercise_name,
-      weight: w.weight,
-      reps: w.reps,
-    })),
+    recent_sessions: recentSessions,
   });
 
-  const systemPrompt = `You are RepForge Coach, a friendly, practical strength-training coach. Speak naturally, like a helpful person at the gym. Answer the question directly in a few concise sentences; avoid fixed headings, telemetry jargon, ASCII cards, and unnecessary emojis. Ask one short follow-up only when important details are missing.
+  const systemPrompt = `You are RepForge Coach, a friendly, practical strength-training coach. Speak naturally, like a helpful training partner at the gym. Answer directly and concisely; avoid fixed headings, telemetry jargon, ASCII cards, and unnecessary emojis. Ask one short follow-up only when essential information is missing.
 
-Use the athlete's verified workout history below only when it is relevant. Never invent lifts, progress, or personal records. If there is not enough history to answer a personal-progress question, say so plainly. For general training questions, answer normally without pretending to have personal data. Do not diagnose injuries or prescribe treatment; suggest a qualified clinician for pain or injury concerns.
+When the athlete asks to analyze or review a workout, or asks what to do next, use the recent sessions below. Briefly identify the clearest observed performance pattern, then recommend one specific next move (exercise, target reps/load, or recovery adjustment) tied to that history. Be clear when too little workout data is available; never invent sets, progress, or records. For general questions, answer normally without pretending they came from the athlete's logs. Do not diagnose injuries or prescribe treatment; suggest a qualified clinician for pain or injury concerns.
 
 Verified workout history:
 ${telemetryContext}`;
@@ -1327,7 +1580,7 @@ ${telemetryContext}`;
   const wantsStream = acceptHeader.includes("text/event-stream");
 
   // Keep first-token latency bounded; model fallbacks can be selected through GROQ_MODEL.
-  const primaryModel = c.env?.GROQ_MODEL || "qwen/qwen3.8-27b";
+  const primaryModel = c.env?.GROQ_MODEL || DEFAULT_GROQ_MODEL;
   const candidateModels = [primaryModel];
 
   let groqResponse = null;

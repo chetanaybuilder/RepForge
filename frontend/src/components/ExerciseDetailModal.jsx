@@ -22,7 +22,9 @@ export function ExerciseDetailModal({ exercise, open, onClose, onToggleFavorite 
 
   const images = Array.isArray(exercise.images) ? exercise.images : [];
   const primaryMuscles = Array.isArray(exercise.primary_muscles) ? exercise.primary_muscles : [];
-  const secondaryMuscles = Array.isArray(exercise.secondary_muscles) ? exercise.secondary_muscles : [];
+  const secondaryMuscles = Array.isArray(exercise.secondary_muscles)
+    ? exercise.secondary_muscles
+    : [];
   const instructions = Array.isArray(exercise.instructions) ? exercise.instructions : [];
 
   const handleAddToWorkout = () => {
@@ -51,7 +53,14 @@ export function ExerciseDetailModal({ exercise, open, onClose, onToggleFavorite 
         }}
       >
         {/* Top Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            gap: 12,
+          }}
+        >
           <div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
               {exercise.category && (
@@ -163,9 +172,7 @@ export function ExerciseDetailModal({ exercise, open, onClose, onToggleFavorite 
                           ? "rgba(0, 242, 254, 0.25)"
                           : "rgba(255, 255, 255, 0.05)",
                       borderColor:
-                        activeImageIdx === idx
-                          ? "var(--rf-cyan)"
-                          : "rgba(255, 255, 255, 0.1)",
+                        activeImageIdx === idx ? "var(--rf-cyan)" : "rgba(255, 255, 255, 0.1)",
                       color: activeImageIdx === idx ? "var(--rf-cyan)" : "var(--rf-text-sub)",
                     }}
                   >
@@ -178,7 +185,13 @@ export function ExerciseDetailModal({ exercise, open, onClose, onToggleFavorite 
         )}
 
         {/* Anatomical Targets: Primary & Secondary */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            gap: 14,
+          }}
+        >
           {primaryMuscles.length > 0 && (
             <div
               style={{
@@ -188,7 +201,10 @@ export function ExerciseDetailModal({ exercise, open, onClose, onToggleFavorite 
                 padding: "12px 16px",
               }}
             >
-              <div className="rf-telemetry-tag" style={{ color: "var(--rf-cyan)", marginBottom: 6 }}>
+              <div
+                className="rf-telemetry-tag"
+                style={{ color: "var(--rf-cyan)", marginBottom: 6 }}
+              >
                 PRIMARY TARGET
               </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -221,7 +237,10 @@ export function ExerciseDetailModal({ exercise, open, onClose, onToggleFavorite 
                 padding: "12px 16px",
               }}
             >
-              <div className="rf-telemetry-tag" style={{ color: "var(--rf-violet)", marginBottom: 6 }}>
+              <div
+                className="rf-telemetry-tag"
+                style={{ color: "var(--rf-violet)", marginBottom: 6 }}
+              >
                 SYNERGISTS / SECONDARY
               </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -250,12 +269,18 @@ export function ExerciseDetailModal({ exercise, open, onClose, onToggleFavorite 
         <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
           {exercise.mechanic && (
             <div className="rf-stat-sub">
-              <strong>Mechanic:</strong> <span style={{ color: "var(--rf-text-bright)", textTransform: "capitalize" }}>{exercise.mechanic}</span>
+              <strong>Mechanic:</strong>{" "}
+              <span style={{ color: "var(--rf-text-bright)", textTransform: "capitalize" }}>
+                {exercise.mechanic}
+              </span>
             </div>
           )}
           {exercise.force && (
             <div className="rf-stat-sub">
-              <strong>Force:</strong> <span style={{ color: "var(--rf-text-bright)", textTransform: "capitalize" }}>{exercise.force}</span>
+              <strong>Force:</strong>{" "}
+              <span style={{ color: "var(--rf-text-bright)", textTransform: "capitalize" }}>
+                {exercise.force}
+              </span>
             </div>
           )}
         </div>
@@ -263,7 +288,10 @@ export function ExerciseDetailModal({ exercise, open, onClose, onToggleFavorite 
         {/* Step-by-Step Instructions */}
         {instructions.length > 0 && (
           <div>
-            <div className="rf-telemetry-tag" style={{ color: "var(--rf-text-sub)", marginBottom: 10 }}>
+            <div
+              className="rf-telemetry-tag"
+              style={{ color: "var(--rf-text-sub)", marginBottom: 10 }}
+            >
               EXECUTION PROTOCOL
             </div>
             <ol
@@ -301,9 +329,7 @@ export function ExerciseDetailModal({ exercise, open, onClose, onToggleFavorite 
           <button type="button" className="rf-btn rf-btn--outline" onClick={onClose}>
             Close
           </button>
-          <PrimaryButton onClick={handleAddToWorkout}>
-            + Log In Workout
-          </PrimaryButton>
+          <PrimaryButton onClick={handleAddToWorkout}>+ Log In Workout</PrimaryButton>
         </div>
       </div>
     </div>

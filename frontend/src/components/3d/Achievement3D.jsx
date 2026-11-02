@@ -50,4 +50,3 @@ export function Achievement3D({ color = "#8a5cf6", active = true, size = 56 }) {
     />
   );
 }
-

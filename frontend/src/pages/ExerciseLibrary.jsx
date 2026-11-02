@@ -160,7 +160,8 @@ export function ExerciseLibrary() {
             Exercise <span className="rf-gradient-text">Library</span>
           </h1>
           <p className="rf-page-subtitle">
-            800+ biomechanical movements with multi-angle execution guides, anatomical targets, and form instructions.
+            800+ biomechanical movements with multi-angle execution guides, anatomical targets, and
+            form instructions.
           </p>
         </div>
         <Link to="/workouts">
@@ -296,8 +297,16 @@ export function ExerciseLibrary() {
         <div className="rf-pod" style={{ textAlign: "center", padding: "60px 20px" }}>
           <div style={{ fontSize: "2.5rem", marginBottom: 12 }}>🏋️</div>
           <h3 style={{ color: "#fff", margin: "0 0 8px 0" }}>No exercises matched your criteria</h3>
-          <p style={{ color: "var(--rf-text-sub)", maxWidth: 440, margin: "0 auto 20px auto", fontSize: "0.9rem" }}>
-            Try expanding your search query, selecting "All Muscles", or turning off the favorites filter.
+          <p
+            style={{
+              color: "var(--rf-text-sub)",
+              maxWidth: 440,
+              margin: "0 auto 20px auto",
+              fontSize: "0.9rem",
+            }}
+          >
+            Try expanding your search query, selecting "All Muscles", or turning off the favorites
+            filter.
           </p>
           <button
             type="button"
@@ -514,7 +523,13 @@ export function ExerciseLibrary() {
                 ← Previous
               </button>
 
-              <span style={{ color: "var(--rf-text-sub)", fontSize: "0.9rem", fontFamily: "var(--rf-font-mono)" }}>
+              <span
+                style={{
+                  color: "var(--rf-text-sub)",
+                  fontSize: "0.9rem",
+                  fontFamily: "var(--rf-font-mono)",
+                }}
+              >
                 PAGE {page + 1} OF {totalPages}
               </span>
 

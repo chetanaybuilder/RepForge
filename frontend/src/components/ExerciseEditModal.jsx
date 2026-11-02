@@ -188,80 +188,86 @@ export function ExerciseEditModal({ open, initialValue, onSave, onClose }) {
                 <span className="rf-set-th rf-set-th--idx">SET</span>
                 <span className="rf-set-th rf-set-th--weight">WEIGHT (KG)</span>
                 <span className="rf-set-th rf-set-th--reps">REPS</span>
-                <span className="rf-set-th rf-set-th--check" aria-label="Complete">✓</span>
+                <span className="rf-set-th rf-set-th--check" aria-label="Complete">
+                  ✓
+                </span>
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {form.sets.map((set, sIdx) => (
-                    <div
-                      key={sIdx}
-                      className={`rf-set-row ${set.completed ? "rf-set-row--done" : ""}`}
-                    >
-                      {/* Lightweight Set Index */}
-                      <div className="rf-set-cell rf-set-cell--idx">
-                        <span className="rf-set-num">{sIdx + 1}</span>
-                      </div>
+                  <div
+                    key={sIdx}
+                    className={`rf-set-row ${set.completed ? "rf-set-row--done" : ""}`}
+                  >
+                    {/* Lightweight Set Index */}
+                    <div className="rf-set-cell rf-set-cell--idx">
+                      <span className="rf-set-num">{sIdx + 1}</span>
+                    </div>
 
-                      {/* Total weight entered directly in kilograms */}
-                      <div className="rf-set-cell rf-set-cell--weight">
-                        <WeightScrollInput
-                          value={set.weight}
-                          onChange={(val) => updateSet(sIdx, "weight", val)}
-                          ariaLabel={`Set ${sIdx + 1} weight (kg)`}
-                        />
-                      </div>
+                    {/* Total weight entered directly in kilograms */}
+                    <div className="rf-set-cell rf-set-cell--weight">
+                      <WeightScrollInput
+                        value={set.weight}
+                        onChange={(val) => updateSet(sIdx, "weight", val)}
+                        ariaLabel={`Set ${sIdx + 1} weight (kg)`}
+                      />
+                    </div>
 
-                      {/* Minimal Reps Input */}
-                      <div className="rf-set-cell rf-set-cell--reps">
-                        <input
-                          type="number"
-                          step="1"
-                          min="1"
-                          className="rf-set-input"
-                          value={set.reps === 0 ? "" : set.reps}
-                          placeholder="0"
-                          onChange={(e) =>
-                            updateSet(
-                              sIdx,
-                              "reps",
-                              e.target.value === "" ? 0 : Number(e.target.value)
-                            )
+                    {/* Minimal Reps Input */}
+                    <div className="rf-set-cell rf-set-cell--reps">
+                      <input
+                        type="number"
+                        step="1"
+                        min="1"
+                        className="rf-set-input"
+                        value={set.reps === 0 ? "" : set.reps}
+                        placeholder="0"
+                        onChange={(e) =>
+                          updateSet(
+                            sIdx,
+                            "reps",
+                            e.target.value === "" ? 0 : Number(e.target.value)
+                          )
+                        }
+                        aria-label={`Set ${sIdx + 1} reps`}
+                      />
+                    </div>
+
+                    {/* Completion and removal share the final action column */}
+                    <div className="rf-set-cell rf-set-cell--actions">
+                      <button
+                        type="button"
+                        className={`rf-set-check-btn ${set.completed ? "rf-set-check-btn--active" : ""}`}
+                        onClick={() => {
+                          const nextCompleted = !set.completed;
+                          updateSet(sIdx, "completed", nextCompleted);
+                          if (nextCompleted) {
+                            setShowRestTimer(true);
                           }
-                          aria-label={`Set ${sIdx + 1} reps`}
-                        />
-                      </div>
-
-                      {/* Completion and removal share the final action column */}
-                      <div className="rf-set-cell rf-set-cell--actions">
+                        }}
+                        title={
+                          set.completed
+                            ? "Mark set incomplete"
+                            : "Mark completed & start Rest Timer"
+                        }
+                        aria-label={`Toggle set ${sIdx + 1} completion`}
+                      >
+                        ✓
+                      </button>
+                      {form.sets.length > 1 ? (
                         <button
                           type="button"
-                          className={`rf-set-check-btn ${set.completed ? "rf-set-check-btn--active" : ""}`}
-                          onClick={() => {
-                            const nextCompleted = !set.completed;
-                            updateSet(sIdx, "completed", nextCompleted);
-                            if (nextCompleted) {
-                              setShowRestTimer(true);
-                            }
-                          }}
-                          title={set.completed ? "Mark set incomplete" : "Mark completed & start Rest Timer"}
-                          aria-label={`Toggle set ${sIdx + 1} completion`}
+                          className="rf-set-delete-btn"
+                          onClick={() => removeSet(sIdx)}
+                          title="Remove set"
+                          aria-label={`Remove set ${sIdx + 1}`}
                         >
-                          ✓
+                          ✕
                         </button>
-                        {form.sets.length > 1 ? (
-                          <button
-                            type="button"
-                            className="rf-set-delete-btn"
-                            onClick={() => removeSet(sIdx)}
-                            title="Remove set"
-                            aria-label={`Remove set ${sIdx + 1}`}
-                          >
-                            ✕
-                          </button>
-                        ) : null}
-                      </div>
+                      ) : null}
                     </div>
-                  ))}
+                  </div>
+                ))}
               </div>
 
               {/* + Add Set Action Button */}
@@ -290,9 +296,7 @@ export function ExerciseEditModal({ open, initialValue, onSave, onClose }) {
           </div>
         </form>
 
-        {showRestTimer && (
-          <RestTimer onClose={() => setShowRestTimer(false)} />
-        )}
+        {showRestTimer && <RestTimer onClose={() => setShowRestTimer(false)} />}
       </div>
     </div>
   );

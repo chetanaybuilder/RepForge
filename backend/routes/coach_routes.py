@@ -74,9 +74,7 @@ def chat() -> WerkzeugResponse | Response:
 
     raw_message = data.get("message")
     if not raw_message or not isinstance(raw_message, str) or not raw_message.strip():
-        raise ApiError(
-            "message is required and must be a non-empty string.", 400, "validation_error"
-        )
+        raise ApiError("message is required and must be a non-empty string.", 400, "validation_error")
 
     history_in = data.get("history", [])
     if not isinstance(history_in, list):

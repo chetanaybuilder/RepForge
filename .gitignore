@@ -1,5 +1,10 @@
 # Environment / secrets
 .env
+.env.*
+!.env.example
+!**/.env.example
+.dev.vars
+.dev.vars.*
 backend/.env
 frontend/.env
 *.env.local
@@ -15,6 +20,7 @@ env/
 # Node / frontend
 node_modules/
 dist/
+.wrangler/
 .vite/
 npm-debug.log*
 
@@ -30,4 +36,3 @@ coverage/
 
 # Logs
 *.log
-

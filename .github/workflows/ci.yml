@@ -14,6 +14,9 @@ jobs:
   backend:
     name: Backend (Python / Ruff / Pytest)
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -23,11 +26,13 @@ jobs:
         with:
           python-version: "3.11"
           cache: "pip"
+          cache-dependency-path: backend/requirements.txt
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install ruff==0.16.9
 
       - name: Run Ruff Lint Check
         run: ruff check .
@@ -59,6 +64,9 @@ jobs:
 
       - name: Check Cloudflare Build Configuration Formatting
         run: npm run format:check
+
+      - name: Check Frontend Formatting
+        run: npm --prefix frontend run format:check
 
       - name: Run Vitest Suite
         run: npm test

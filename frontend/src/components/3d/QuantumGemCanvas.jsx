@@ -37,7 +37,12 @@ function QuantumGem({ color = "#8a5cf6", active }) {
   );
 }
 
-export default function QuantumGemCanvas({ color = "#8a5cf6", active = true, size = 56, fallback }) {
+export default function QuantumGemCanvas({
+  color = "#8a5cf6",
+  active = true,
+  size = 56,
+  fallback,
+}) {
   return (
     <ThreeErrorBoundary fallback={fallback}>
       <div style={{ width: size, height: size, cursor: "pointer", flexShrink: 0 }}>

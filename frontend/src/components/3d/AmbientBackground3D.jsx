@@ -26,9 +26,6 @@ function FallbackNebula() {
 
 export function AmbientBackground3D() {
   return (
-    <LazyThree
-      loadComponent={() => import("./AmbientScene3D")}
-      fallback={<FallbackNebula />}
-    />
+    <LazyThree loadComponent={() => import("./AmbientScene3D")} fallback={<FallbackNebula />} />
   );
 }

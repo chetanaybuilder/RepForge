@@ -134,4 +134,3 @@ export function getExerciseImageUrl(imagePath) {
 }
 
 export { ApiError, API_URL };
-

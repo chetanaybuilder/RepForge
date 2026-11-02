@@ -6,7 +6,8 @@ import path from "path";
 const BASE_URL = process.env.BASE_URL || "https://repforge.chetanaybatra03-8b2.workers.dev";
 const OUTPUT_DIR = path.resolve("docs/media");
 const TEMP_VIDEOS = path.resolve("docs/media/temp_videos");
-const FFMPEG_PATH = "C:\\Users\\batra\\AppData\\Local\\ms-playwright\\ffmpeg-1013\\ffmpeg-win64.exe";
+const FFMPEG_PATH =
+  "C:\\Users\\batra\\AppData\\Local\\ms-playwright\\ffmpeg-1013\\ffmpeg-win64.exe";
 
 if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 if (!fs.existsSync(TEMP_VIDEOS)) fs.mkdirSync(TEMP_VIDEOS, { recursive: true });
@@ -72,7 +73,9 @@ async function captureAllMedia() {
   await page.goto(`${BASE_URL}/workouts`, { waitUntil: "networkidle" });
   await page.waitForTimeout(1500);
   // Open Exercise Picker
-  const pickerBtn = await page.$("button:has-text('Browse Exercise Library'), button:has-text('Pick from Library'), button:has-text('Browse Library')");
+  const pickerBtn = await page.$(
+    "button:has-text('Browse Exercise Library'), button:has-text('Pick from Library'), button:has-text('Browse Library')"
+  );
   if (pickerBtn) {
     await pickerBtn.click();
     await page.waitForTimeout(1000);
@@ -107,7 +110,8 @@ async function captureAllMedia() {
   console.log("\n--- Capturing Mobile Screenshots (390x844) ---");
   const mobileContext = await browser.newContext({
     viewport: { width: 390, height: 844 },
-    userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1",
+    userAgent:
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1",
     deviceScaleFactor: 2,
     isMobile: true,
     hasTouch: true,
@@ -148,7 +152,9 @@ async function captureAllMedia() {
   await page1.goto(`${BASE_URL}/workouts`, { waitUntil: "networkidle" });
   await page1.waitForTimeout(1000);
 
-  const btn1 = await page1.$("button:has-text('Browse Exercise Library'), button:has-text('Pick from Library'), button:has-text('Browse Library')");
+  const btn1 = await page1.$(
+    "button:has-text('Browse Exercise Library'), button:has-text('Pick from Library'), button:has-text('Browse Library')"
+  );
   if (btn1) {
     await btn1.click();
     await page1.waitForTimeout(1000);
@@ -203,13 +209,17 @@ async function captureAllMedia() {
   await page3.waitForTimeout(1500);
 
   // Click quick prompt pill or type prompt
-  const quickPill = await page3.$("button:has-text('volume'), button:has-text('overload'), button:has-text('streak')");
+  const quickPill = await page3.$(
+    "button:has-text('volume'), button:has-text('overload'), button:has-text('streak')"
+  );
   if (quickPill) {
     await quickPill.click();
   } else {
     const chatInput = await page3.$("input[placeholder*='Ask'], textarea");
     if (chatInput) {
-      await chatInput.type("How should I plan my progressive overload for squat next session?", { delay: 40 });
+      await chatInput.type("How should I plan my progressive overload for squat next session?", {
+        delay: 40,
+      });
       const sendBtn = await page3.$("button:has-text('Send'), button[type='submit']");
       if (sendBtn) await sendBtn.click();
     }
@@ -223,13 +233,13 @@ async function captureAllMedia() {
   // --- 4. Convert Recorded Videos to GIFs ---
   console.log("\n--- Converting WebM Videos to Optimized GIFs with FFmpeg ---");
   const videoFiles = fs.readdirSync(TEMP_VIDEOS).filter((f) => f.endsWith(".webm"));
-  videoFiles.sort((a, b) => fs.statSync(path.join(TEMP_VIDEOS, a)).mtimeMs - fs.statSync(path.join(TEMP_VIDEOS, b)).mtimeMs);
+  videoFiles.sort(
+    (a, b) =>
+      fs.statSync(path.join(TEMP_VIDEOS, a)).mtimeMs -
+      fs.statSync(path.join(TEMP_VIDEOS, b)).mtimeMs
+  );
 
-  const gifTargets = [
-    "demo-workout-logging.gif",
-    "demo-3d-dashboard.gif",
-    "demo-coach-stream.gif",
-  ];
+  const gifTargets = ["demo-workout-logging.gif", "demo-3d-dashboard.gif", "demo-coach-stream.gif"];
 
   videoFiles.forEach((vFile, idx) => {
     if (gifTargets[idx]) {

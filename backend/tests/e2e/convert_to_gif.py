@@ -6,6 +6,7 @@ from PIL import Image
 
 FFMPEG = r"C:\Users\batra\AppData\Local\ms-playwright\ffmpeg-1013\ffmpeg-win64.exe"
 
+
 def make_gif_from_webm(webm_path, gif_path, fps=8, max_width=640):
     temp_dir = os.path.join(os.path.dirname(gif_path), "temp_frames")
     os.makedirs(temp_dir, exist_ok=True)
@@ -19,12 +20,7 @@ def make_gif_from_webm(webm_path, gif_path, fps=8, max_width=640):
 
     # Extract PNG frames using Playwright's bundled FFmpeg
     frame_pattern = os.path.join(temp_dir, "frame_%04d.png")
-    cmd = [
-        FFMPEG, "-y", "-i", webm_path,
-        "-r", str(fps),
-        "-vf", f"scale={max_width}:-2",
-        frame_pattern
-    ]
+    cmd = [FFMPEG, "-y", "-i", webm_path, "-r", str(fps), "-vf", f"scale={max_width}:-2", frame_pattern]
     subprocess.run(cmd, check=True)
 
     frame_files = sorted(glob.glob(os.path.join(temp_dir, "*.png")))
@@ -40,12 +36,7 @@ def make_gif_from_webm(webm_path, gif_path, fps=8, max_width=640):
     images = [Image.open(f).convert("P", palette=Image.ADAPTIVE) for f in frame_files]
     if images:
         images[0].save(
-            gif_path,
-            save_all=True,
-            append_images=images[1:],
-            duration=int(1000 / fps),
-            loop=0,
-            optimize=True
+            gif_path, save_all=True, append_images=images[1:], duration=int(1000 / fps), loop=0, optimize=True
         )
         size_mb = os.path.getsize(gif_path) / (1024 * 1024)
         print(f"[OK] Generated GIF: {os.path.basename(gif_path)} ({size_mb:.2f} MB, {len(images)} frames)")
@@ -61,7 +52,9 @@ def make_gif_from_webm(webm_path, gif_path, fps=8, max_width=640):
     except OSError:
         pass
 
+
 if __name__ == "__main__":
     import sys
+
     if len(sys.argv) >= 3:
         make_gif_from_webm(sys.argv[1], sys.argv[2])

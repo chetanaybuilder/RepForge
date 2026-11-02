@@ -91,12 +91,7 @@ export function ExercisePickerModal({ open, onSelect, onClose }) {
               Select Movement
             </h2>
           </div>
-          <button
-            type="button"
-            className="rf-icon-btn"
-            onClick={onClose}
-            aria-label="Close picker"
-          >
+          <button type="button" className="rf-icon-btn" onClick={onClose} aria-label="Close picker">
             ✕
           </button>
         </div>
@@ -168,9 +163,7 @@ export function ExercisePickerModal({ open, onSelect, onClose }) {
                     ? "rgba(0, 242, 254, 0.2)"
                     : "rgba(255, 255, 255, 0.05)",
                 borderColor:
-                  selectedMuscle === muscle
-                    ? "var(--rf-cyan)"
-                    : "rgba(255, 255, 255, 0.1)",
+                  selectedMuscle === muscle ? "var(--rf-cyan)" : "rgba(255, 255, 255, 0.1)",
                 color: selectedMuscle === muscle ? "var(--rf-cyan)" : "var(--rf-text-sub)",
                 whiteSpace: "nowrap",
               }}
@@ -194,7 +187,10 @@ export function ExercisePickerModal({ open, onSelect, onClose }) {
         >
           {loading && (
             <div style={{ textAlign: "center", padding: "40px 0", color: "var(--rf-text-faint)" }}>
-              <div className="rf-spin" style={{ display: "inline-block", fontSize: "1.5rem", marginBottom: 8 }}>
+              <div
+                className="rf-spin"
+                style={{ display: "inline-block", fontSize: "1.5rem", marginBottom: 8 }}
+              >
                 ◈
               </div>
               <div>Scanning exercise database...</div>

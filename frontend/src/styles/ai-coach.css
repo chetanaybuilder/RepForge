@@ -297,7 +297,9 @@
   border-radius: var(--rf-radius-lg);
   overflow: hidden;
   position: relative;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.65), 0 0 24px -6px rgba(0, 242, 254, 0.12);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.65),
+    0 0 24px -6px rgba(0, 242, 254, 0.12);
 }
 
 @media (max-width: 959px) {
@@ -537,4 +539,3 @@
     padding-inline: 10px !important;
   }
 }
-

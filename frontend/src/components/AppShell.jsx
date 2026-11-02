@@ -5,6 +5,11 @@ import { AmbientBackground3D } from "./3d/AmbientBackground3D";
 import { AnimatePresence, motion } from "framer-motion";
 import { RestTimer } from "./RestTimer";
 
+/**
+ * Shared navigation shell for the authenticated app.
+ * Keeps the global layout, destination rail, and widget states consistent.
+ */
+
 export const APP_SECTIONS = [
   {
     to: "/workouts",
@@ -78,10 +83,7 @@ export function AppShell() {
     <div className="rf-shell">
       <AmbientBackground3D />
 
-      {/* ====================================================================
-          DESKTOP COMMAND RAIL (>= 1024px)
-          Exact 4 Destinations: 01 Log Workout, 02 Dashboard, 03 AI Trainer, 04 Goals
-          ==================================================================== */}
+      {/* Desktop navigation rail */}
       <aside className="rf-desktop-rail">
         <div className="rf-rail-header">
           <div className="rf-brand-group">
@@ -201,10 +203,7 @@ export function AppShell() {
         </div>
       </aside>
 
-      {/* ====================================================================
-          MOBILE TOP BAR (< 768px)
-          Includes Three-Line Hamburger Menu Button (☰) & Rest Timer
-          ==================================================================== */}
+      {/* Mobile top bar */}
       <header className="rf-topbar">
         <div className="rf-brand-group">
           <div className="rf-brand-glyph">RF</div>
@@ -392,7 +391,13 @@ export function AppShell() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.15, ease: "easeOut" }}
-              style={{ width: "100%", flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}
+              style={{
+                width: "100%",
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                minHeight: 0,
+              }}
             >
               <Outlet />
             </motion.div>
@@ -400,9 +405,7 @@ export function AppShell() {
         </div>
       </main>
 
-      {showGlobalTimer && (
-        <RestTimer onClose={() => setShowGlobalTimer(false)} />
-      )}
+      {showGlobalTimer && <RestTimer onClose={() => setShowGlobalTimer(false)} />}
     </div>
   );
 }

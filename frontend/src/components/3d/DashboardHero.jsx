@@ -12,10 +12,7 @@ import { DashboardHero2D } from "./DashboardHero2D";
 export function DashboardHero() {
   return (
     <>
-      <LazyThree
-        loadComponent={() => import("./DashboardHero3D")}
-        fallback={null}
-      />
+      <LazyThree loadComponent={() => import("./DashboardHero3D")} fallback={null} />
       <DashboardHero2D />
     </>
   );

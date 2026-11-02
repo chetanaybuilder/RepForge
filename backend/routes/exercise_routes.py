@@ -49,9 +49,7 @@ def list_exercises() -> Response:
     # Soft user identification without forcing 401
     user_id = getattr(g, "user_id", None)
     if not user_id:
-        cookie_val = request.cookies.get(
-            current_app.config.get("SESSION_COOKIE_NAME", "repforge_session")
-        )
+        cookie_val = request.cookies.get(current_app.config.get("SESSION_COOKIE_NAME", "repforge_session"))
         if cookie_val:
             sess = get_session(cookie_val)
             if sess:
@@ -111,9 +109,7 @@ def get_exercise_detail(exercise_id: str) -> Response:
     """
     user_id = getattr(g, "user_id", None)
     if not user_id:
-        cookie_val = request.cookies.get(
-            current_app.config.get("SESSION_COOKIE_NAME", "repforge_session")
-        )
+        cookie_val = request.cookies.get(current_app.config.get("SESSION_COOKIE_NAME", "repforge_session"))
         if cookie_val:
             sess = get_session(cookie_val)
             if sess:
@@ -180,9 +176,7 @@ def get_exercise_image(image_path: str) -> Response:
         return response
 
     # Not cached locally yet: fetch once from open-source repository
-    upstream_url = (
-        f"https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/{image_path}"
-    )
+    upstream_url = f"https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/{image_path}"
     try:
         req = urllib.request.Request(
             upstream_url,

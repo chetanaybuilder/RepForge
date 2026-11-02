@@ -11,9 +11,6 @@ import { LandingScene2D } from "./LandingScene2D";
 
 export default function LandingScene() {
   return (
-    <LazyThree
-      loadComponent={() => import("./LandingScene3D")}
-      fallback={<LandingScene2D />}
-    />
+    <LazyThree loadComponent={() => import("./LandingScene3D")} fallback={<LandingScene2D />} />
   );
 }

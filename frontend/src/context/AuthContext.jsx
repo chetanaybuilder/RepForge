@@ -1,6 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { api, setCsrfToken, API_URL } from "../services/api";
 
+/**
+ * Provides the current authenticated athlete, session state, and login/logout actions.
+ */
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {

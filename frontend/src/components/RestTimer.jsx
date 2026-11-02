@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 
 /**
- * Web Audio API synthesizer for crisp gym rest notification
- * Zero external mp3 dependencies, works offline
+ * Produces a lightweight offline beep when a rest interval finishes.
  */
 function playRestBeep() {
   try {
@@ -39,7 +38,7 @@ function playRestBeep() {
 }
 
 /**
- * Haptic mobile pulse on rest completion
+ * Emits a brief vibration pulse on mobile devices when the rest timer ends.
  */
 function triggerHapticPulse() {
   try {
@@ -111,13 +110,9 @@ export function RestTimer({ initialSeconds = 90, onComplete, onClose }) {
           bottom: 24,
           right: 24,
           zIndex: 9999,
-          background: isFinished
-            ? "rgba(0, 245, 160, 0.95)"
-            : "rgba(12, 12, 24, 0.92)",
+          background: isFinished ? "rgba(0, 245, 160, 0.95)" : "rgba(12, 12, 24, 0.92)",
           backdropFilter: "blur(16px)",
-          border: isFinished
-            ? "1px solid var(--rf-emerald)"
-            : "1px solid rgba(0, 242, 254, 0.4)",
+          border: isFinished ? "1px solid var(--rf-emerald)" : "1px solid rgba(0, 242, 254, 0.4)",
           borderRadius: "999px",
           padding: "8px 16px",
           display: "flex",
@@ -148,9 +143,7 @@ export function RestTimer({ initialSeconds = 90, onComplete, onClose }) {
         width: "min(340px, calc(100vw - 32px))",
         background: "rgba(10, 10, 22, 0.95)",
         backdropFilter: "blur(24px) saturate(180%)",
-        border: isFinished
-          ? "1px solid var(--rf-emerald)"
-          : "1px solid rgba(0, 242, 254, 0.35)",
+        border: isFinished ? "1px solid var(--rf-emerald)" : "1px solid rgba(0, 242, 254, 0.35)",
         borderRadius: "var(--rf-radius-lg)",
         padding: "16px",
         boxShadow: "0 12px 40px rgba(0,0,0,0.7), 0 0 24px -6px rgba(0,242,254,0.2)",
@@ -281,9 +274,7 @@ export function RestTimer({ initialSeconds = 90, onComplete, onClose }) {
               fontWeight: totalSeconds === p.val ? 800 : 600,
               borderRadius: "var(--rf-radius-sm)",
               background:
-                totalSeconds === p.val
-                  ? "rgba(0, 242, 254, 0.2)"
-                  : "rgba(255, 255, 255, 0.05)",
+                totalSeconds === p.val ? "rgba(0, 242, 254, 0.2)" : "rgba(255, 255, 255, 0.05)",
               border:
                 totalSeconds === p.val
                   ? "1px solid var(--rf-cyan)"
@@ -331,9 +322,7 @@ export function RestTimer({ initialSeconds = 90, onComplete, onClose }) {
         <button
           type="button"
           onClick={() => setIsActive((prev) => !prev)}
-          className={`rf-btn rf-btn--sm ${
-            isActive ? "rf-btn--secondary" : "rf-btn--primary"
-          }`}
+          className={`rf-btn rf-btn--sm ${isActive ? "rf-btn--secondary" : "rf-btn--primary"}`}
           style={{ padding: "4px 12px", fontSize: "0.75rem" }}
         >
           {isActive ? "Pause" : "Resume"}

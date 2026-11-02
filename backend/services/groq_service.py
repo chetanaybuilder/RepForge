@@ -104,10 +104,12 @@ def _build_groq_messages(
         "This is the lifter's verified historical training telemetry. Acknowledge and utilize this data."
     )
     messages.append({"role": "user", "content": grounding_content})
-    messages.append({
-        "role": "assistant",
-        "content": "Telemetry loaded. Standing by for lifter inquiry and tactical analysis.",
-    })
+    messages.append(
+        {
+            "role": "assistant",
+            "content": "Telemetry loaded. Standing by for lifter inquiry and tactical analysis.",
+        }
+    )
 
     # Append recent chat history (bounded to last 10 messages)
     for msg in chat_history[-10:]:
@@ -242,17 +244,11 @@ def stream_coach_dialogue(
                 time.sleep(backoff)
                 backoff *= 2.0
                 continue
-            yield (
-                "Coach telemetry connection timed out. "
-                "Please verify your network connection and retry."
-            )
+            yield ("Coach telemetry connection timed out. Please verify your network connection and retry.")
             return
         except Exception as exc:
             logger.error("Unexpected error during Groq inference: %s", exc)
-            yield (
-                "Coach diagnostics encountered an unexpected error. "
-                "Please try again in a moment."
-            )
+            yield ("Coach diagnostics encountered an unexpected error. Please try again in a moment.")
             return
 
     # If all retries exhausted

@@ -14,6 +14,7 @@ import { motion } from "framer-motion";
 import { PrimaryButton } from "../components/PrimaryButton";
 
 const QUICK_PROMPTS = [
+  "Analyze my last workout and tell me what to do next",
   "How should I progress my bench?",
   "Help me plan a leg day",
   "How many reps should I do for strength?",
@@ -52,9 +53,7 @@ class CoachErrorBoundary extends Component {
             background: "rgba(255, 51, 102, 0.06)",
           }}
         >
-          <div className="rf-coach-kicker rf-coach-kicker--error">
-            CHAT DISPLAY ERROR
-          </div>
+          <div className="rf-coach-kicker rf-coach-kicker--error">CHAT DISPLAY ERROR</div>
           <h3 style={{ margin: "0 0 8px 0", color: "var(--rf-text-pure)", fontSize: "1.05rem" }}>
             This reply could not be displayed
           </h3>
@@ -135,7 +134,8 @@ export function Coach() {
     setChatLoading(true);
 
     const userMessage = { role: "user", text: textToSend };
-    const hasPendingMessage = chatHistory.at(-1)?.role === "user" && chatHistory.at(-1)?.text === textToSend;
+    const hasPendingMessage =
+      chatHistory.at(-1)?.role === "user" && chatHistory.at(-1)?.text === textToSend;
     const historyForRequest = hasPendingMessage ? chatHistory.slice(0, -1) : [...chatHistory];
     const updatedHistory = hasPendingMessage ? chatHistory : [...chatHistory, userMessage];
     setChatHistory(updatedHistory);
@@ -144,7 +144,7 @@ export function Coach() {
       const csrf = getCsrfToken();
       const headers = {
         "Content-Type": "application/json",
-        "Accept": "text/event-stream",
+        Accept: "text/event-stream",
       };
       if (csrf) headers["X-CSRF-Token"] = csrf;
 
@@ -165,7 +165,9 @@ export function Coach() {
         if (response.status === 401 || response.status === 403) {
           throw new Error("Your session has expired. Sign in again to continue with Coach.");
         }
-        throw new Error(`Coach request failed (${response.status}). Retry when your connection is ready.`);
+        throw new Error(
+          `Coach request failed (${response.status}). Retry when your connection is ready.`
+        );
       }
 
       setChatLoading(false);
@@ -260,9 +262,7 @@ export function Coach() {
       {/* Header */}
       <div className="rf-page-header" style={{ marginBottom: 16 }}>
         <div>
-          <div className="rf-coach-kicker">
-            STRENGTH COACH
-          </div>
+          <div className="rf-coach-kicker">STRENGTH COACH</div>
           <h1 className="rf-page-title">
             RepForge <span className="rf-gradient-text">Coach</span>
           </h1>
@@ -288,14 +288,14 @@ export function Coach() {
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div className="rf-coach-mark" aria-hidden="true">RF</div>
+              <div className="rf-coach-mark" aria-hidden="true">
+                RF
+              </div>
               <div>
                 <div style={{ fontSize: "0.86rem", fontWeight: 700, color: "var(--rf-text-pure)" }}>
                   RepForge Coach
                 </div>
-                <div className="rf-coach-provider">
-                  STRENGTH TRAINING · GROQ
-                </div>
+                <div className="rf-coach-provider">STRENGTH TRAINING · GROQ</div>
               </div>
             </div>
 
@@ -328,7 +328,9 @@ export function Coach() {
             <CoachErrorBoundary>
               {chatHistory.length === 0 && !chatLoading && (
                 <div className="rf-coach-empty-state">
-                  <div className="rf-coach-mark rf-coach-mark--large" aria-hidden="true">RF</div>
+                  <div className="rf-coach-mark rf-coach-mark--large" aria-hidden="true">
+                    RF
+                  </div>
                   <h2>What are you working on?</h2>
                   <p>Ask about lifting, programming, recovery, or your training history.</p>
                 </div>
@@ -409,7 +411,14 @@ export function Coach() {
               })}
 
               {chatLoading && (
-                <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--rf-text-sub)" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    color: "var(--rf-text-sub)",
+                  }}
+                >
                   <span className="rf-spin" style={{ color: "var(--rf-cyan)" }}>
                     ◈
                   </span>
@@ -433,41 +442,43 @@ export function Coach() {
           </div>
 
           {/* Natural-language conversation starters */}
-          {chatHistory.length === 0 && <div
-            style={{
-              padding: "8px 14px",
-              borderTop: "1px solid rgba(255, 255, 255, 0.05)",
-              background: "rgba(8, 8, 16, 0.6)",
-              display: "flex",
-              gap: 8,
-              overflowX: "auto",
-              WebkitOverflowScrolling: "touch",
-              scrollbarWidth: "none",
-              flexShrink: 0,
-            }}
-          >
-            {QUICK_PROMPTS.map((prompt) => (
-              <button
-                key={prompt}
-                type="button"
-                onClick={() => handleSendMessage(prompt)}
-                disabled={chatLoading || isStreaming}
-                className="rf-badge"
-                style={{
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                  background: "rgba(255, 255, 255, 0.04)",
-                  borderColor: "rgba(255, 255, 255, 0.12)",
-                  color: "var(--rf-text-sub)",
-                  fontSize: "0.75rem",
-                  transition: "all 0.15s ease",
-                  flexShrink: 0,
-                }}
-              >
-                {prompt}
-              </button>
-            ))}
-          </div>}
+          {chatHistory.length === 0 && (
+            <div
+              style={{
+                padding: "8px 14px",
+                borderTop: "1px solid rgba(255, 255, 255, 0.05)",
+                background: "rgba(8, 8, 16, 0.6)",
+                display: "flex",
+                gap: 8,
+                overflowX: "auto",
+                WebkitOverflowScrolling: "touch",
+                scrollbarWidth: "none",
+                flexShrink: 0,
+              }}
+            >
+              {QUICK_PROMPTS.map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  onClick={() => handleSendMessage(prompt)}
+                  disabled={chatLoading || isStreaming}
+                  className="rf-badge"
+                  style={{
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                    background: "rgba(255, 255, 255, 0.04)",
+                    borderColor: "rgba(255, 255, 255, 0.12)",
+                    color: "var(--rf-text-sub)",
+                    fontSize: "0.75rem",
+                    transition: "all 0.15s ease",
+                    flexShrink: 0,
+                  }}
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Sticky Mobile Input Pinned to Viewport Bottom */}
           <form
@@ -514,7 +525,6 @@ export function Coach() {
             </PrimaryButton>
           </form>
         </div>
-
       </div>
     </div>
   );
