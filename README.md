@@ -1,126 +1,136 @@
+<div align="center">
+
 # RepForge
 
-### A focused strength-training app for logging, reviewing, and progressing your training.
+### The AI-Powered Strength & Hypertrophy Tracker
 
-[![CI](https://github.com/chetanaybuilder/RepForge/actions/workflows/ci.yml/badge.svg)](https://github.com/chetanaybuilder/RepForge/actions/workflows/ci.yml)
-[![Cloudflare Pages](https://img.shields.io/badge/Hosted%20on-Cloudflare%20Pages-F38020?logo=cloudflare&logoColor=white)](https://repforge-app.pages.dev)
+Train with purpose. Log every set. Turn consistent work into measurable progress.
 
-RepForge brings workout logging, exercise discovery, progress tracking, goals, and an AI coaching experience into one responsive application. Its interface combines a fast React frontend with a Cloudflare Worker API and D1 persistence, with a Flask backend available for local and alternate deployments.
+[![Live status](https://img.shields.io/badge/Live%20Status-Online-2ea44f?style=for-the-badge&logo=cloudflarepages&logoColor=white)](https://repforge-app.pages.dev)
+[![React](https://img.shields.io/badge/React-18-149eca?logo=react&logoColor=white)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-5-646cff?logo=vite&logoColor=white)](https://vite.dev/)
+[![Flask](https://img.shields.io/badge/Flask-Python-3babc3?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Backend-4169e1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Groq](https://img.shields.io/badge/AI-Groq-f55036?logo=groq&logoColor=white)](https://groq.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-[Open RepForge](https://repforge-app.pages.dev) · [Deployment guide](DEPLOYMENT.md)
+**[Live demo](https://repforge-app.pages.dev)** · **[Report a bug](https://github.com/chetanaybuilder/RepForge/issues/new?labels=bug)** · **[Request a feature](https://github.com/chetanaybuilder/RepForge/issues/new?labels=enhancement)**
+
+</div>
 
 ---
 
-## What it does
+## Product preview
 
-- **Log training sessions** with exercises, sets, reps, weight, and completion state.
-- **Browse the exercise library** with search and muscle-group filters.
-- **Review training data** through dashboard summaries, progress charts, and personal-record tracking.
-- **Set measurable goals** and monitor progress toward them.
-- **Ask the AI coach** for training guidance, with streamed responses when the service is configured.
-- **Use the app across devices**, including compact workout entry and an optional 3D dashboard experience.
+| Landing page | Analytics dashboard |
+|:---:|:---:|
+| ![RepForge landing page](docs/media/landing.png) | ![RepForge analytics dashboard](docs/media/dashboard.png) |
 
-## Built with
+| Mobile workout logger | AI strength coach |
+|:---:|:---:|
+| ![RepForge mobile workout logger](docs/media/mobile-workouts.png) | ![RepForge AI strength coach](docs/media/coach.png) |
 
-| Area              | Technologies                                            |
-| ----------------- | ------------------------------------------------------- |
-| Frontend          | React 18, Vite, React Router, Recharts, Three.js        |
-| Edge API          | Cloudflare Workers, Hono                                |
-| Edge persistence  | Cloudflare D1                                           |
-| Alternate backend | Python, Flask, PostgreSQL                               |
-| Tests and quality | Vitest, Testing Library, Pytest, Ruff, ESLint, Prettier |
+## What you can do
 
-## Engineering highlights
-
-- Session-based authentication with OAuth state validation and CSRF protection for mutations.
-- User-scoped workout and goal APIs backed by parameterized database queries.
-- Lazy-loaded 3D visuals with a 2D fallback for devices without WebGL support.
-- Separate frontend and backend test suites, with lint, formatting, and build checks in CI.
+- **Progressive overload tracking** — keep exercises, working sets, loads, reps, and personal records together across sessions.
+- **Fast workout logging** — build and edit complete sessions with exercise-library search and mobile-friendly inputs.
+- **Real-time rest timers** — use adjustable set-rest countdowns with optional sound and haptic cues.
+- **Hypertrophy and strength analytics** — review training volume, workout consistency, progress trends, and goals.
+- **Context-aware AI coaching** — ask for actionable guidance grounded in your logged training history.
+- **Responsive training tools** — use the workout log, exercise library, progress views, and coach on desktop or mobile.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    Browser["React application"] --> Worker["Cloudflare Worker API"]
-    Worker --> D1[("Cloudflare D1")]
-    Worker --> Groq["Groq API (optional)"]
-    Browser -. "local / alternate runtime" .-> Flask["Flask API"]
-    Flask --> Postgres[("PostgreSQL")]
+    Browser["React 18 + Vite"]
+    Pages["Cloudflare Pages"]
+    Worker["Hono API on Cloudflare Workers"]
+    D1[("Cloudflare D1")]
+    Groq["Groq inference API"]
+    Flask["Alternate Flask API"]
+    PostgreSQL[("PostgreSQL")]
+
+    Browser --> Pages
+    Browser --> Worker
+    Worker --> D1
+    Worker --> Groq
+    Browser -. "local / alternate deployment" .-> Flask
+    Flask --> PostgreSQL
+    Flask --> Groq
 ```
 
-The deployed Pages application uses the Worker and D1 path. The Flask service is maintained as an alternate backend and is tested separately.
+The public demo runs on **Cloudflare Pages, Workers, and D1**, with Groq used for AI coaching. The repository also maintains a **Flask/Python API backed by PostgreSQL** for local development and alternate deployments. The two backends implement the same application surfaces; the Flask service is not the API used by the Pages production deployment.
 
-## Run locally
+## Quick start
 
-### Frontend with the Flask API
+This repository is public. Anyone can clone it and run the application locally with their own database and provider credentials.
 
-Prerequisites: Node.js 20+ and Python 3.11+.
+### Prerequisites
 
-1. Install frontend dependencies from the repository root:
+- Node.js 20+
+- Python 3.11+
+- PostgreSQL for the Flask backend
+- Google OAuth credentials for sign-in; a Groq API key for AI coaching
 
-   ```bash
-   npm ci
-   ```
-
-2. Create and activate a Python environment, then install backend dependencies:
-
-   ```powershell
-   cd backend
-   py -m venv .venv
-   .venv\Scripts\Activate.ps1
-   py -m pip install -r requirements.txt
-   ```
-
-   On macOS/Linux, activate with `source .venv/bin/activate`.
-
-3. Copy the safe template and configure local values in `backend/.env`:
-
-   ```powershell
-   Copy-Item ..\.env.example .env
-   ```
-
-   On macOS/Linux, use `cp ../.env.example .env`. Supply your own database and provider credentials only when needed. Never commit `.env` files or paste credentials into issues or logs.
-
-4. Start the Flask API from `backend`:
-
-   ```bash
-   python app.py
-   ```
-
-5. In another terminal, from the repository root, start the frontend:
-
-   ```bash
-   npm run dev
-   ```
-
-   Open `http://localhost:5173`. Vite proxies `/api` and `/auth` to the Flask service on port `5000`.
-
-### Cloudflare Worker
-
-Build the Pages application and Worker bundle:
+### 1. Clone and install frontend dependencies
 
 ```bash
+git clone https://github.com/chetanaybuilder/RepForge.git
+cd RepForge
 npm ci
+```
+
+### 2. Configure and run the Flask API
+
+Create and activate a Python environment, install backend requirements, and copy the example configuration:
+
+```powershell
+py -m venv backend\.venv
+backend\.venv\Scripts\Activate.ps1
+python -m pip install -r backend\requirements.txt
+Copy-Item backend\.env.example backend\.env
+```
+
+Edit `backend/.env` with your local PostgreSQL connection string and Google OAuth settings. Set `GROQ_API_KEY` if you want to use AI coaching. These are local-only values; never commit them.
+
+Start the API from the repository root:
+
+```powershell
+python backend\app.py
+```
+
+### 3. Run the frontend
+
+In another terminal:
+
+```powershell
+npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173). Vite proxies API and authentication requests to the local Flask server.
+
+For macOS/Linux, activate the virtual environment with `source backend/.venv/bin/activate`; copy the template with `cp backend/.env.example backend/.env`; and use `python backend/app.py` to start the API.
+
+### Cloudflare development and deployment
+
+The Cloudflare Worker uses D1. For local Pages/Worker development, create a private `.dev.vars` for any provider credentials and use Wrangler's local D1 database. Do not commit `.dev.vars`.
+
+```bash
 npm run build
 npm run check:cloudflare
-```
-
-For local Worker development, configure private values in an ignored `.dev.vars` file and use Wrangler's local D1 database. For deployment, configure Worker secrets in the Cloudflare dashboard or with `wrangler secret put`; do not store production secrets in this repository.
-
-After building, start the Pages/Worker development environment with:
-
-```bash
 npx wrangler pages dev dist
 ```
 
-## Quality checks
+Production deployment requires a configured Cloudflare account, D1 database, and server-side OAuth/Groq secrets. See the [deployment guide](DEPLOYMENT.md) before deploying.
 
-Run the same core checks used by CI:
+## Development checks
 
 ```bash
 npm run lint
+npm run format:check
 npm --prefix frontend run format:check
-npm run test
+npm test
 npm run test:backend
 python -m ruff check backend
 python -m ruff format --check backend
@@ -128,32 +138,46 @@ npm run build
 npm run check:cloudflare
 ```
 
-The current suites cover the React API/components and Flask authentication, CSRF, workout, exercise, goal, and coach behavior.
+Install Ruff separately for the Python lint and format checks: `python -m pip install ruff==0.16.9`.
 
-## Repository layout
+## Repository map
 
 ```text
-backend/       Flask API, database access, services, and tests
-frontend/      React application, styles, and component tests
-migrations/    Cloudflare D1 migrations
-scripts/       Worker build and Pages output verification
-worker/        Cloudflare Worker API
-docs/media/    Screenshots and product demo GIFs
+backend/
+  auth/       OAuth, session, and authentication helpers
+  database/   PostgreSQL access, queries, schemas, and migrations
+  routes/     Flask API blueprints
+  services/   Business logic and Groq integration
+  tests/      Backend unit and API tests
+  utils/      Validation, security, and error handling
+frontend/
+  src/
+    components/ Reusable UI, workout forms, and 3D components
+    context/    Authentication and notifications
+    hooks/      Data-fetching and workout hooks
+    pages/      Route-level screens
+    services/   API client
+    styles/     Modular application styles
+    utils/      Browser capability and graphics helpers
+  tests/      Browser-based media capture utilities
+worker/       Hono API for Cloudflare Workers
+migrations/   Cloudflare D1 migrations
+scripts/      Worker build and Pages output checks
+docs/media/   Product screenshots and walkthroughs
 ```
 
-## Security notes
+## Security
 
-- Keep `.env`, `.dev.vars`, local database files, and provider credentials out of Git.
-- Use the committed `.env.example` files only as templates; replace placeholders locally.
-- If a credential was ever committed or shared, rotate it at its provider. Removing it from the latest commit does not remove it from Git history.
-- Report security concerns privately to the repository maintainer rather than including exploit details in a public issue.
+- Keep `.env`, `.dev.vars`, local databases, and provider credentials out of Git.
+- Use the committed `.env.example` files as templates only.
+- The Groq key belongs on the server and must never be exposed to browser code.
+- If a credential is ever committed or shared, rotate it with its provider; deleting it from the latest commit does not remove it from Git history.
+- The exercise catalog includes data from [free-exercise-db](https://github.com/yuhonas/free-exercise-db); see the upstream project for its license and attribution terms.
 
-## Credits
+## Author
 
-The exercise catalog is based on [free-exercise-db](https://github.com/yuhonas/free-exercise-db). Review its upstream license and attribution requirements when redistributing the dataset.
+**Chetanay** · [GitHub @chetanaybuilder](https://github.com/chetanaybuilder)
 
----
+## License
 
-## Dashboard preview
-
-![RepForge dashboard demo](docs/media/demo-3d-dashboard.gif)
+RepForge is released under the [MIT License](LICENSE). You are free to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the software, subject to the license terms.

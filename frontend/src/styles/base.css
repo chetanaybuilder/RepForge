@@ -24,9 +24,15 @@ html {
   scroll-behavior: smooth;
   height: 100%;
   width: 100%;
-  overflow-y: scroll;
-  scrollbar-gutter: stable;
+  overflow-x: clip;
+  overflow-y: auto;
   overscroll-behavior-y: none;
+}
+
+@media (min-width: 681px) {
+  html {
+    scrollbar-gutter: stable;
+  }
 }
 
 body {
@@ -39,6 +45,7 @@ body {
     radial-gradient(ellipse 60% 40% at 100% 100%, rgba(0, 242, 254, 0.06), transparent 60%),
     linear-gradient(180deg, var(--rf-void) 0%, var(--rf-bg) 100%);
   background-attachment: fixed;
+  overflow-x: clip;
   overscroll-behavior-y: none;
   -webkit-overflow-scrolling: touch;
   line-height: 1.5;
@@ -46,9 +53,17 @@ body {
   user-select: text;
 }
 
+@media (max-width: 680px) {
+  body {
+    background-attachment: scroll;
+  }
+}
+
 /* Fix iOS bouncy safari overscroll bleed & enforce edge-to-edge canvas coverage */
 #root {
   width: 100%;
+  min-width: 0;
+  overflow-x: clip;
   min-height: 100vh;
   min-height: 100dvh;
   display: flex;

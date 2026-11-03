@@ -22,6 +22,7 @@ export function Workouts() {
   const toast = useToast();
 
   const [dayModalOpen, setDayModalOpen] = useState(false);
+  const [editingDay, setEditingDay] = useState(null);
   const [editExerciseModalOpen, setEditExerciseModalOpen] = useState(false);
   const [editingExercise, setEditingExercise] = useState(null);
   const [pendingDelete, setPendingDelete] = useState(null);
@@ -54,12 +55,21 @@ export function Workouts() {
 
   const handleSaveDay = async (payload) => {
     try {
-      await createWorkout(payload);
-      toast.success("Workout session recorded successfully.");
+      if (editingDay) {
+        await api.put(`/api/workouts/${editingDay.id}`, payload);
+        toast.success("Workout session updated.");
+      } else {
+        await createWorkout(payload);
+        toast.success("Workout session recorded successfully.");
+      }
+      setEditingDay(null);
       setDayModalOpen(false);
       reload();
     } catch (err) {
-      toast.error(err.message || "Failed to record workout session.");
+      toast.error(
+        err.message ||
+          (editingDay ? "Could not update workout session." : "Failed to record workout session.")
+      );
     }
   };
 
@@ -181,9 +191,6 @@ export function Workouts() {
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {workouts.map((day) => {
             const isExpanded = expandedDayId === day.id;
-            const primaryTypes = [
-              ...new Set(day.exercises.map((ex) => ex.workout_type.replace("_", " "))),
-            ].join(" · ");
             const totalSets = day.exercises.reduce((acc, ex) => acc + ex.sets.length, 0);
 
             return (
@@ -196,57 +203,41 @@ export function Workouts() {
                   className="rf-workout-header"
                   onClick={() => setExpandedDayId(isExpanded ? null : day.id)}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                    <div
-                      style={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: "var(--rf-radius-sm)",
-                        background: isExpanded
-                          ? "rgba(0, 242, 254, 0.15)"
-                          : "rgba(255, 255, 255, 0.04)",
-                        border: isExpanded
-                          ? "1px solid rgba(0, 242, 254, 0.4)"
-                          : "1px solid var(--rf-border-subtle)",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontFamily: "var(--rf-font-mono)",
-                        fontWeight: 700,
-                        fontSize: "0.85rem",
-                        color: isExpanded ? "var(--rf-cyan)" : "var(--rf-text-bright)",
-                      }}
-                    >
-                      <span>D{day.day_number}</span>
-                    </div>
-
+                  <div className="rf-workout-identity">
                     <div className="rf-workout-title-group">
                       <div className="rf-workout-day-badge">
-                        <span>{day.day ? day.day : `Session #${day.day_number}`}</span>
-                        <span className="rf-badge rf-badge--cyan">{formatDate(day.date)}</span>
+                        <span className="rf-workout-session-name">
+                          {day.day || `Session #${day.day_number}`}
+                        </span>
+                        <span className="rf-workout-date">{formatDate(day.date)}</span>
                       </div>
-                      <div
-                        style={{
-                          fontSize: "0.82rem",
-                          color: "var(--rf-text-sub)",
-                          textTransform: "capitalize",
-                        }}
-                      >
-                        {day.exercises.length} Exercises · {totalSets} sets{" "}
-                        {primaryTypes ? `(${primaryTypes})` : ""}
+                      <div className="rf-workout-summary">
+                        {day.exercises.length} exercises <span aria-hidden="true">·</span>{" "}
+                        {totalSets} sets
                       </div>
                     </div>
                   </div>
 
-                  <div
-                    style={{
-                      color: "var(--rf-text-faint)",
-                      transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
-                      transition: "transform 0.3s var(--rf-ease-spring)",
-                    }}
-                  >
-                    ▼
+                  <div className="rf-workout-header-actions">
+                    <button
+                      type="button"
+                      className="rf-session-edit-button"
+                      title="Edit the entire saved session"
+                      aria-label={`Edit entire session ${day.day || `number ${day.day_number}`}`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setEditingDay(day);
+                        setDayModalOpen(true);
+                      }}
+                    >
+                      Edit
+                    </button>
+                    <span
+                      aria-hidden="true"
+                      className={`rf-workout-chevron${isExpanded ? " rf-workout-chevron--expanded" : ""}`}
+                    >
+                      ▼
+                    </span>
                   </div>
                 </div>
 
@@ -439,10 +430,12 @@ export function Workouts() {
       {/* Modals */}
       <DayFormModal
         open={dayModalOpen}
+        initialDay={editingDay}
         initialExercise={initialExercise}
         onSave={handleSaveDay}
         onClose={() => {
           setDayModalOpen(false);
+          setEditingDay(null);
           setInitialExercise("");
         }}
       />

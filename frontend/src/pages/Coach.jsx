@@ -159,14 +159,22 @@ export function Coach() {
       });
 
       if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
         if (response.status === 429) {
-          throw new Error("Coach is rate limited right now. Wait briefly, then retry.");
+          throw new Error(
+            errorData?.error?.message ||
+              "Coach is rate limited right now. Wait briefly, then retry."
+          );
         }
         if (response.status === 401 || response.status === 403) {
-          throw new Error("Your session has expired. Sign in again to continue with Coach.");
+          throw new Error(
+            errorData?.error?.message ||
+              "Your session has expired. Sign in again to continue with Coach."
+          );
         }
         throw new Error(
-          `Coach request failed (${response.status}). Retry when your connection is ready.`
+          errorData?.error?.message ||
+            `Coach request failed (${response.status}). Retry when your connection is ready.`
         );
       }
 
@@ -501,7 +509,7 @@ export function Coach() {
           >
             <input
               type="text"
-              className="rf-input"
+              className="rf-input rf-coach-chat-input"
               placeholder="Message your strength coach..."
               aria-label="Message your strength coach"
               value={chatInput}
@@ -509,7 +517,6 @@ export function Coach() {
               disabled={chatLoading || isStreaming}
               style={{
                 flex: 1,
-                fontSize: "0.92rem",
                 background: "rgba(255, 255, 255, 0.05)",
                 borderColor: "rgba(255, 255, 255, 0.15)",
                 color: "#ffffff",

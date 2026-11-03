@@ -3,7 +3,7 @@ RepForge Coach Routes (Groq LLM Engine).
 
 Purpose:
     Exposes conversational coaching, progressive overload targets,
-    and single-session breakdown insights powered by the Groq API (llama-3.3-70b-versatile).
+    and single-session breakdown insights powered by the Groq API (openai/gpt-oss-120b).
 
 Security Invariants:
     - Zero Credential Disclosure: GROQ_API_KEY is retained exclusively server-side.
@@ -50,7 +50,7 @@ def status() -> WerkzeugResponse:
     return jsonify(
         {
             "configured": configured,
-            "model": current_app.config.get("GROQ_MODEL", "llama-3.3-70b-versatile"),
+            "model": current_app.config.get("GROQ_MODEL", "openai/gpt-oss-120b"),
         }
     )
 
@@ -111,7 +111,7 @@ def chat() -> WerkzeugResponse | Response:
     context = stats_service.build_ai_context(all_workouts, prs, dashboard_stats)
 
     api_key = current_app.config.get("GROQ_API_KEY", "")
-    model = current_app.config.get("GROQ_MODEL", "llama-3.3-70b-versatile")
+    model = current_app.config.get("GROQ_MODEL", "openai/gpt-oss-120b")
     timeout = current_app.config.get("GROQ_TIMEOUT_SECONDS", 25)
 
     # Check if client requested streaming
@@ -194,7 +194,7 @@ def day_insights(day_id: str) -> WerkzeugResponse:
 
     context = {"session_exercises": day_summary}
     api_key = current_app.config.get("GROQ_API_KEY", "")
-    model = current_app.config.get("GROQ_MODEL", "llama-3.3-70b-versatile")
+    model = current_app.config.get("GROQ_MODEL", "openai/gpt-oss-120b")
     timeout = current_app.config.get("GROQ_TIMEOUT_SECONDS", 25)
 
     reply = groq_service.chat_with_coach(

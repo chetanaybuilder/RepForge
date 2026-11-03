@@ -63,6 +63,7 @@ export function RestTimer({ initialSeconds = 90, onComplete, onClose }) {
       return;
     }
 
+    // Use a functional update so each tick reads the latest value, not the effect's captured state.
     intervalRef.current = setInterval(() => {
       setSecondsLeft((prev) => {
         if (prev <= 1) {

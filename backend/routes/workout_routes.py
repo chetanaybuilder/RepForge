@@ -66,6 +66,18 @@ def create_workout_day() -> tuple[Response, int]:
     return jsonify({"workout": day}), 201
 
 
+@workout_bp.route("/<day_id>", methods=["PUT"])
+@login_required
+@csrf_protect
+def update_workout_day(day_id: str) -> Response:
+    """Replaces an owned workout session and its nested exercises and sets."""
+    payload = validate_workout_day_payload(request.get_json(silent=True) or {})
+    day = wq.update_workout_day(g.user_id, day_id, payload)
+    if not day:
+        raise ApiError("Workout session not found.", 404, "not_found")
+    return jsonify({"workout": day})
+
+
 @workout_bp.route("/exercises/<exercise_id>", methods=["PUT"])
 @login_required
 @csrf_protect

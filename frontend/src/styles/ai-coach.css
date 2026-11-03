@@ -287,7 +287,7 @@
 .rf-coach-terminal-box {
   display: flex;
   flex-direction: column;
-  height: calc(100dvh - 165px);
+  height: calc(100svh - 165px);
   min-height: 480px;
   min-width: 0;
   background: rgba(10, 10, 22, 0.88);
@@ -450,12 +450,16 @@
   min-width: 0;
 }
 
+.rf-coach-chat-input {
+  font-size: 16px;
+}
+
 .rf-coach-layout--chat-only .rf-coach-terminal-box,
 .rf-coach-layout--chat-only .rf-coach-terminal-box--visible {
   display: flex;
   width: 100%;
   max-width: 1040px;
-  height: min(72dvh, 760px);
+  height: min(72svh, 760px);
   min-height: 360px;
   margin-inline: auto;
 }
@@ -530,8 +534,8 @@
 @media (max-width: 520px) {
   .rf-coach-layout--chat-only .rf-coach-terminal-box,
   .rf-coach-layout--chat-only .rf-coach-terminal-box--visible {
-    height: min(70dvh, 640px);
-    min-height: 300px;
+    height: min(70svh, 640px);
+    min-height: min(300px, calc(100svh - 220px));
     border-radius: var(--rf-radius-md);
   }
 

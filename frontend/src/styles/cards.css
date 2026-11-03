@@ -133,10 +133,49 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
   cursor: pointer;
   user-select: none;
   touch-action: manipulation;
   transition: background var(--rf-transition-fast);
+  min-width: 0;
+}
+
+.rf-workout-identity,
+.rf-workout-title-group {
+  flex: 1;
+  min-width: 0;
+}
+
+.rf-workout-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 0 0 auto;
+}
+
+.rf-session-edit-button {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--rf-border-laser);
+  border-radius: var(--rf-radius-sm);
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--rf-text-pure);
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  touch-action: manipulation;
+  transition:
+    background var(--rf-transition-fast),
+    border-color var(--rf-transition-fast),
+    color var(--rf-transition-fast);
+}
+
+.rf-session-edit-button:hover,
+.rf-session-edit-button:focus-visible {
+  border-color: rgba(133, 217, 223, 0.55);
+  background: rgba(133, 217, 223, 0.1);
+  color: #a4edf0;
 }
 
 .rf-workout-header:hover {
@@ -146,17 +185,52 @@
 .rf-workout-title-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .rf-workout-day-badge {
   font-family: var(--rf-font-display);
   font-weight: 700;
-  font-size: 1.15rem;
   color: var(--rf-text-pure);
   display: flex;
+  min-width: 0;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+}
+
+.rf-workout-session-name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 1.08rem;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rf-workout-date {
+  flex: 0 0 auto;
+  color: var(--rf-text-faint);
+  font-family: var(--rf-font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.rf-workout-summary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--rf-text-sub);
+  font-size: 0.8rem;
+}
+
+.rf-workout-chevron {
+  color: var(--rf-text-faint);
+  transition: transform 0.25s var(--rf-ease-smooth);
+}
+
+.rf-workout-chevron--expanded {
+  transform: rotate(180deg);
 }
 
 .rf-workout-body {
@@ -177,6 +251,30 @@
 
 .rf-exercise-pod:hover {
   border-color: var(--rf-border-laser);
+}
+
+@media (max-width: 420px) {
+  .rf-workout-header {
+    gap: 10px;
+    padding-inline: 14px;
+  }
+
+  .rf-workout-header-actions {
+    gap: 10px;
+  }
+
+  .rf-session-edit-button {
+    min-height: 36px;
+    padding-inline: 12px;
+  }
+
+  .rf-workout-session-name {
+    font-size: 0.98rem;
+  }
+
+  .rf-workout-date {
+    font-size: 0.66rem;
+  }
 }
 
 .rf-exercise-head {

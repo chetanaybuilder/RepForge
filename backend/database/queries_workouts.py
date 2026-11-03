@@ -177,6 +177,110 @@ def create_workout_day(user_id: str, data: dict[str, Any]) -> dict[str, Any]:
             }
 
 
+def update_workout_day(user_id: str, day_id: str, data: dict[str, Any]) -> dict[str, Any] | None:
+    """Atomically replaces the date, label, and nested contents of an owned workout day."""
+    with get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT id, day_number FROM workout_days
+                WHERE id = %s AND user_id = %s
+                FOR UPDATE
+                """,
+                (day_id, user_id),
+            )
+            day_row = cur.fetchone()
+            if not day_row:
+                return None
+
+            cur.execute(
+                """
+                UPDATE workout_days
+                SET date = %s, day_label = %s, updated_at = now()
+                WHERE id = %s AND user_id = %s
+                """,
+                (data["date"], data.get("day"), day_id, user_id),
+            )
+            cur.execute("DELETE FROM workout_exercises WHERE workout_day_id = %s", (day_id,))
+
+            exercise_values = [
+                (day_id, ex["exercise_name"], ex["workout_type"], ex.get("notes"), idx)
+                for idx, ex in enumerate(data["exercises"])
+            ]
+            exercise_rows = execute_values(
+                cur,
+                """
+                INSERT INTO workout_exercises (workout_day_id, exercise_name, workout_type, notes, order_index)
+                VALUES %s
+                RETURNING id, exercise_name, workout_type, notes, order_index
+                """,
+                exercise_values,
+                fetch=True,
+            )
+
+            set_values = []
+            for ex_idx, ex_row in enumerate(exercise_rows):
+                for set_idx, workout_set in enumerate(data["exercises"][ex_idx]["sets"]):
+                    set_values.append(
+                        (
+                            ex_row["id"],
+                            set_idx + 1,
+                            workout_set["reps"],
+                            _extract_weight(workout_set),
+                            bool(workout_set.get("completed", True)),
+                        )
+                    )
+
+            set_rows = (
+                execute_values(
+                    cur,
+                    """
+                    INSERT INTO workout_sets (workout_exercise_id, set_number, reps, weight_kg, completed)
+                    VALUES %s
+                    RETURNING id, workout_exercise_id, set_number, reps, weight_kg, completed
+                    """,
+                    set_values,
+                    fetch=True,
+                )
+                if set_values
+                else []
+            )
+
+            sets_by_ex = defaultdict(list)
+            for workout_set in set_rows:
+                weight = float(workout_set["weight_kg"])
+                sets_by_ex[workout_set["workout_exercise_id"]].append(
+                    {
+                        "id": workout_set["id"],
+                        "set_number": workout_set["set_number"],
+                        "reps": workout_set["reps"],
+                        "weight": weight,
+                        "weight_kg": weight,
+                        "completed": workout_set["completed"],
+                    }
+                )
+
+            exercises = [
+                {
+                    "id": exercise["id"],
+                    "exercise_name": exercise["exercise_name"],
+                    "workout_type": exercise["workout_type"],
+                    "notes": exercise["notes"],
+                    "order_index": exercise["order_index"],
+                    "sets": sets_by_ex[exercise["id"]],
+                }
+                for exercise in exercise_rows
+            ]
+            return {
+                "id": day_id,
+                "user_id": user_id,
+                "date": data["date"],
+                "day": data.get("day"),
+                "day_number": day_row["day_number"],
+                "exercises": exercises,
+            }
+
+
 def list_workout_days(
     user_id: str,
     search: str | None = None,

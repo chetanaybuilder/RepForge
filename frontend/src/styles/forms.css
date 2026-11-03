@@ -426,6 +426,9 @@
 /* Minimal Numeric Set Input */
 .rf-set-input {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   height: 38px;
   min-height: 38px;
   background: rgba(8, 8, 16, 0.85);

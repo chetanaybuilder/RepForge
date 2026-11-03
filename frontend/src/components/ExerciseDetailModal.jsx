@@ -10,6 +10,7 @@
  */
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { getExerciseImageUrl } from "../services/api";
 import { PrimaryButton } from "./PrimaryButton";
@@ -32,9 +33,9 @@ export function ExerciseDetailModal({ exercise, open, onClose, onToggleFavorite 
     navigate(`/workouts?add_exercise=${encodeURIComponent(exercise.name)}`);
   };
 
-  return (
+  return createPortal(
     <div
-      className="rf-modal-backdrop"
+      className="rf-modal-overlay"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -332,6 +333,7 @@ export function ExerciseDetailModal({ exercise, open, onClose, onToggleFavorite 
           <PrimaryButton onClick={handleAddToWorkout}>+ Log In Workout</PrimaryButton>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

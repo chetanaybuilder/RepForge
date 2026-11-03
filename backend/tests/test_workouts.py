@@ -50,6 +50,65 @@ def test_create_workout_day_success(auth_client, auth_session):
         assert data["workout"]["id"] == "day-uuid-1"
 
 
+def test_update_workout_day_success(auth_client, auth_session):
+    """Replaces a full owned session while retaining its day identity."""
+    payload = {
+        "date": "2026-10-15",
+        "day": "Upper Strength",
+        "exercises": [
+            {
+                "exercise_name": "Bench Press",
+                "workout_type": "push",
+                "notes": "Paused reps",
+                "sets": [{"reps": 5, "weight": 80, "completed": True}],
+            }
+        ],
+    }
+    updated = {"id": "day-uuid-1", **payload, "day_number": 2}
+
+    with patch("database.queries_workouts.update_workout_day", return_value=updated) as mock_update:
+        resp = auth_client.put(
+            "/api/workouts/day-uuid-1",
+            json=payload,
+            headers={"X-CSRF-Token": auth_session["csrf_token"]},
+        )
+
+    assert resp.status_code == 200
+    assert resp.get_json()["workout"]["id"] == "day-uuid-1"
+    called_user_id, called_day_id, called_payload = mock_update.call_args.args
+    assert called_user_id == auth_session["user_id"]
+    assert called_day_id == "day-uuid-1"
+    assert called_payload["date"] == payload["date"]
+    assert called_payload["day"] == payload["day"]
+    assert called_payload["exercises"][0]["sets"][0] == {
+        "reps": 5,
+        "set_number": 1,
+        "weight": 80.0,
+        "weight_kg": 80.0,
+        "completed": True,
+    }
+
+
+def test_update_workout_day_not_found(auth_client, auth_session):
+    with patch("database.queries_workouts.update_workout_day", return_value=None):
+        resp = auth_client.put(
+            "/api/workouts/missing-day",
+            json={
+                "date": "2026-10-15",
+                "day": None,
+                "exercises": [
+                    {
+                        "exercise_name": "Bench Press",
+                        "workout_type": "push",
+                        "sets": [{"reps": 5, "weight": 80}],
+                    }
+                ],
+            },
+            headers={"X-CSRF-Token": auth_session["csrf_token"]},
+        )
+    assert resp.status_code == 404
+
+
 def test_create_workout_rejects_empty_or_excessive_exercises(auth_client, auth_session):
     """Anti-DoS: reject empty exercises array or more than 30 exercises."""
     # 0 exercises

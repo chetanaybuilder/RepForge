@@ -25,7 +25,7 @@ def test_coach_status_endpoint(auth_client):
     assert resp.status_code == 200
     data = resp.get_json()
     assert data["configured"] is True
-    assert "llama-3.3-70b-versatile" in data["model"]
+    assert data["model"] == "openai/gpt-oss-120b"
 
 
 def test_coach_chat_non_streaming_success(auth_client, auth_session):

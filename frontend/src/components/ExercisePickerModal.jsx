@@ -7,7 +7,8 @@
  * - Selecting an exercise auto-populates exercise name and suggested workout type.
  */
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { api, getExerciseImageUrl } from "../services/api";
 
 const COMMON_MUSCLES = [
@@ -62,9 +63,9 @@ export function ExercisePickerModal({ open, onSelect, onClose }) {
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div
-      className="rf-modal-backdrop"
+      className="rf-modal-overlay"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -75,7 +76,7 @@ export function ExercisePickerModal({ open, onSelect, onClose }) {
       <div
         className="rf-modal rf-modal--lg"
         style={{
-          maxHeight: "85vh",
+          maxHeight: "min(85svh, 720px)",
           display: "flex",
           flexDirection: "column",
           gap: 16,
@@ -104,7 +105,6 @@ export function ExercisePickerModal({ open, onSelect, onClose }) {
             placeholder="Search 800+ movements (e.g. Incline Bench, Squat, Pull-Up)..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            autoFocus
             style={{ paddingLeft: 38 }}
           />
           <span
@@ -310,6 +310,7 @@ export function ExercisePickerModal({ open, onSelect, onClose }) {
             })}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

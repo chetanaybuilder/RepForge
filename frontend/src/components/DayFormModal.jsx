@@ -31,7 +31,10 @@ const EMPTY_FORM = {
   exercises: [{ ...EMPTY_EXERCISE }],
 };
 
-export function DayFormModal({ open, onSave, onClose, initialExercise }) {
+/**
+ * Keeps session editing local so nested exercise and set changes are saved atomically.
+ */
+export function DayFormModal({ open, onSave, onClose, initialExercise, initialDay = null }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
@@ -39,21 +42,57 @@ export function DayFormModal({ open, onSave, onClose, initialExercise }) {
   const [showRestTimer, setShowRestTimer] = useState(false);
 
   useEffect(() => {
+    if (!open) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    const previousPaddingRight = document.body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+
+    // Restore the prior inline styles on close so this modal does not leave page scrolling locked.
+    document.body.style.overflow = "hidden";
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.paddingRight = previousPaddingRight;
+    };
+  }, [open]);
+
+  useEffect(() => {
     if (open) {
-      setForm({
-        ...EMPTY_FORM,
-        date: new Date().toISOString().slice(0, 10),
-        exercises: [
-          {
-            ...EMPTY_EXERCISE,
-            exercise_name: initialExercise || "",
-            sets: [{ ...EMPTY_SET }],
-          },
-        ],
-      });
+      setForm(
+        initialDay
+          ? {
+              day: initialDay.day || "",
+              date: (initialDay.date || new Date().toISOString()).slice(0, 10),
+              exercises: initialDay.exercises.map((exercise) => ({
+                workout_type: exercise.workout_type || "other",
+                exercise_name: exercise.exercise_name || "",
+                notes: exercise.notes || "",
+                sets: exercise.sets.map((set) => ({
+                  reps: Number(set.reps),
+                  weight: Number(set.weight ?? set.weight_kg ?? 0),
+                  completed: Boolean(set.completed),
+                })),
+              })),
+            }
+          : {
+              ...EMPTY_FORM,
+              date: new Date().toISOString().slice(0, 10),
+              exercises: [
+                {
+                  ...EMPTY_EXERCISE,
+                  exercise_name: initialExercise || "",
+                  sets: [{ ...EMPTY_SET }],
+                },
+              ],
+            }
+      );
       setErrors({});
     }
-  }, [open, initialExercise]);
+  }, [open, initialExercise, initialDay]);
 
   if (!open) return null;
 
@@ -95,6 +134,7 @@ export function DayFormModal({ open, onSave, onClose, initialExercise }) {
   };
 
   const updateSet = (eIdx, sIdx, field, value) => {
+    // Clone each changed level so React sees updates without mutating sibling sets or exercises.
     const newExs = [...form.exercises];
     const newSets = [...newExs[eIdx].sets];
     newSets[sIdx] = { ...newSets[sIdx], [field]: value };
@@ -193,7 +233,7 @@ export function DayFormModal({ open, onSave, onClose, initialExercise }) {
   return (
     <div className="rf-modal-overlay" onClick={onClose}>
       <div
-        className="rf-modal rf-modal--lg"
+        className="rf-modal rf-modal--lg rf-day-form-modal"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -202,19 +242,18 @@ export function DayFormModal({ open, onSave, onClose, initialExercise }) {
         <div className="rf-modal-header">
           <div>
             <div className="rf-telemetry-tag" style={{ marginBottom: 2 }}>
-              TRAINING SESSION PROTOCOL
+              {initialDay ? "EDIT SAVED SESSION" : "TRAINING SESSION PROTOCOL"}
             </div>
-            <h3 className="rf-modal-title">Log Workout Session</h3>
+            <h3 className="rf-modal-title">
+              {initialDay ? "Edit Workout Session" : "Log Workout Session"}
+            </h3>
           </div>
           <button type="button" className="rf-icon-btn" onClick={onClose} aria-label="Close">
             ✕
           </button>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}
-        >
+        <form onSubmit={handleSubmit} className="rf-day-form">
           <div className="rf-modal-body">
             {errors.general && (
               <div className="rf-field-error" style={{ marginBottom: 14 }}>
@@ -256,11 +295,11 @@ export function DayFormModal({ open, onSave, onClose, initialExercise }) {
             </div>
 
             {/* Exercises Section */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div className="rf-workout-exercise-list">
               {form.exercises.map((ex, eIdx) => (
                 <div
                   key={eIdx}
-                  className="rf-pod"
+                  className="rf-pod rf-workout-exercise-card"
                   style={{
                     background: "rgba(14, 14, 26, 0.85)",
                     border: "1px solid var(--rf-border-laser)",
@@ -514,7 +553,13 @@ export function DayFormModal({ open, onSave, onClose, initialExercise }) {
               Cancel
             </button>
             <PrimaryButton type="submit" disabled={saving}>
-              {saving ? "Recording Session…" : "Log Workout Session"}
+              {saving
+                ? initialDay
+                  ? "Saving Session…"
+                  : "Recording Session…"
+                : initialDay
+                  ? "Save Session Changes"
+                  : "Log Workout Session"}
             </PrimaryButton>
           </div>
         </form>

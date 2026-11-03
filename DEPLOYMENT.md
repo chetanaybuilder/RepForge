@@ -40,13 +40,13 @@ graph TD
             Auth["/auth/*<br/>Google OAuth, Sessions, CSRF"]
             Workouts["/api/workouts/*<br/>CRUD, Streaks, Volume, PRs, 1RM"]
             Exercises["/api/exercises/*<br/>876 Taxonomy, Filters, Image Proxy"]
-            Coach["/api/coach/*<br/>Groq LLaMA 3.3 SSE Streaming"]
+            Coach["/api/coach/*<br/>Groq GPT-OSS-120B SSE Streaming"]
             Goals["/api/goals/*<br/>Target Progression & Achievements"]
         end
         
         subgraph Storage & Upstream
             D1[("Cloudflare D1 Database<br/>repforge-db (SQLite Edge)")]
-            Groq["Groq Cloud API<br/>llama-3.3-70b-versatile"]
+            Groq["Groq Cloud API<br/>openai/gpt-oss-120b"]
             RawCDN["Exercise Image Upstream CDN<br/>(Cached for 1 Year Immutable)"]
         end
     end
@@ -105,7 +105,7 @@ Because the frontend single page app and the API backend run together on `https:
 - **Groq Prompt Guardrails:**
   - Invariant medical refusal filter.
   - Dangerous prompt tags (`[INST]`, `system:`, HTML tags) stripped before sending to Groq.
-  - Strict grounding prompt binding LLaMA 3.3 responses to verified telemetry from D1.
+  - Strict grounding prompt binding GPT-OSS-120B responses to verified telemetry from D1.
 
 ---
 

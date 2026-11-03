@@ -16,6 +16,7 @@ __pycache__/
 venv/
 env/
 *.egg-info/
+build/
 
 # Node / frontend
 node_modules/
@@ -28,9 +29,14 @@ npm-debug.log*
 .pytest_cache/
 .ruff_cache/
 coverage/
+.coverage
+playwright-report/
+test-results/
 
 # OS / editor
 .DS_Store
+Thumbs.db
+Desktop.ini
 .vscode/
 .idea/
 

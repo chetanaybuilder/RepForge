@@ -2,7 +2,7 @@
  * RepForge Cloudflare Edge Worker API
  *
  * Full-stack serverless API running on Cloudflare Workers & Cloudflare Pages.
- * Built with Hono, Cloudflare D1 (SQLite), and Groq Cloud LLaMA 3.3.
+ * Built with Hono, Cloudflare D1 (SQLite), and the Groq inference API.
  */
 
 import { Hono } from "hono";
@@ -14,7 +14,7 @@ import { streamSSE } from "hono/streaming";
  * Cloudflare Worker API for authentication, training data, and AI coaching.
  */
 const app = new Hono();
-const DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile";
+const DEFAULT_GROQ_MODEL = "openai/gpt-oss-120b";
 
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
@@ -974,6 +974,162 @@ app.post("/api/workouts", requireAuth, async (c) => {
   return c.json({ success: true, workout: createdWorkout }, 201);
 });
 
+app.put("/api/workouts/:day_id", requireAuth, async (c) => {
+  const user = c.get("user");
+  const dayId = c.req.param("day_id");
+  const db = getDb(c);
+  const body = await parseJsonBody(c);
+  const allowedTypes = new Set([
+    "push",
+    "pull",
+    "legs",
+    "upper",
+    "lower",
+    "full_body",
+    "cardio",
+    "core",
+    "mobility",
+    "other",
+  ]);
+  const parsedDate =
+    typeof body?.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.date)
+      ? new Date(`${body.date}T00:00:00Z`)
+      : null;
+  const dateIsValid =
+    parsedDate &&
+    !Number.isNaN(parsedDate.getTime()) &&
+    parsedDate.toISOString().slice(0, 10) === body.date;
+
+  if (
+    !body ||
+    !dateIsValid ||
+    (body.day != null && (typeof body.day !== "string" || body.day.length > 50)) ||
+    !Array.isArray(body.exercises) ||
+    body.exercises.length < 1 ||
+    body.exercises.length > 30 ||
+    body.exercises.some(
+      (exercise) =>
+        !exercise ||
+        typeof exercise.exercise_name !== "string" ||
+        !exercise.exercise_name.trim() ||
+        exercise.exercise_name.length > 500 ||
+        !allowedTypes.has(exercise.workout_type) ||
+        (exercise.notes != null &&
+          (typeof exercise.notes !== "string" || exercise.notes.length > 2000)) ||
+        !Array.isArray(exercise.sets) ||
+        exercise.sets.length < 1 ||
+        exercise.sets.length > 50 ||
+        exercise.sets.some((set) => {
+          const weight = Number(set?.weight ?? set?.weight_kg ?? 0);
+          return (
+            !set ||
+            !Number.isInteger(set.reps) ||
+            set.reps < 1 ||
+            set.reps > 200 ||
+            !Number.isFinite(weight) ||
+            weight < 0 ||
+            weight > 1000
+          );
+        })
+    )
+  ) {
+    return c.json(
+      { error: { code: "validation_error", message: "Workout session data is invalid." } },
+      400
+    );
+  }
+
+  if (!db) {
+    return c.json({ workout: { id: dayId, date: body.date, day: body.day || null, exercises: body.exercises } });
+  }
+
+  const existing = await db
+    .prepare("SELECT id, day_number FROM workout_days WHERE id = ? AND user_id = ?")
+    .bind(dayId, user.id)
+    .first();
+  if (!existing) {
+    return c.json({ error: { code: "not_found", message: "Workout session not found." } }, 404);
+  }
+
+  const exercises = body.exercises.map((exercise, exerciseIndex) => {
+    const exerciseId = generateId();
+    const setStatements = [];
+    const sets = exercise.sets.map((set, setIndex) => {
+      const setId = generateId();
+      const weight = Number(set.weight ?? set.weight_kg ?? 0);
+      const reps = set.reps;
+      const completed = set.completed !== false;
+      setStatements.push(
+        db
+          .prepare(
+            "INSERT INTO workout_sets (id, workout_exercise_id, set_number, reps, weight_kg, completed) VALUES (?, ?, ?, ?, ?, ?)"
+          )
+          .bind(setId, exerciseId, setIndex + 1, reps, weight, completed ? 1 : 0)
+      );
+      return {
+        id: setId,
+        set_number: setIndex + 1,
+        reps,
+        weight,
+        weight_kg: weight,
+        completed,
+      };
+    });
+    return {
+      id: exerciseId,
+      exercise_name: exercise.exercise_name.trim(),
+      workout_type: exercise.workout_type,
+      notes: exercise.notes || "",
+      order_index: exerciseIndex,
+      sets,
+      statements: [
+        db
+          .prepare(
+            "INSERT INTO workout_exercises (id, workout_day_id, exercise_name, workout_type, notes, order_index) VALUES (?, ?, ?, ?, ?, ?)"
+          )
+          .bind(
+            exerciseId,
+            dayId,
+            exercise.exercise_name.trim(),
+            exercise.workout_type,
+            exercise.notes || "",
+            exerciseIndex
+          ),
+        ...setStatements,
+      ],
+    };
+  });
+
+  const statements = [
+    db
+      .prepare(
+        "UPDATE workout_days SET date = ?, day_label = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?"
+      )
+      .bind(body.date, body.day || null, dayId, user.id),
+    db.prepare("DELETE FROM workout_exercises WHERE workout_day_id = ?").bind(dayId),
+    ...exercises.flatMap((exercise) => exercise.statements),
+  ];
+  await db.batch(statements);
+
+  return c.json({
+    workout: {
+      id: dayId,
+      user_id: user.id,
+      date: body.date,
+      day: body.day || null,
+      day_number: existing.day_number,
+      exercises: exercises.map((exercise) => ({
+        id: exercise.id,
+        exercise_name: exercise.exercise_name,
+        workout_type: exercise.workout_type,
+        notes: exercise.notes,
+        order_index: exercise.order_index,
+        sets: exercise.sets,
+      })),
+    },
+  });
+});
+
 app.put("/api/workouts/exercises/:exercise_id", requireAuth, async (c) => {
   const user = c.get("user");
   const exerciseId = c.req.param("exercise_id");
@@ -1496,10 +1652,15 @@ app.post("/api/coach/chat", requireAuth, async (c) => {
 
   const apiKey = c.env?.GROQ_API_KEY;
   if (!apiKey) {
-    return c.json({
-      reply:
-        "Groq API key is not configured on this Cloudflare deployment. Set GROQ_API_KEY in your Cloudflare dashboard.",
-    });
+    return c.json(
+      {
+        error: {
+          code: "coach_not_configured",
+          message: "Coach is not configured on the server. Please contact support.",
+        },
+      },
+      503
+    );
   }
 
   // Prompt injection & Medical refusal checks
@@ -1581,13 +1742,18 @@ ${telemetryContext}`;
 
   // Keep first-token latency bounded; model fallbacks can be selected through GROQ_MODEL.
   const primaryModel = c.env?.GROQ_MODEL || DEFAULT_GROQ_MODEL;
-  const candidateModels = [primaryModel];
+  const fallbackModels =
+    typeof c.env?.GROQ_FALLBACK_MODELS === "string"
+      ? c.env.GROQ_FALLBACK_MODELS.split(",").map((model) => model.trim())
+      : ["openai/gpt-oss-20b"];
+  const candidateModels = [...new Set([primaryModel, ...fallbackModels].filter(Boolean))].slice(0, 3);
 
   let groqResponse = null;
+  let lastUpstreamStatus = null;
 
   for (const modelName of candidateModels) {
     const upstreamController = new AbortController();
-    const upstreamTimeout = setTimeout(() => upstreamController.abort(), 4500);
+    const upstreamTimeout = setTimeout(() => upstreamController.abort(), 10000);
     try {
       const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
@@ -1610,22 +1776,30 @@ ${telemetryContext}`;
         groqResponse = res;
         break;
       } else {
-        const errText = await res.text();
-        console.warn(`Model ${modelName} returned status ${res.status}: ${errText}`);
+        lastUpstreamStatus = res.status;
+        console.warn(`Groq model ${modelName} returned status ${res.status}; trying fallback if available.`);
+        await res.body?.cancel();
       }
     } catch (err) {
+      console.warn(`Groq request failed for model ${modelName}; trying fallback if available.`, err);
+    } finally {
       clearTimeout(upstreamTimeout);
-      console.warn(`Fetch error for model ${modelName}:`, err);
     }
   }
 
   if (!groqResponse || !groqResponse.ok) {
-    return c.json({
-      error: {
-        code: "coach_unavailable",
-        message: "Coach could not get a reply in time. Please try again.",
+    return c.json(
+      {
+        error: {
+          code: "coach_unavailable",
+          message:
+            lastUpstreamStatus === 429
+              ? "Coach is temporarily rate-limited by the AI provider. Please retry in a minute."
+              : "Coach is temporarily unavailable because the AI provider did not respond. Your message is saved; please retry shortly.",
+        },
       },
-    }, 503);
+      503
+    );
   }
 
   if (wantsStream && groqResponse.body) {
@@ -1634,39 +1808,62 @@ ${telemetryContext}`;
       const decoder = new TextDecoder();
       let buffer = "";
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
 
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (trimmed.startsWith("data: ")) {
-            const raw = trimmed.slice(6);
-            if (raw === "[DONE]") {
-              await stream.writeSSE({ data: "[DONE]" });
-              return;
-            }
-            try {
-              const parsed = JSON.parse(raw);
-              const delta = parsed.choices?.[0]?.delta?.content || "";
-              if (delta) {
-                await stream.writeSSE({ data: JSON.stringify({ text: delta }) });
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith("data: ")) {
+              const raw = trimmed.slice(6);
+              if (raw === "[DONE]") {
+                await stream.writeSSE({ data: "[DONE]" });
+                return;
               }
-            } catch {
-              // ignore parse errors
+              try {
+                const parsed = JSON.parse(raw);
+                const delta = parsed.choices?.[0]?.delta?.content || "";
+                if (delta) {
+                  await stream.writeSSE({ data: JSON.stringify({ text: delta }) });
+                }
+              } catch {
+                // Ignore malformed upstream chunks without failing the stream.
+              }
             }
           }
         }
+      } catch (err) {
+        console.error("Groq stream interrupted:", err);
+        await stream.writeSSE({
+          data: JSON.stringify({ text: "\n\nCoach connection was interrupted. Please retry." }),
+        });
       }
       await stream.writeSSE({ data: "[DONE]" });
     });
   } else {
-    const data = await groqResponse.json();
-    const reply = data.choices?.[0]?.message?.content || "Coach response received.";
-    return c.json({ reply });
+    try {
+      const data = await groqResponse.json();
+      const reply = data.choices?.[0]?.message?.content;
+      if (typeof reply !== "string" || !reply.trim()) {
+        throw new Error("Groq response did not contain a reply.");
+      }
+      return c.json({ reply });
+    } catch (err) {
+      console.error("Invalid Groq response:", err);
+      return c.json(
+        {
+          error: {
+            code: "coach_invalid_response",
+            message: "Coach received an invalid response from the AI provider. Please retry shortly.",
+          },
+        },
+        502
+      );
+    }
   }
 });
 

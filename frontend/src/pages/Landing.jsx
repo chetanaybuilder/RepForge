@@ -1,332 +1,523 @@
-import React, { Suspense, useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
 import { motion } from "framer-motion";
+import { useAuth } from "../context/AuthContext";
 import { PrimaryButton } from "../components/PrimaryButton";
 
-const LandingScene = React.lazy(() => import("../components/3d/LandingScene"));
+const METRICS = [
+  { value: "63.2K", label: "TOTAL VOLUME", unit: "kg", trend: "+12.8%" },
+  { value: "392", label: "TOTAL SETS", unit: "sets", trend: "+8.4%" },
+  { value: "2.0K", label: "TOTAL REPS", unit: "reps", trend: "+6.2%" },
+];
+
+const HEATMAP_LEVELS = [
+  0, 1, 0, 2, 0, 3, 1, 0, 2, 0, 4, 1, 0, 3, 2, 0, 1, 0, 3, 0, 2, 4, 1, 0, 0, 2, 0, 3, 1, 0, 4, 2, 0,
+  1, 3, 0, 2, 0, 1, 4, 0, 2, 3, 0, 1, 0, 4, 2, 0, 3, 0, 1, 2, 0, 4, 0, 1, 3, 0, 2, 1, 0, 3, 4, 0, 2,
+  0, 1, 3, 0, 2, 4, 1, 0, 2, 0, 3, 1, 0, 4, 2, 0, 3, 0,
+];
+
+const EXERCISES = [
+  { name: "Barbell squat", detail: "3 sets · 5 reps", load: "100 kg" },
+  { name: "Bench press", detail: "3 sets · 5 reps", load: "72.5 kg" },
+];
 
 const FEATURES = [
   {
-    icon: "◈",
-    title: "Groq Strength Coach",
-    body: "Groq LLaMA 3.3 reads your real training history — sets, reps, weight, and volume — and surfaces plateaus, momentum, and what to target next. Never invented, always grounded in your data.",
+    number: "01",
+    category: "THE SESSION",
+    title: "Precision workout logging",
+    description:
+      "Stay focused between sets. Log load, reps, and effort, use built-in rest timers, and keep every session connected to your progression history.",
+    bullets: ["Fast set-by-set entry", "Rest timer built in", "RPE & progression history"],
+    visual: "logging",
   },
   {
-    icon: "▦",
-    title: "Effortless Logging",
-    body: "Log a session in seconds. Search, filter, and sort your entire history the way a real training log should work.",
+    number: "02",
+    category: "GROQ-POWERED AI COACH",
+    title: "RepForge AI Coach",
+    description:
+      "Get practical next-step guidance grounded in your actual training log, not generic routines or made-up numbers.",
+    bullets: [
+      "Personalized session insights",
+      "Recovery-aware suggestions",
+      "Ask about your progress",
+    ],
+    visual: "coach",
   },
   {
-    icon: "◱",
-    title: "Real Progress Charts",
-    body: "Volume trends, exercise progression, and personal records — computed straight from your logged sets, not guesses.",
-  },
-  {
-    icon: "◎",
-    title: "Goals That Mean Something",
-    body: "Set a weekly frequency, a PR target, or a volume goal, and watch honest progress bars move as you train.",
+    number: "03",
+    category: "THE LONG GAME",
+    title: "Strength & hypertrophy analytics",
+    description:
+      "Understand your training patterns with volume trends, muscle-group breakdowns, and a clear view of your next personal record.",
+    bullets: ["Volume landmarks", "Muscle-group balance", "PR trajectory"],
+    visual: "analytics",
   },
 ];
 
-const METRICS = [
-  { value: "100%", label: "Your data, your account" },
-  { value: "0", label: "Fake statistics" },
-  { value: "24/7", label: "Coach intelligence on demand" },
-];
+function WorkoutHeatmap() {
+  return (
+    <div className="rf-saas-heatmap" aria-label="Workout consistency across the last 12 weeks">
+      {["M", "T", "W", "T", "F", "S", "S"].map((day, index) => (
+        <span className="rf-saas-heatmap-day" key={`${day}-${index}`}>
+          {day}
+        </span>
+      ))}
+      <div className="rf-saas-heatmap-grid">
+        {HEATMAP_LEVELS.map((level, index) => (
+          <span
+            className={`rf-saas-heatmap-cell rf-saas-heatmap-cell--${level}`}
+            key={index}
+            aria-hidden="true"
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
-const WORKFLOW_STEPS = [
-  {
-    num: "01",
-    label: "LOG WORKOUT",
-    desc: "Capture sets, reps, and loads effortlessly with high-speed thumb controls.",
-  },
-  {
-    num: "02",
-    label: "DASHBOARD",
-    desc: "Observe cumulative volume, streak momentum, and empirical overload metrics.",
-  },
-  {
-    num: "03",
-    label: "COACH",
-    desc: "Receive conversational Groq strength coach diagnostics that interpret your real fatigue and milestones.",
-  },
-  {
-    num: "04",
-    label: "GOALS & ACHIEVEMENTS",
-    desc: "Advance towards validated milestones and unlock 3D performance crystals.",
-  },
-];
+function VolumeBars() {
+  return (
+    <div className="rf-saas-volume-bars" aria-label="Weekly training volume trend">
+      {[38, 55, 46, 72, 58, 88, 68, 96, 74, 84, 65, 100].map((height, index) => (
+        <span
+          className={
+            index === 11 ? "rf-saas-volume-bar rf-saas-volume-bar--current" : "rf-saas-volume-bar"
+          }
+          key={index}
+          style={{ height: `${height}%` }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function DashboardPreview() {
+  return (
+    <div className="rf-saas-product-stage" aria-label="RepForge training dashboard preview">
+      <div className="rf-saas-dashboard">
+        <div className="rf-saas-window-bar">
+          <div className="rf-saas-window-dots" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
+          <span className="rf-saas-window-label">REPforge / PERFORMANCE</span>
+          <span className="rf-saas-window-avatar">A</span>
+        </div>
+
+        <div className="rf-saas-dashboard-content">
+          <div className="rf-saas-dashboard-heading">
+            <div>
+              <span className="rf-saas-kicker">TRAINING OVERVIEW</span>
+              <h2>Your work, measured.</h2>
+            </div>
+            <span className="rf-saas-period">LAST 12 WEEKS⌄</span>
+          </div>
+
+          <div className="rf-saas-metric-grid">
+            {METRICS.map((metric) => (
+              <div className="rf-saas-metric-card" key={metric.label}>
+                <span className="rf-saas-metric-label">{metric.label}</span>
+                <div className="rf-saas-metric-value">
+                  {metric.value}
+                  <small>{metric.unit}</small>
+                </div>
+                <span className="rf-saas-metric-trend">
+                  <span aria-hidden="true">↗</span> {metric.trend}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <div className="rf-saas-dashboard-panels">
+            <section className="rf-saas-panel rf-saas-consistency">
+              <div className="rf-saas-panel-heading">
+                <div>
+                  <h3>Consistency</h3>
+                  <span>Small wins add up.</span>
+                </div>
+                <strong>
+                  38 <small>sessions</small>
+                </strong>
+              </div>
+              <WorkoutHeatmap />
+              <div className="rf-saas-heatmap-legend">
+                <span>LESS</span>
+                <i className="rf-saas-heatmap-cell--0" />
+                <i className="rf-saas-heatmap-cell--1" />
+                <i className="rf-saas-heatmap-cell--2" />
+                <i className="rf-saas-heatmap-cell--3" />
+                <i className="rf-saas-heatmap-cell--4" />
+                <span>MORE</span>
+              </div>
+            </section>
+
+            <section className="rf-saas-panel rf-saas-volume-panel">
+              <div className="rf-saas-panel-heading">
+                <div>
+                  <h3>Volume trend</h3>
+                  <span>Weekly tonnage</span>
+                </div>
+                <span className="rf-saas-chart-period">12 W</span>
+              </div>
+              <div className="rf-saas-volume-total">
+                <strong>18,420</strong>
+                <small>kg this week</small>
+              </div>
+              <VolumeBars />
+              <div className="rf-saas-chart-axis">
+                <span>WEEK 01</span>
+                <span>WEEK 06</span>
+                <span>WEEK 12</span>
+              </div>
+              <div className="rf-saas-volume-progress">
+                <div className="rf-saas-volume-progress-row">
+                  <div>
+                    <span>Weekly volume</span>
+                    <strong>82%</strong>
+                  </div>
+                  <span
+                    className="rf-saas-progress-track"
+                    role="meter"
+                    aria-label="Weekly volume target"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    aria-valuenow="82"
+                  >
+                    <i style={{ width: "82%" }} />
+                  </span>
+                </div>
+                <div className="rf-saas-volume-progress-row">
+                  <div>
+                    <span>Strength target</span>
+                    <strong>67%</strong>
+                  </div>
+                  <span
+                    className="rf-saas-progress-track"
+                    role="meter"
+                    aria-label="Strength target"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    aria-valuenow="67"
+                  >
+                    <i style={{ width: "67%" }} />
+                  </span>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <div className="rf-saas-goal-row">
+            <div className="rf-saas-goal-ring" aria-label="Weekly goal achieved: 100%">
+              <span>
+                100<small>%</small>
+              </span>
+            </div>
+            <div className="rf-saas-goal-copy">
+              <span className="rf-saas-kicker">WEEKLY TARGET</span>
+              <strong>Goal hit. Keep the streak.</strong>
+              <span>4 of 4 planned sessions complete</span>
+            </div>
+            <span className="rf-saas-goal-check" aria-hidden="true">
+              ✓
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="rf-saas-mobile-card" aria-label="Mobile workout and coach preview">
+        <div className="rf-saas-mobile-top">
+          <span>◈ TODAY'S SESSION</span>
+          <span className="rf-saas-mobile-more">•••</span>
+        </div>
+        <div className="rf-saas-timer-row">
+          <span className="rf-saas-timer-indicator" />
+          <span>REST TIMER</span>
+          <strong>02:01:07</strong>
+        </div>
+        <div className="rf-saas-mobile-exercises">
+          {EXERCISES.map((exercise) => (
+            <div className="rf-saas-mobile-exercise" key={exercise.name}>
+              <span className="rf-saas-exercise-check">✓</span>
+              <div>
+                <strong>{exercise.name}</strong>
+                <span>{exercise.detail}</span>
+              </div>
+              <small>{exercise.load}</small>
+            </div>
+          ))}
+        </div>
+        <div className="rf-saas-coach-note">
+          <div className="rf-saas-coach-avatar">RF</div>
+          <div>
+            <span>
+              REPFORGE COACH <i>NOW</i>
+            </span>
+            <p>Solid work. You matched last week’s load across all 3 sets.</p>
+          </div>
+        </div>
+        <div className="rf-saas-chat-input">
+          <span>Ask about your session...</span>
+          <span aria-hidden="true">↑</span>
+        </div>
+      </div>
+      <div className="rf-saas-stage-glow" aria-hidden="true" />
+    </div>
+  );
+}
+
+function FeatureVisual({ type }) {
+  if (type === "logging") {
+    return (
+      <div className="rf-saas-feature-visual rf-saas-logging-visual" aria-hidden="true">
+        <div className="rf-saas-logging-top">
+          <span>UPPER BODY A</span>
+          <span>•••</span>
+        </div>
+        <div className="rf-saas-logging-exercise">
+          <span className="rf-saas-logging-icon">01</span>
+          <div>
+            <strong>Incline dumbbell press</strong>
+            <small>CHEST · COMPOUND</small>
+          </div>
+          <span className="rf-saas-logging-chevron">⌄</span>
+        </div>
+        <div className="rf-saas-log-set">
+          <span>SET</span>
+          <span>LOAD</span>
+          <span>REPS</span>
+          <span>✓</span>
+        </div>
+        <div className="rf-saas-log-set rf-saas-log-set--filled">
+          <strong>01</strong>
+          <strong>
+            32.5 <small>kg</small>
+          </strong>
+          <strong>10</strong>
+          <i>✓</i>
+        </div>
+        <div className="rf-saas-log-set">
+          <strong>02</strong>
+          <strong>
+            32.5 <small>kg</small>
+          </strong>
+          <strong>09</strong>
+          <i>✓</i>
+        </div>
+        <div className="rf-saas-log-add">＋ ADD SET</div>
+      </div>
+    );
+  }
+
+  if (type === "coach") {
+    return (
+      <div className="rf-saas-feature-visual rf-saas-coach-visual" aria-hidden="true">
+        <div className="rf-saas-coach-visual-header">
+          <span className="rf-saas-coach-avatar">RF</span>
+          <div>
+            <strong>RepForge Coach</strong>
+            <small>
+              <i /> READY WHEN YOU ARE
+            </small>
+          </div>
+          <span className="rf-saas-coach-spark">✳</span>
+        </div>
+        <div className="rf-saas-chat-bubble rf-saas-chat-bubble--user">
+          How should I progress my squat?
+        </div>
+        <div className="rf-saas-chat-bubble rf-saas-chat-bubble--coach">
+          <span>BASED ON YOUR RECENT SETS</span>
+          You’ve hit 3×5 at 100 kg twice. Try 102.5 kg next session and keep your reps crisp.
+        </div>
+        <div className="rf-saas-coach-visual-input">
+          <span>Ask about your training...</span>
+          <b>↑</b>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rf-saas-feature-visual rf-saas-analytics-visual" aria-hidden="true">
+      <div className="rf-saas-analytics-heading">
+        <span>STRENGTH TREND</span>
+        <strong>+8.6%</strong>
+      </div>
+      <div className="rf-saas-analytics-chart">
+        <span className="rf-saas-chart-line rf-saas-chart-line--one" />
+        <span className="rf-saas-chart-line rf-saas-chart-line--two" />
+        <svg viewBox="0 0 360 112" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="rf-analytics-gradient" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="#00f0ff" stopOpacity=".28" />
+              <stop offset="100%" stopColor="#00f0ff" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <path
+            d="M0 94 C28 85 35 81 62 84 S95 68 122 73 S160 50 190 58 S230 36 255 45 S300 18 326 25 S345 12 360 8 V112 H0Z"
+            fill="url(#rf-analytics-gradient)"
+          />
+          <path
+            d="M0 94 C28 85 35 81 62 84 S95 68 122 73 S160 50 190 58 S230 36 255 45 S300 18 326 25 S345 12 360 8"
+            fill="none"
+            stroke="#00f0ff"
+            strokeWidth="2.5"
+            vectorEffect="non-scaling-stroke"
+          />
+          <circle cx="360" cy="8" r="4" fill="#00f0ff" />
+        </svg>
+      </div>
+      <div className="rf-saas-analytics-tags">
+        <span>
+          VOLUME <b>↑ 12%</b>
+        </span>
+        <span>
+          PR TARGET <b>85%</b>
+        </span>
+      </div>
+    </div>
+  );
+}
 
 export function Landing() {
   const { status } = useAuth();
   const navigate = useNavigate();
 
   const handleContinue = () => {
-    if (status === "authenticated") navigate("/dashboard");
-    else navigate("/login");
+    navigate(status === "authenticated" ? "/dashboard" : "/login");
   };
 
   return (
-    <div className="rf-landing">
-      {/* Navigation Header */}
-      <nav className="rf-landing-nav" style={{ zIndex: 20 }}>
-        <div className="rf-brand-group">
-          <div className="rf-brand-glyph">RF</div>
-          <span className="rf-brand-text">RepForge</span>
+    <main className="rf-landing rf-saas-landing">
+      <nav className="rf-saas-nav" aria-label="Main navigation">
+        <Link to="/" className="rf-saas-brand" aria-label="RepForge home">
+          <span className="rf-saas-brand-mark">RF</span>
+          <span>RepForge</span>
+        </Link>
+        <div className="rf-saas-nav-links">
+          <a href="#features">Features</a>
+          <a href="#workouts">Workouts</a>
+          <a href="#coach">AI Coach</a>
         </div>
-        <div>
-          <PrimaryButton className="rf-btn--sm" onClick={handleContinue}>
-            CONTINUE
-          </PrimaryButton>
-        </div>
+        <PrimaryButton className="rf-saas-nav-cta" onClick={handleContinue} variant="ghost">
+          Get Started <span aria-hidden="true">↗</span>
+        </PrimaryButton>
       </nav>
 
-      {/* Cinematic Hero */}
-      <header className="rf-hero">
-        <div className="rf-hero-bg" style={{ zIndex: 1 }} />
-
-        <Suspense fallback={<div className="rf-hero-bg" />}>
-          <LandingScene />
-        </Suspense>
-
-        <motion.div
-          className="rf-hero-content"
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ type: "spring", stiffness: 100, damping: 20, delay: 0.15 }}
-          style={{ zIndex: 10, position: "relative" }}
-        >
-          <span className="rf-hero-badge" style={{ marginBottom: 14 }}>
-            AI-POWERED TRAINING INTELLIGENCE
-          </span>
-          <h1 className="rf-hero-title">
-            Train. Track.
-            <br />
-            <span className="rf-gradient-text">Evolve.</span>
-          </h1>
-          <p className="rf-hero-sub">
-            RepForge turns every set you log into real signal — strength trends, plateaus, and
-            personal records, analyzed by AI that only ever looks at your actual training.
-          </p>
-          <div className="rf-hero-actions">
-            <PrimaryButton
-              className="rf-btn--lg"
-              onClick={handleContinue}
-              style={{ minWidth: 180, letterSpacing: "0.04em", fontWeight: 800 }}
-            >
-              CONTINUE
-            </PrimaryButton>
+      <section className="rf-saas-hero">
+        <div className="rf-saas-hero-copy">
+          <div className="rf-saas-hero-eyebrow">
+            <span className="rf-saas-live-dot" />
+            BUILT FOR THE NEXT REP
           </div>
+          <h1>
+            FORGE YOUR
+            <span>STRENGTH</span>
+          </h1>
+          <p className="rf-saas-hero-subtitle">THE AI-POWERED WORKOUT TRACKER &amp; COACH</p>
+          <p className="rf-saas-hero-description">
+            Train with purpose, track every set, and turn your hard work into measurable progress.
+          </p>
+          <div className="rf-saas-hero-actions">
+            <PrimaryButton className="rf-saas-primary-cta" onClick={handleContinue}>
+              Try RepForge Free <span aria-hidden="true">→</span>
+            </PrimaryButton>
+            <span className="rf-saas-cta-note">
+              <i /> YOUR TRAINING. YOUR DATA. YOUR NEXT PR.
+            </span>
+          </div>
+          <div className="rf-saas-proof-row">
+            <span>
+              <b>01</b> LOG
+            </span>
+            <i />
+            <span>
+              <b>02</b> LEARN
+            </span>
+            <i />
+            <span>
+              <b>03</b> LEVEL UP
+            </span>
+          </div>
+        </div>
+        <motion.div
+          className="rf-saas-hero-showcase"
+          initial={{ opacity: 0, y: 22 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, ease: "easeOut", delay: 0.12 }}
+        >
+          <DashboardPreview />
         </motion.div>
-      </header>
-
-      {/* Metric Strip */}
-      <section className="rf-metric-strip" style={{ position: "relative", zIndex: 10 }}>
-        {METRICS.map((m, i) => (
-          <motion.div
-            key={m.label}
-            className="rf-metric-cell"
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ type: "spring", delay: i * 0.1 }}
-          >
-            <div className="rf-metric-num rf-gradient-text">{m.value}</div>
-            <div
-              className="rf-metric-desc"
-              style={{ color: "var(--rf-text-bright)", fontWeight: 600 }}
-            >
-              {m.label}
-            </div>
-          </motion.div>
-        ))}
+        <div className="rf-saas-hero-grid" aria-hidden="true" />
       </section>
 
-      {/* Features Showcase */}
-      <section
-        className="rf-page-container"
-        style={{ padding: "clamp(48px, 8vw, 88px) 20px", position: "relative", zIndex: 10 }}
-      >
-        <div style={{ textAlign: "center", maxWidth: 640, margin: "0 auto 40px" }}>
-          <div className="rf-telemetry-tag" style={{ marginBottom: 8 }}>
-            BUILT FOR LIFTERS WHO TRACK EVERYTHING
+      <section className="rf-saas-feature-section" id="features">
+        <div className="rf-saas-section-heading">
+          <div>
+            <span className="rf-saas-section-kicker">BUILT AROUND YOUR TRAINING</span>
+            <h2>
+              Less guessing.
+              <br />
+              <span>More getting after it.</span>
+            </h2>
           </div>
-          <h2
-            style={{
-              fontSize: "var(--rf-text-2xl)",
-              marginBottom: 14,
-              color: "var(--rf-text-pure)",
-            }}
-          >
-            Everything a serious training log should do — and the analysis a coach would give you.
-          </h2>
-          <p style={{ color: "var(--rf-text-sub)", fontSize: "0.95rem" }}>
-            No placeholder charts, no invented statistics. Every number on RepForge traces back to a
-            set you actually logged.
+          <p>
+            Everything you need to make your training consistent, measurable, and unmistakably
+            yours.
           </p>
         </div>
-
-        <div className="rf-feature-grid">
-          {FEATURES.map((f, i) => (
-            <motion.div
-              key={f.title}
-              className="rf-feature-card"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ type: "spring", stiffness: 200, damping: 20, delay: i * 0.08 }}
+        <div className="rf-saas-bento-grid">
+          {FEATURES.map((feature) => (
+            <article
+              className={`rf-saas-bento-card rf-saas-bento-card--${feature.visual}`}
+              id={feature.visual === "logging" ? "workouts" : feature.visual}
+              key={feature.number}
             >
-              <div className="rf-feature-icon">{f.icon}</div>
-              <h3 style={{ fontSize: "1.2rem", color: "var(--rf-text-pure)", marginBottom: 8 }}>
-                {f.title}
-              </h3>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: "0.9rem",
-                  color: "var(--rf-text-sub)",
-                  lineHeight: 1.6,
-                }}
-              >
-                {f.body}
-              </p>
-            </motion.div>
+              <div className="rf-saas-bento-copy">
+                <span className="rf-saas-section-kicker">
+                  {feature.number} / {feature.category}
+                </span>
+                <h3>{feature.title}</h3>
+                <p>{feature.description}</p>
+                <ul>
+                  {feature.bullets.map((bullet) => (
+                    <li key={bullet}>
+                      <span>✓</span>
+                      {bullet}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <FeatureVisual type={feature.visual} />
+              <span className="rf-saas-bento-glow" aria-hidden="true" />
+            </article>
           ))}
         </div>
       </section>
 
-      {/* Cinematic Architecture Flow (Makes page feel more complete & cinematic) */}
-      <section
-        style={{
-          padding: "clamp(48px, 8vw, 88px) 20px",
-          background:
-            "linear-gradient(180deg, transparent 0%, rgba(138, 92, 246, 0.04) 50%, transparent 100%)",
-          borderTop: "1px solid var(--rf-border-subtle)",
-          borderBottom: "1px solid var(--rf-border-subtle)",
-          position: "relative",
-          zIndex: 10,
-        }}
-      >
-        <div className="rf-page-container">
-          <div style={{ textAlign: "center", maxWidth: 640, margin: "0 auto 44px" }}>
-            <div
-              className="rf-telemetry-tag"
-              style={{ color: "var(--rf-violet)", marginBottom: 8 }}
-            >
-              THE REVOLUTIONARY FOUR-PILLAR ENGINE
-            </div>
-            <h2 style={{ fontSize: "var(--rf-text-xl)", color: "var(--rf-text-pure)" }}>
-              One Cohesive Intelligence Platform
-            </h2>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-              gap: 20,
-            }}
-          >
-            {WORKFLOW_STEPS.map((step, idx) => (
-              <motion.div
-                key={step.num}
-                className="rf-pod"
-                initial={{ opacity: 0, y: 16 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ type: "spring", delay: idx * 0.08 }}
-                style={{ padding: 24 }}
-              >
-                <div
-                  className="rf-telemetry-tag"
-                  style={{ color: "var(--rf-cyan)", marginBottom: 8 }}
-                >
-                  {step.num}
-                </div>
-                <h3 style={{ fontSize: "1.05rem", color: "var(--rf-text-pure)", marginBottom: 8 }}>
-                  {step.label}
-                </h3>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: "0.86rem",
-                    color: "var(--rf-text-sub)",
-                    lineHeight: 1.55,
-                  }}
-                >
-                  {step.desc}
-                </p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
+      <section className="rf-saas-bottom-cta">
+        <span className="rf-saas-section-kicker">YOUR NEXT SESSION STARTS HERE</span>
+        <h2>
+          Put the work in.
+          <br />
+          <span>See it add up.</span>
+        </h2>
+        <p>Build your log. Find your momentum. Get stronger on your terms.</p>
+        <PrimaryButton className="rf-saas-primary-cta" onClick={handleContinue}>
+          Try RepForge Free <span aria-hidden="true">→</span>
+        </PrimaryButton>
       </section>
 
-      {/* CTA Banner */}
-      <section
-        className="rf-page-container"
-        style={{
-          padding: "clamp(48px, 8vw, 88px) 20px",
-          textAlign: "center",
-          position: "relative",
-          zIndex: 10,
-        }}
-      >
-        <div style={{ maxWidth: 640, margin: "0 auto" }}>
-          <h2
-            style={{
-              fontSize: "var(--rf-text-xl)",
-              color: "var(--rf-text-pure)",
-              marginBottom: 12,
-            }}
-          >
-            Your next PR starts with logging today's set.
-          </h2>
-          <p style={{ color: "var(--rf-text-sub)", marginBottom: 28, fontSize: "0.95rem" }}>
-            Sign in with Google — no passwords, no setup, just training.
-          </p>
-          <PrimaryButton
-            className="rf-btn--lg"
-            onClick={handleContinue}
-            style={{ minWidth: 180, letterSpacing: "0.04em", fontWeight: 800 }}
-          >
-            CONTINUE
-          </PrimaryButton>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer
-        className="rf-landing-footer"
-        style={{
-          padding: "28px 24px",
-          borderTop: "1px solid var(--rf-border-subtle)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: 16,
-          maxWidth: "var(--rf-container-max)",
-          margin: "0 auto",
-          width: "100%",
-          position: "relative",
-          zIndex: 10,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div className="rf-brand-glyph" style={{ width: 28, height: 28, fontSize: "0.75rem" }}>
-            RF
-          </div>
-          <span style={{ fontSize: "0.92rem", color: "var(--rf-text-pure)" }}>RepForge</span>
-        </div>
-        <span style={{ fontSize: "0.82rem", color: "var(--rf-text-faint)" }}>
-          © {new Date().getFullYear()} RepForge. Train with intention.
-        </span>
-        <Link to="/login" style={{ fontSize: "0.85rem", color: "var(--rf-cyan)" }}>
-          Sign in
+      <footer className="rf-saas-footer">
+        <Link to="/" className="rf-saas-brand">
+          <span className="rf-saas-brand-mark">RF</span>
+          <span>RepForge</span>
+        </Link>
+        <span>BUILT FOR THE WORK. © {new Date().getFullYear()} REPFORGE</span>
+        <Link to="/login">
+          Sign in <span aria-hidden="true">↗</span>
         </Link>
       </footer>
-    </div>
+    </main>
   );
 }

@@ -3,7 +3,7 @@ RepForge Elite Coach Engine (Groq Cloud API).
 
 Purpose:
     Executes high-speed server-to-server inference calls to the Groq API
-    (default model: llama-3.3-70b-versatile).
+    (default model: openai/gpt-oss-120b).
     Provides evidence-based strength coaching, progressive overload targets,
     and recovery analysis strictly grounded in verified user telemetry.
 
@@ -130,7 +130,7 @@ def stream_coach_dialogue(
     chat_history: list[dict[str, str]],
     new_message: str,
     api_key: str,
-    model: str = "llama-3.3-70b-versatile",
+    model: str = "openai/gpt-oss-120b",
     timeout_seconds: int = 25,
 ) -> Generator[str, None, None]:
     """
@@ -199,6 +199,7 @@ def stream_coach_dialogue(
                 backoff *= 2.0
                 continue
 
+            # Retry upstream status failures before any tokens have been forwarded to the client.
             if response.status_code >= 500:
                 logger.warning(
                     "Groq server error %d (attempt %d/%d)",
@@ -263,7 +264,7 @@ def chat_with_coach(
     chat_history: list[dict[str, str]],
     new_message: str,
     api_key: str,
-    model: str = "llama-3.3-70b-versatile",
+    model: str = "openai/gpt-oss-120b",
     timeout_seconds: int = 25,
 ) -> str:
     """
