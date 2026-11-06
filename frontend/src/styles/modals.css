@@ -8,6 +8,9 @@
 .rf-modal-overlay {
   position: fixed;
   inset: 0;
+  top: var(--rf-modal-viewport-offset-top, 0px);
+  bottom: auto;
+  height: var(--rf-modal-viewport-height, 100dvh);
   background: rgba(2, 2, 6, 0.82);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -17,6 +20,8 @@
   z-index: var(--rf-z-modal-backdrop);
   padding: max(12px, env(safe-area-inset-top)) 0 max(0px, env(safe-area-inset-bottom));
   overflow: hidden;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
   animation: rf-fade-in 0.2s var(--rf-ease-smooth);
 }
 
@@ -24,6 +29,7 @@
   .rf-modal-overlay {
     align-items: center; /* Centered modal on desktop */
     padding: 24px;
+    touch-action: auto;
   }
 }
 
@@ -31,8 +37,13 @@
 .rf-modal {
   width: 100%;
   max-width: 100%;
-  max-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
-  max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  touch-action: pan-y;
+  max-height: calc(
+    var(--rf-modal-viewport-height, 100vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom)
+  );
+  max-height: calc(
+    var(--rf-modal-viewport-height, 100dvh) - env(safe-area-inset-top) - env(safe-area-inset-bottom)
+  );
   background: rgba(12, 12, 22, 0.95);
   backdrop-filter: blur(32px) saturate(180%);
   -webkit-backdrop-filter: blur(32px) saturate(180%);
@@ -71,7 +82,9 @@
 
 .rf-modal.rf-day-form-modal {
   height: min(88svh, 760px);
-  max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  max-height: calc(
+    var(--rf-modal-viewport-height, 100dvh) - env(safe-area-inset-top) - env(safe-area-inset-bottom)
+  );
   min-width: 0;
 }
 
@@ -179,14 +192,19 @@
 
 @media (max-width: 420px) {
   .rf-modal-footer {
-    align-items: stretch;
-    flex-direction: column-reverse;
+    align-items: center;
+    flex-direction: row;
     gap: 8px;
+    padding-inline: 12px;
   }
 
-  .rf-modal-footer > button {
-    width: 100%;
+  .rf-day-form-modal .rf-modal-footer > button {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
     min-height: 44px;
+    padding-inline: 8px;
+    font-size: clamp(0.78rem, 3.2vw, 0.9rem);
   }
 
   .rf-modal-header {

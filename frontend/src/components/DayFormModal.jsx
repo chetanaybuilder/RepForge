@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { PrimaryButton } from "./PrimaryButton";
 import { ExercisePickerModal } from "./ExercisePickerModal";
 import { WeightScrollInput } from "./WeightScrollInput";
 import { RestTimer } from "./RestTimer";
+import { useModalBodyLock } from "../hooks/useModalBodyLock";
 
 export const DAY_WORKOUT_TYPES = [
   { value: "push", label: "Push (Chest/Shoulders/Triceps)" },
@@ -40,23 +42,34 @@ export function DayFormModal({ open, onSave, onClose, initialExercise, initialDa
   const [saving, setSaving] = useState(false);
   const [pickerActiveIndex, setPickerActiveIndex] = useState(null);
   const [showRestTimer, setShowRestTimer] = useState(false);
+  const overlayRef = useRef(null);
+
+  useModalBodyLock(open);
 
   useEffect(() => {
-    if (!open) return undefined;
+    if (!open || !overlayRef.current) return undefined;
 
-    const previousOverflow = document.body.style.overflow;
-    const previousPaddingRight = document.body.style.paddingRight;
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    const overlay = overlayRef.current;
+    const viewport = window.visualViewport;
+    const syncViewport = () => {
+      overlay.style.setProperty(
+        "--rf-modal-viewport-height",
+        `${viewport?.height ?? window.innerHeight}px`
+      );
+      overlay.style.setProperty("--rf-modal-viewport-offset-top", `${viewport?.offsetTop ?? 0}px`);
+    };
 
-    // Restore the prior inline styles on close so this modal does not leave page scrolling locked.
-    document.body.style.overflow = "hidden";
-    if (scrollbarWidth > 0) {
-      document.body.style.paddingRight = `${scrollbarWidth}px`;
-    }
+    syncViewport();
+    viewport?.addEventListener("resize", syncViewport);
+    viewport?.addEventListener("scroll", syncViewport);
+    window.addEventListener("resize", syncViewport);
 
     return () => {
-      document.body.style.overflow = previousOverflow;
-      document.body.style.paddingRight = previousPaddingRight;
+      viewport?.removeEventListener("resize", syncViewport);
+      viewport?.removeEventListener("scroll", syncViewport);
+      window.removeEventListener("resize", syncViewport);
+      overlay.style.removeProperty("--rf-modal-viewport-height");
+      overlay.style.removeProperty("--rf-modal-viewport-offset-top");
     };
   }, [open]);
 
@@ -230,8 +243,8 @@ export function DayFormModal({ open, onSave, onClose, initialExercise, initialDa
     }
   };
 
-  return (
-    <div className="rf-modal-overlay" onClick={onClose}>
+  return createPortal(
+    <div ref={overlayRef} className="rf-modal-overlay" onClick={onClose}>
       <div
         className="rf-modal rf-modal--lg rf-day-form-modal"
         onClick={(e) => e.stopPropagation()}
@@ -253,8 +266,18 @@ export function DayFormModal({ open, onSave, onClose, initialExercise, initialDa
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="rf-day-form">
-          <div className="rf-modal-body">
+        <form
+          onSubmit={handleSubmit}
+          className="rf-day-form"
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            flex: 1,
+            minHeight: 0,
+            overflow: "hidden",
+          }}
+        >
+          <div className="rf-modal-body" style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
             {errors.general && (
               <div className="rf-field-error" style={{ marginBottom: 14 }}>
                 {errors.general}
@@ -409,7 +432,10 @@ export function DayFormModal({ open, onSave, onClose, initialExercise, initialDa
                       <input
                         type="text"
                         className="rf-input rf-input--compact"
-                        placeholder="e.g. Barbell Incline Press"
+                        placeholder={
+                          eIdx === 0 ? "Enter first exercise" : "Enter another exercise"
+                        }
+                        aria-label={`Exercise ${eIdx + 1} name`}
                         value={ex.exercise_name}
                         onChange={(e) => updateExercise(eIdx, "exercise_name", e.target.value)}
                         required
@@ -468,6 +494,8 @@ export function DayFormModal({ open, onSave, onClose, initialExercise, initialDa
                               type="number"
                               step="1"
                               min="1"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
                               className="rf-set-input"
                               value={set.reps === 0 ? "" : set.reps}
                               placeholder="0"
@@ -558,8 +586,8 @@ export function DayFormModal({ open, onSave, onClose, initialExercise, initialDa
                   ? "Saving Session…"
                   : "Recording Session…"
                 : initialDay
-                  ? "Save Session Changes"
-                  : "Log Workout Session"}
+                  ? "Save Changes"
+                  : "Save Session"}
             </PrimaryButton>
           </div>
         </form>
@@ -572,6 +600,7 @@ export function DayFormModal({ open, onSave, onClose, initialExercise, initialDa
 
         {showRestTimer && <RestTimer onClose={() => setShowRestTimer(false)} />}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
