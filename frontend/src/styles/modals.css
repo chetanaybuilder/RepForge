@@ -81,10 +81,8 @@
 }
 
 .rf-modal.rf-day-form-modal {
-  height: min(88svh, 760px);
-  max-height: calc(
-    var(--rf-modal-viewport-height, 100dvh) - env(safe-area-inset-top) - env(safe-area-inset-bottom)
-  );
+  height: auto;
+  max-height: min(var(--rf-modal-viewport-height, 88svh), 760px);
   min-width: 0;
 }
 
@@ -129,8 +127,8 @@
 
 @media (min-width: 680px) {
   .rf-modal.rf-day-form-modal {
-    height: min(86vh, 760px);
-    max-height: 86vh;
+    height: auto;
+    max-height: min(86vh, 760px);
   }
 }
 
