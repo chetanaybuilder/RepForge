@@ -9,7 +9,7 @@ export function ProtectedRoute({ children }) {
     return (
       <div
         style={{
-          minHeight: "100vh",
+          minHeight: ["100vh", "100dvh", "-webkit-fill-available"],
           display: "flex",
           alignItems: "center",
           justifyContent: "center",

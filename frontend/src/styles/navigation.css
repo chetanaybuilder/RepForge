@@ -303,6 +303,7 @@
     width: var(--rf-sidebar-w);
     height: 100vh;
     height: 100dvh;
+    height: -webkit-fill-available;
     position: fixed;
     top: 0;
     left: 0;
