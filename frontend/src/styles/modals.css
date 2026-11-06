@@ -82,7 +82,7 @@
 
 .rf-modal.rf-day-form-modal {
   height: auto;
-  min-height: 100dvh;
+  min-height: 100%;
   max-height: min(var(--rf-modal-viewport-height, 88svh), 760px);
   min-width: 0;
   overflow-y: auto;
@@ -93,8 +93,8 @@
   overflow-x: hidden;
   overflow-y: auto;
   scrollbar-gutter: stable;
-  /* Ensure content is never hidden behind the fixed bottom action bar */
-  padding-bottom: calc(72px + max(16px, env(safe-area-inset-bottom)));
+  /* Padding safety: action bar height + safe area inset so last input is never hidden behind buttons */
+  padding-bottom: calc(80px + env(safe-area-inset-bottom, 20px));
 }
 
 .rf-day-form {
@@ -135,6 +135,7 @@
 @media (min-width: 680px) {
   .rf-modal.rf-day-form-modal {
     height: auto;
+    min-height: 100%;
     max-height: min(86vh, 760px);
   }
 }
@@ -182,10 +183,13 @@
   -webkit-overflow-scrolling: touch;
 }
 
-/* Modal Actions Footer */
+/* Modal Actions Footer — sticks cleanly above the keyboard */
 .rf-modal-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
   padding: 16px clamp(18px, 4vw, 26px);
-  background: rgba(8, 8, 16, 0.6);
+  background: rgba(12, 12, 22, 0.95);
   border-top: 1px solid var(--rf-border-subtle);
   display: flex;
   align-items: center;
@@ -193,6 +197,8 @@
   gap: 12px;
   flex-shrink: 0;
   padding-bottom: max(16px, env(safe-area-inset-bottom));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 @media (max-width: 420px) {
