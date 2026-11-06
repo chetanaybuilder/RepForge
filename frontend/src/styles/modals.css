@@ -8,17 +8,13 @@
 .rf-modal-overlay {
   position: fixed;
   inset: 0;
-  top: var(--rf-modal-viewport-offset-top, 0px);
-  bottom: auto;
-  height: var(--rf-modal-viewport-height, 100dvh);
   background: rgba(2, 2, 6, 0.82);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   display: flex;
-  align-items: flex-end; /* Bottom sheet on mobile */
+  align-items: stretch;
   justify-content: center;
   z-index: var(--rf-z-modal-backdrop);
-  padding: max(12px, env(safe-area-inset-top)) 0 max(0px, env(safe-area-inset-bottom));
   overflow: hidden;
   overscroll-behavior: contain;
   touch-action: pan-y;
@@ -38,12 +34,6 @@
   width: 100%;
   max-width: 100%;
   touch-action: pan-y;
-  max-height: calc(
-    var(--rf-modal-viewport-height, 100vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom)
-  );
-  max-height: calc(
-    var(--rf-modal-viewport-height, 100dvh) - env(safe-area-inset-top) - env(safe-area-inset-bottom)
-  );
   background: rgba(12, 12, 22, 0.95);
   backdrop-filter: blur(32px) saturate(180%);
   -webkit-backdrop-filter: blur(32px) saturate(180%);
@@ -81,12 +71,10 @@
 }
 
 .rf-modal.rf-day-form-modal {
-  height: auto;
-  min-height: 100%;
-  max-height: min(var(--rf-modal-viewport-height, 88svh), 760px);
+  height: 100%;
+  min-height: 0;
   min-width: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  overflow: hidden;
 }
 
 .rf-day-form-modal .rf-modal-body {
@@ -94,17 +82,13 @@
   overflow-y: auto;
   scrollbar-gutter: stable;
   /* Padding safety: action bar height + safe area inset so last input is never hidden behind buttons */
-  padding-bottom: calc(80px + env(safe-area-inset-bottom, 20px));
+  padding-bottom: 120px;
 }
 
 .rf-day-form {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
+  width: 100%;
   min-width: 0;
   min-height: 0;
-  overflow: hidden;
-  contain: layout style size;
 }
 
 .rf-workout-exercise-list {
@@ -130,14 +114,6 @@
 .rf-day-form-modal .rf-set-row {
   width: 100%;
   min-width: 0;
-}
-
-@media (min-width: 680px) {
-  .rf-modal.rf-day-form-modal {
-    height: auto;
-    min-height: 100%;
-    max-height: min(86vh, 760px);
-  }
 }
 
 /* Mobile Pull Handle */
@@ -187,7 +163,7 @@
 .rf-modal-footer {
   position: sticky;
   bottom: 0;
-  z-index: 5;
+  z-index: 50;
   padding: 16px clamp(18px, 4vw, 26px);
   background: rgba(12, 12, 22, 0.95);
   border-top: 1px solid var(--rf-border-subtle);

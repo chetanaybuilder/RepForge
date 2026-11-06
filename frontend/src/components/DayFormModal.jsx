@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { PrimaryButton } from "./PrimaryButton";
 import { ExercisePickerModal } from "./ExercisePickerModal";
 import { WeightScrollInput } from "./WeightScrollInput";
 import { RestTimer } from "./RestTimer";
-import { useModalBodyLock } from "../hooks/useModalBodyLock";
 
 export const DAY_WORKOUT_TYPES = [
   { value: "push", label: "Push (Chest/Shoulders/Triceps)" },
@@ -42,36 +41,6 @@ export function DayFormModal({ open, onSave, onClose, initialExercise, initialDa
   const [saving, setSaving] = useState(false);
   const [pickerActiveIndex, setPickerActiveIndex] = useState(null);
   const [showRestTimer, setShowRestTimer] = useState(false);
-  const overlayRef = useRef(null);
-
-  useModalBodyLock(open);
-
-  useEffect(() => {
-    if (!open || !overlayRef.current) return undefined;
-
-    const overlay = overlayRef.current;
-    const viewport = window.visualViewport;
-    const syncViewport = () => {
-      overlay.style.setProperty(
-        "--rf-modal-viewport-height",
-        `${viewport?.height ?? window.innerHeight}px`
-      );
-      overlay.style.setProperty("--rf-modal-viewport-offset-top", `${viewport?.offsetTop ?? 0}px`);
-    };
-
-    syncViewport();
-    viewport?.addEventListener("resize", syncViewport);
-    viewport?.addEventListener("scroll", syncViewport);
-    window.addEventListener("resize", syncViewport);
-
-    return () => {
-      viewport?.removeEventListener("resize", syncViewport);
-      viewport?.removeEventListener("scroll", syncViewport);
-      window.removeEventListener("resize", syncViewport);
-      overlay.style.removeProperty("--rf-modal-viewport-height");
-      overlay.style.removeProperty("--rf-modal-viewport-offset-top");
-    };
-  }, [open]);
 
   useEffect(() => {
     if (open) {
@@ -244,15 +213,30 @@ export function DayFormModal({ open, onSave, onClose, initialExercise, initialDa
   };
 
   return createPortal(
-    <div ref={overlayRef} className="rf-modal-overlay" onClick={onClose}>
+    <div
+      className="rf-modal-overlay"
+      onClick={onClose}
+      style={{
+        display: "flex",
+        alignItems: "stretch",
+        justifyContent: "center",
+      }}
+    >
       <div
         className="rf-modal rf-modal--lg rf-day-form-modal"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          height: "100%",
+          width: "100%",
+          maxWidth: "100%",
+        }}
       >
-        <div className="rf-modal-handle" />
-        <div className="rf-modal-header">
+        <div className="rf-modal-handle" style={{ flexShrink: 0 }} />
+        <div className="rf-modal-header" style={{ flexShrink: 0 }}>
           <div>
             <div className="rf-telemetry-tag" style={{ marginBottom: 2 }}>
               {initialDay ? "EDIT SAVED SESSION" : "TRAINING SESSION PROTOCOL"}
@@ -266,18 +250,26 @@ export function DayFormModal({ open, onSave, onClose, initialExercise, initialDa
           </button>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="rf-day-form"
+        <div
+          className="rf-modal-body"
           style={{
+            flex: 1,
+            overflowY: "auto",
+            WebkitOverflowScrolling: "touch",
+            paddingBottom: 120,
+            minHeight: 0,
             display: "flex",
             flexDirection: "column",
-            flex: 1,
-            minHeight: 0,
-            overflow: "hidden",
           }}
         >
-          <div className="rf-modal-body" style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
+          <form
+            onSubmit={handleSubmit}
+            className="rf-day-form"
+            style={{
+              width: "100%",
+              minWidth: 0,
+            }}
+          >
             {errors.general && (
               <div className="rf-field-error" style={{ marginBottom: 14 }}>
                 {errors.general}
@@ -569,9 +561,18 @@ export function DayFormModal({ open, onSave, onClose, initialExercise, initialDa
                 + Add Exercise
               </button>
             </div>
-          </div>
+          </form>
+        </div>
 
-          <div className="rf-modal-footer">
+        <div
+          className="rf-modal-footer"
+          style={{
+            position: "sticky",
+            bottom: 0,
+            zIndex: 50,
+            flexShrink: 0,
+          }}
+        >
             <button
               type="button"
               className="rf-btn rf-btn--ghost"
@@ -590,7 +591,6 @@ export function DayFormModal({ open, onSave, onClose, initialExercise, initialDa
                   : "Save Session"}
             </PrimaryButton>
           </div>
-        </form>
 
         <ExercisePickerModal
           open={pickerActiveIndex !== null}
