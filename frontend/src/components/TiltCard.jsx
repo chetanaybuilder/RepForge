@@ -1,9 +1,15 @@
+/**
+ * frontend\src\components\TiltCard.jsx
+ * Implements this RepForge module's single responsibility while preserving its existing public behavior.
+ */
+
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { useState, useEffect } from "react";
 
 export function TiltCard({ children, className = "", style = {}, glowColor = "cyan" }) {
   const [canHover, setCanHover] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
     try {
@@ -16,6 +22,18 @@ export function TiltCard({ children, className = "", style = {}, glowColor = "cy
       };
     } catch {
       setCanHover(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+      const update = () => setReducedMotion(mq.matches);
+      update();
+      mq.addEventListener?.("change", update);
+      return () => mq.removeEventListener?.("change", update);
+    } catch {
+      setReducedMotion(false);
     }
   }, []);
 
@@ -51,7 +69,7 @@ export function TiltCard({ children, className = "", style = {}, glowColor = "cy
         ? "138, 92, 246"
         : "0, 242, 254";
 
-  if (!canHover) {
+  if (!canHover || reducedMotion) {
     // Touch / Mobile Fallback: pure hardware accelerated tap response without perspective distortion
     return (
       <div className={className} style={{ position: "relative", ...style }}>
@@ -69,8 +87,7 @@ export function TiltCard({ children, className = "", style = {}, glowColor = "cy
       style={{
         rotateX,
         rotateY,
-        transformStyle: "preserve-3d",
-        perspective: 1000,
+        transformPerspective: 900,
         position: "relative",
         ...style,
       }}
@@ -93,7 +110,14 @@ export function TiltCard({ children, className = "", style = {}, glowColor = "cy
         />
       )}
       <div
-        style={{ transform: "translateZ(18px)", position: "relative", zIndex: 1, height: "100%" }}
+        style={{
+          position: "relative",
+          zIndex: 1,
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+        }}
       >
         {children}
       </div>

@@ -1,3 +1,8 @@
+/**
+ * frontend\src\components\PrimaryButton.jsx
+ * Implements this RepForge module's single responsibility while preserving its existing public behavior.
+ */
+
 import { motion } from "framer-motion";
 
 export function PrimaryButton({

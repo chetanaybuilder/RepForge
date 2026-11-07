@@ -9,7 +9,18 @@
  */
 
 import React, { Suspense, useMemo } from "react";
+import { ThreeErrorBoundary } from "./ThreeErrorBoundary";
 import { useGraphicsTier } from "../../utils/graphicsTier";
+
+const lazyCache = new Map();
+
+function getLazyComponent(loader) {
+  if (!loader) return null;
+  if (!lazyCache.has(loader)) {
+    lazyCache.set(loader, React.lazy(loader));
+  }
+  return lazyCache.get(loader);
+}
 
 /**
  * Intelligent 3D Wrapper that guards Three.js loading based on hardware capabilities.
@@ -25,7 +36,7 @@ export function LazyThree({ loadComponent, fallback, props = {} }) {
 
   const LazyComponent = useMemo(() => {
     if (!canRender3D) return null;
-    return React.lazy(loadComponent);
+    return getLazyComponent(loadComponent);
   }, [canRender3D, loadComponent]);
 
   if (!canRender3D || !LazyComponent) {
@@ -33,8 +44,10 @@ export function LazyThree({ loadComponent, fallback, props = {} }) {
   }
 
   return (
-    <Suspense fallback={fallback}>
-      <LazyComponent tier={tier} {...props} />
-    </Suspense>
+    <ThreeErrorBoundary fallback={fallback}>
+      <Suspense fallback={fallback}>
+        <LazyComponent tier={tier} {...props} />
+      </Suspense>
+    </ThreeErrorBoundary>
   );
 }

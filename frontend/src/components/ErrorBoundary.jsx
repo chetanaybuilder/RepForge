@@ -1,3 +1,8 @@
+/**
+ * frontend\src\components\ErrorBoundary.jsx
+ * Implements this RepForge module's single responsibility while preserving its existing public behavior.
+ */
+
 import { ErrorBoundary } from "react-error-boundary";
 import { PrimaryButton } from "./PrimaryButton";
 
@@ -22,7 +27,7 @@ function ErrorFallback({ error, resetErrorBoundary }) {
         SUBSYSTEM EXCEPTION DETECTED
       </div>
       <h2 style={{ margin: 0, color: "var(--rf-text-pure)", fontSize: "1.6rem" }}>
-        Neural Anomaly Interruption
+        Something went wrong
       </h2>
       <p
         style={{
@@ -94,14 +99,14 @@ function ErrorFallback({ error, resetErrorBoundary }) {
       </details>
 
       <div style={{ display: "flex", gap: "12px", marginTop: "14px" }}>
-        <PrimaryButton onClick={resetErrorBoundary}>Re-initialize Subsystem</PrimaryButton>
+        <PrimaryButton onClick={resetErrorBoundary}>Try again</PrimaryButton>
         <button
           className="rf-btn rf-btn--ghost"
           onClick={() => {
             window.location.href = "/";
           }}
         >
-          Return to Deck
+          Back to home
         </button>
       </div>
     </div>

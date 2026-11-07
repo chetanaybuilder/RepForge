@@ -1,7 +1,13 @@
-import { Link } from "react-router-dom";
+/**
+ * frontend\src\pages\NotFound.jsx
+ * Implements this RepForge module's single responsibility while preserving its existing public behavior.
+ */
+
+import { useNavigate } from "react-router-dom";
 import { PrimaryButton } from "../components/PrimaryButton";
 
 export function NotFound() {
+  const navigate = useNavigate();
   return (
     <div
       style={{
@@ -31,9 +37,9 @@ export function NotFound() {
       <p style={{ color: "var(--rf-text-sub)", maxWidth: 420, margin: "16px 0 28px" }}>
         The telemetry sector you are attempting to query does not exist in the neural registry.
       </p>
-      <Link to="/dashboard">
-        <PrimaryButton className="rf-btn--sm">Return to Command Deck →</PrimaryButton>
-      </Link>
+      <PrimaryButton className="rf-btn--sm" onClick={() => navigate("/dashboard")}>
+        Return to Command Deck →
+      </PrimaryButton>
     </div>
   );
 }

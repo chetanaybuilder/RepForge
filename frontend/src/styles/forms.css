@@ -49,21 +49,19 @@
 .rf-select,
 .rf-textarea {
   box-sizing: border-box;
-  isolation: isolate;
   background-clip: padding-box;
   width: 100%;
   min-width: 0;
   max-width: 100%;
   height: var(--rf-touch-target);
   padding: 0 16px;
-  background: rgba(14, 14, 26, 0.7);
+  background: rgba(14, 14, 26, 0.9);
   border: 1px solid var(--rf-border-subtle);
   border-radius: var(--rf-radius-md);
   color: var(--rf-text-pure);
-  font-size: 16px;
+  font-size: 16px !important; /* Force 16px to prevent Safari mobile zoom bugs */
   transition: all var(--rf-transition-fast);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  outline: none !important;
 }
 
 .rf-input {
@@ -92,16 +90,16 @@
 .rf-textarea:focus {
   border-color: var(--rf-cyan);
   background: rgba(22, 22, 40, 0.95);
-  box-shadow:
-    0 0 16px -2px rgba(0, 242, 254, 0.3),
-    inset 0 0 10px rgba(0, 242, 254, 0.05);
+  outline: none !important;
+  box-shadow: none !important; /* Strips the weird expanding blue line artifact */
 }
 
 .rf-input:focus-visible,
 .rf-select:focus-visible,
 .rf-textarea:focus-visible,
 .rf-set-input:focus-visible {
-  outline: none;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .rf-input::placeholder,
@@ -447,10 +445,9 @@
 /* Minimal Numeric Set Input */
 .rf-set-input {
   width: 100%;
-  isolation: isolate;
   background-clip: padding-box;
-  --webkit-appearance: none;
-  --moz-appearance: textfield;
+  -moz-appearance: textfield;
+  appearance: textfield;
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
@@ -463,12 +460,14 @@
   color: var(--rf-text-pure);
   font-family: var(--rf-font-mono);
   font-weight: 700;
-  font-size: 0.92rem;
+  font-size: 16px !important;
   text-align: center;
   padding: 0 4px;
   margin: 0;
   transition: all var(--rf-transition-fast);
   line-height: 1.2;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .rf-set-input::-webkit-outer-spin-button,
@@ -485,8 +484,8 @@
 .rf-set-input:focus {
   border-color: var(--rf-cyan);
   background: rgba(16, 16, 32, 1);
-  box-shadow: 0 0 10px -2px rgba(0, 242, 254, 0.35);
-  outline: none;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 /* Low-Profile Checkmark Button */
@@ -727,6 +726,20 @@
   background: rgba(255, 255, 255, 0.09);
   border-color: var(--rf-border-laser);
   color: var(--rf-text-pure);
+}
+
+.rf-btn--outline,
+.rf-btn--secondary {
+  background: transparent;
+  border: 1px solid var(--rf-border-laser);
+  color: var(--rf-text-bright);
+}
+
+.rf-btn--outline:hover,
+.rf-btn--secondary:hover {
+  background: rgba(0, 242, 254, 0.08);
+  border-color: var(--rf-cyan);
+  color: var(--rf-cyan);
 }
 
 .rf-btn--danger {

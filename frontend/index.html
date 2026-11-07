@@ -1,10 +1,14 @@
+<!--
+  index.html
+  Provides the RepForge application document shell and bootstraps the React entry module.
+-->
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
     />
     <title>RepForge — Strength Training, Organized</title>
     <link
@@ -15,8 +19,12 @@
       name="description"
       content="Log your workouts, review training progress, and plan your next session with RepForge."
     />
+    <meta name="theme-color" content="#090d13" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
   </head>
   <body>
+    <noscript>RepForge requires JavaScript to log workouts and use training tools.</noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

@@ -1,4 +1,9 @@
-import { Link } from "react-router-dom";
+/**
+ * frontend\src\pages\Dashboard.jsx
+ * Implements this RepForge module's single responsibility while preserving its existing public behavior.
+ */
+
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useFetch } from "../hooks/useFetch";
 import { api } from "../services/api";
@@ -9,6 +14,7 @@ import { PrimaryButton } from "../components/PrimaryButton";
 import { TiltCard } from "../components/TiltCard";
 import { DashboardHero } from "../components/3d/DashboardHero";
 import { motion } from "framer-motion";
+import { formatDate, formatNumber } from "../utils/format";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -35,19 +41,20 @@ const DEFAULT_STATS_SCHEMA = {
 };
 
 export function Dashboard() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { data, status, error, reload } = useFetch(
     () => api.get("/api/workouts/stats"),
     [],
     () => false,
-    null,
+    `dashboard:stats:${user?.id ?? "anonymous"}`,
     DEFAULT_STATS_SCHEMA
   );
   const { data: analyticsData } = useFetch(
     () => api.get("/api/workouts/analytics"),
     [],
     () => false,
-    null,
+    `dashboard:analytics:${user?.id ?? "anonymous"}`,
     { volume_trend: [] }
   );
 
@@ -60,23 +67,26 @@ export function Dashboard() {
   const isLoading = status === "loading" || (!data?.stats && status !== "error");
 
   return (
-    <div style={{ width: "100%", flex: 1, display: "flex", flexDirection: "column" }}>
+    <div
+      className="rf-dashboard"
+      style={{ width: "100%", flex: 1, display: "flex", flexDirection: "column" }}
+    >
       {/* Header */}
       <div className="rf-page-header">
         <div>
           <div className="rf-telemetry-tag" style={{ marginBottom: 6 }}>
-            02 — DASHBOARD OVERVIEW
+            YOUR TRAINING AT A GLANCE
           </div>
           <h1 className="rf-page-title">
             Welcome back, <span className="rf-gradient-text">{firstName}</span>
           </h1>
           <p className="rf-page-subtitle">
-            Cumulative volume load, training metrics, and progression intelligence.
+            A clear view of your training consistency, progress, and recent sessions.
           </p>
         </div>
-        <Link to="/workouts">
-          <PrimaryButton className="rf-btn--sm">+ Log Session</PrimaryButton>
-        </Link>
+        <PrimaryButton className="rf-btn--sm" onClick={() => navigate("/workouts?new=1")}>
+          + Log Session
+        </PrimaryButton>
       </div>
 
       {isLoading && <SkeletonGrid count={6} />}
@@ -117,7 +127,7 @@ export function Dashboard() {
                   className="rf-telemetry-tag"
                   style={{ color: "var(--rf-cyan)", marginBottom: 8 }}
                 >
-                  PRIMARY TELEMETRY · CUMULATIVE LOAD
+                  TOTAL TRAINING VOLUME
                 </div>
                 <div
                   style={{
@@ -144,7 +154,7 @@ export function Dashboard() {
                 <p
                   style={{ margin: "10px 0 0 0", color: "var(--rf-text-sub)", fontSize: "0.9rem" }}
                 >
-                  Total mechanical load moved across all verified training sets.
+                  Total weight lifted across your logged sets.
                 </p>
               </div>
 
@@ -152,7 +162,7 @@ export function Dashboard() {
               <div
                 style={{
                   background: "rgba(10, 10, 22, 0.6)",
-                  border: "1px solid rgba(255, 51, 102, 0.3)",
+                  border: "1px solid rgba(0, 242, 254, 0.24)",
                   borderRadius: "var(--rf-radius-lg)",
                   padding: "20px 24px",
                   display: "flex",
@@ -162,9 +172,9 @@ export function Dashboard() {
               >
                 <div
                   className="rf-telemetry-tag"
-                  style={{ color: "var(--rf-ember)", marginBottom: 6 }}
+                  style={{ color: "var(--rf-cyan)", marginBottom: 6 }}
                 >
-                  TRAINING MOMENTUM
+                  CURRENT STREAK
                 </div>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
                   <div
@@ -178,8 +188,8 @@ export function Dashboard() {
                   >
                     <AnimatedNumber value={stats?.current_streak ?? 0} />
                   </div>
-                  <span style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--rf-ember)" }}>
-                    DAYS STREAK
+                  <span style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--rf-cyan)" }}>
+                    days
                   </span>
                 </div>
                 <div className="rf-stat-sub" style={{ marginTop: 6 }}>
@@ -259,7 +269,7 @@ export function Dashboard() {
           {/* ==================================================================
               3. WORKOUT STATISTICS PODS
               ================================================================== */}
-          <div className="rf-stat-grid">
+          <div className="rf-stat-grid rf-stat-grid--dashboard">
             <StatPod
               label="Total Workouts"
               value={stats?.total_workouts ?? stats?.workouts_completed ?? 0}
@@ -292,7 +302,7 @@ export function Dashboard() {
           <div>
             <div className="rf-section-head">
               <h2 className="rf-section-title">
-                <span style={{ color: "var(--rf-ember)" }}>⚡</span> Recent Personal Records
+                <span style={{ color: "var(--rf-cyan)" }}>✦</span> Recent Personal Records
               </h2>
             </div>
 
@@ -317,7 +327,7 @@ export function Dashboard() {
                     className="rf-pr-card"
                     glowColor="ember"
                   >
-                    <div className="rf-badge rf-badge--ember">PR · {formatDate(pr?.date)}</div>
+                    <div className="rf-badge rf-badge--cyan">PR · {formatDate(pr?.date)}</div>
                     <div
                       style={{
                         fontFamily: "var(--rf-font-display)",
@@ -366,9 +376,9 @@ export function Dashboard() {
                 title="No logged sessions found"
                 description="Begin tracking by logging your first workout session."
                 action={
-                  <Link to="/workouts">
-                    <PrimaryButton className="rf-btn--sm">Log Workout</PrimaryButton>
-                  </Link>
+                  <PrimaryButton className="rf-btn--sm" onClick={() => navigate("/workouts")}>
+                    Log Workout
+                  </PrimaryButton>
                 }
               />
             ) : (
@@ -466,11 +476,13 @@ export function Dashboard() {
                         >
                           {formatDate(day?.date)}
                         </div>
-                        <Link to="/workouts">
-                          <button className="rf-icon-btn" aria-label="View in workouts">
-                            →
-                          </button>
-                        </Link>
+                        <button
+                          className="rf-icon-btn"
+                          aria-label="View in workouts"
+                          onClick={() => navigate("/workouts")}
+                        >
+                          →
+                        </button>
                       </div>
                     </div>
                   );
@@ -496,23 +508,4 @@ function StatPod({ label, value, sub, glow = "cyan" }) {
       </TiltCard>
     </motion.div>
   );
-}
-
-function formatNumber(n) {
-  const val = Number(n);
-  if (isNaN(val)) return "0";
-  return new Intl.NumberFormat().format(Math.round(val));
-}
-
-function formatDate(iso) {
-  if (!iso) return "";
-  try {
-    return new Date(iso + "T00:00:00").toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  } catch {
-    return String(iso);
-  }
 }

@@ -88,7 +88,7 @@ export function evaluateGraphicsCapability() {
  * }}
  */
 export function useGraphicsTier() {
-  const [capability, setCapability] = useState(evaluateGraphicsCapability);
+  const [capability, setCapability] = useState(() => evaluateGraphicsCapability());
   const [mode, setModeState] = useState(() => {
     try {
       return localStorage.getItem(STORAGE_KEY) || "auto";
@@ -104,12 +104,26 @@ export function useGraphicsTier() {
       // storage unavailable
     }
     setModeState(newMode);
-    setCapability(evaluateGraphicsCapability());
+    setCapability((prev) => {
+      const next = evaluateGraphicsCapability();
+      return prev.canRender3D === next.canRender3D &&
+        prev.tier === next.tier &&
+        prev.isReducedMotion === next.isReducedMotion
+        ? prev
+        : next;
+    });
   }, []);
 
   useEffect(() => {
     const handleMediaChange = () => {
-      setCapability(evaluateGraphicsCapability());
+      setCapability((prev) => {
+        const next = evaluateGraphicsCapability();
+        return prev.canRender3D === next.canRender3D &&
+          prev.tier === next.tier &&
+          prev.isReducedMotion === next.isReducedMotion
+          ? prev
+          : next;
+      });
     };
 
     let motionMq;
@@ -123,7 +137,14 @@ export function useGraphicsTier() {
     }
 
     const handleResize = () => {
-      setCapability(evaluateGraphicsCapability());
+      setCapability((prev) => {
+        const next = evaluateGraphicsCapability();
+        return prev.canRender3D === next.canRender3D &&
+          prev.tier === next.tier &&
+          prev.isReducedMotion === next.isReducedMotion
+          ? prev
+          : next;
+      });
     };
     window.addEventListener("resize", handleResize);
 

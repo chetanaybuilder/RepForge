@@ -1,22 +1,60 @@
+/**
+ * frontend\src\pages\Workouts.jsx
+ * Implements this RepForge module's single responsibility while preserving its existing public behavior.
+ */
+
 import { useMemo, useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useWorkouts } from "../hooks/useWorkouts";
 import { useToast } from "../context/ToastContext";
 import { ErrorState, EmptyState } from "../components/StateViews";
-import { SkeletonGrid } from "../components/Skeleton";
+import { Skeleton, SkeletonGrid } from "../components/Skeleton";
+import { CoachReply } from "../components/CoachReply";
 import { DayFormModal } from "../components/DayFormModal";
 import { ExerciseEditModal } from "../components/ExerciseEditModal";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { api } from "../services/api";
 import { AnimatePresence, motion } from "framer-motion";
+import { formatDate } from "../utils/format";
+
+function normalizeCoachInsights(data) {
+  const source = data?.insights ?? data?.analysis ?? data?.review ?? data;
+  const textCandidates = [
+    source?.deep_review,
+    source?.review,
+    source?.analysis,
+    source?.content,
+    source?.insight,
+    typeof source === "string" ? source : null,
+    data?.deep_review,
+    data?.review,
+    data?.content,
+  ];
+  const deepReview = textCandidates.find(
+    (candidate) => typeof candidate === "string" && candidate.trim()
+  );
+  if (!deepReview) return null;
+
+  return {
+    deep_review: deepReview.trim(),
+    good_points: Array.isArray(source?.good_points) ? source.good_points : [],
+    critical_points: Array.isArray(source?.critical_points) ? source.critical_points : [],
+  };
+}
 
 export function Workouts() {
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
   const [initialExercise, setInitialExercise] = useState("");
 
-  const filters = useMemo(() => ({ search: search || undefined }), [search]);
+  const filters = useMemo(() => ({ search: debouncedSearch || undefined }), [debouncedSearch]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const { workouts, status, error, reload, createWorkout } = useWorkouts(filters);
   const toast = useToast();
@@ -33,13 +71,15 @@ export function Workouts() {
 
   useEffect(() => {
     const addEx = searchParams.get("add_exercise");
-    if (addEx) {
+    const shouldCreate = searchParams.get("new") === "1";
+    if (addEx || shouldCreate) {
       setInitialExercise(addEx);
       setDayModalOpen(true);
       setSearchParams(
         (prev) => {
           const next = new URLSearchParams(prev);
           next.delete("add_exercise");
+          next.delete("new");
           return next;
         },
         { replace: true }
@@ -100,7 +140,11 @@ export function Workouts() {
     setAiLoading((prev) => ({ ...prev, [dayId]: true }));
     try {
       const data = await api.post(`/api/coach/insights/${dayId}`);
-      setAiResults((prev) => ({ ...prev, [dayId]: data.insights }));
+      const result = normalizeCoachInsights(data);
+      if (!result) {
+        throw new Error("Coach Diagnostics returned an empty review. Please retry.");
+      }
+      setAiResults((prev) => ({ ...prev, [dayId]: result }));
       toast.success("Coach analysis synthesized.");
     } catch (err) {
       toast.error(err.message || "Coach Diagnostics unavailable.");
@@ -110,16 +154,19 @@ export function Workouts() {
   };
 
   return (
-    <div style={{ width: "100%", flex: 1, display: "flex", flexDirection: "column" }}>
+    <div
+      className="rf-workouts-page"
+      style={{ width: "100%", flex: 1, display: "flex", flexDirection: "column" }}
+    >
       {/* Header */}
       <div className="rf-page-header">
         <div>
           <div className="rf-telemetry-tag" style={{ marginBottom: 6 }}>
-            01 — LOG WORKOUT
+            WORKOUT LOG
           </div>
-          <h1 className="rf-page-title">Log Training Session</h1>
+          <h1 className="rf-page-title">Your workouts</h1>
           <p className="rf-page-subtitle">
-            Record exercises, sets, reps, and loads with fast mobile touch controls.
+            Log a session, review your training history, and keep your progress moving.
           </p>
         </div>
       </div>
@@ -142,15 +189,15 @@ export function Workouts() {
       >
         <div>
           <h2 style={{ fontSize: "1.35rem", color: "var(--rf-text-pure)", margin: "0 0 6px 0" }}>
-            Ready to record today's sets?
+            Ready for your next session?
           </h2>
           <p style={{ margin: 0, color: "var(--rf-text-sub)", fontSize: "0.9rem" }}>
-            Launch the high-speed input console to log your movements, weight, and completed reps.
+            Add exercises, sets, reps, and weights in one quick session.
           </p>
         </div>
 
         <PrimaryButton className="rf-btn--lg" onClick={openCreateDay}>
-          + LOG WORKOUT NOW
+          + Log workout
         </PrimaryButton>
       </div>
 
@@ -161,7 +208,8 @@ export function Workouts() {
           <input
             type="search"
             className="rf-input rf-search-input"
-            placeholder="Search logged exercises, split type, or notes…"
+            aria-label="Search workout history"
+            placeholder="Search workout history…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -191,7 +239,8 @@ export function Workouts() {
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {workouts.map((day) => {
             const isExpanded = expandedDayId === day.id;
-            const totalSets = day.exercises.reduce((acc, ex) => acc + ex.sets.length, 0);
+            const exercises = day.exercises || [];
+            const totalSets = exercises.reduce((acc, ex) => acc + (ex.sets || []).length, 0);
 
             return (
               <div
@@ -199,24 +248,36 @@ export function Workouts() {
                 className={`rf-workout-card${isExpanded ? " rf-workout-card--expanded" : ""}`}
               >
                 {/* Accordion Header */}
-                <div
-                  className="rf-workout-header"
-                  onClick={() => setExpandedDayId(isExpanded ? null : day.id)}
-                >
-                  <div className="rf-workout-identity">
-                    <div className="rf-workout-title-group">
-                      <div className="rf-workout-day-badge">
-                        <span className="rf-workout-session-name">
-                          {day.day || `Session #${day.day_number}`}
-                        </span>
-                        <span className="rf-workout-date">{formatDate(day.date)}</span>
-                      </div>
-                      <div className="rf-workout-summary">
-                        {day.exercises.length} exercises <span aria-hidden="true">·</span>{" "}
-                        {totalSets} sets
+                <div className="rf-workout-header">
+                  <button
+                    type="button"
+                    className="rf-workout-header-toggle"
+                    aria-expanded={isExpanded}
+                    aria-controls={isExpanded ? `workout-session-${day.id}` : undefined}
+                    aria-label={`${isExpanded ? "Collapse" : "Expand"} ${day.day || `session ${day.day_number}`}`}
+                    onClick={() => setExpandedDayId(isExpanded ? null : day.id)}
+                  >
+                    <div className="rf-workout-identity">
+                      <div className="rf-workout-title-group">
+                        <div className="rf-workout-day-badge">
+                          <span className="rf-workout-session-name">
+                            {day.day || `Session #${day.day_number}`}
+                          </span>
+                          <span className="rf-workout-date">{formatDate(day.date)}</span>
+                        </div>
+                        <div className="rf-workout-summary">
+                          {exercises.length} exercises <span aria-hidden="true">·</span> {totalSets}{" "}
+                          sets
+                        </div>
                       </div>
                     </div>
-                  </div>
+                    <span
+                      aria-hidden="true"
+                      className={`rf-workout-chevron${isExpanded ? " rf-workout-chevron--expanded" : ""}`}
+                    >
+                      ▼
+                    </span>
+                  </button>
 
                   <div className="rf-workout-header-actions">
                     <button
@@ -232,12 +293,6 @@ export function Workouts() {
                     >
                       Edit
                     </button>
-                    <span
-                      aria-hidden="true"
-                      className={`rf-workout-chevron${isExpanded ? " rf-workout-chevron--expanded" : ""}`}
-                    >
-                      ▼
-                    </span>
                   </div>
                 </div>
 
@@ -250,6 +305,8 @@ export function Workouts() {
                       exit={{ opacity: 0, height: 0 }}
                       transition={{ type: "spring", stiffness: 300, damping: 26 }}
                       className="rf-workout-body"
+                      id={`workout-session-${day.id}`}
+                      style={{ overflow: "hidden" }}
                     >
                       {/* AI Session Trigger */}
                       <div
@@ -282,24 +339,30 @@ export function Workouts() {
                       </div>
 
                       {/* In-line AI Diagnostic Results */}
+                      {aiLoading[day.id] && (
+                        <div
+                          className="rf-pod rf-pod--violet rf-coach-review-loading"
+                          aria-live="polite"
+                          aria-busy="true"
+                        >
+                          <div className="rf-badge rf-badge--violet" style={{ marginBottom: 14 }}>
+                            ◈ Coach Tactical Review
+                          </div>
+                          <Skeleton height="16px" width="92%" />
+                          <Skeleton height="16px" width="78%" />
+                          <Skeleton height="16px" width="64%" />
+                        </div>
+                      )}
+
                       {aiResults[day.id] && (
                         <div
-                          className="rf-pod rf-pod--violet"
+                          className="rf-pod rf-pod--violet rf-coach-review"
                           style={{ margin: "16px 0", padding: 18 }}
                         >
                           <div className="rf-badge rf-badge--violet" style={{ marginBottom: 10 }}>
                             ◈ Coach Tactical Review
                           </div>
-                          <p
-                            style={{
-                              margin: "0 0 12px 0",
-                              fontSize: "0.92rem",
-                              lineHeight: 1.6,
-                              color: "var(--rf-text-bright)",
-                            }}
-                          >
-                            {aiResults[day.id].deep_review}
-                          </p>
+                          <CoachReply text={aiResults[day.id].deep_review} />
 
                           {aiResults[day.id].good_points?.length > 0 && (
                             <div className="rf-insight-card rf-insight-card--success">
@@ -348,24 +411,17 @@ export function Workouts() {
 
                       {/* Exercises */}
                       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                        {day.exercises.map((ex) => (
+                        {(day.exercises || []).map((ex) => (
                           <div key={ex.id} className="rf-exercise-pod">
                             <div className="rf-exercise-head">
-                              <div
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 8,
-                                  flexWrap: "wrap",
-                                }}
-                              >
+                              <div className="rf-exercise-identity">
                                 <span className="rf-badge rf-badge--cyan">
-                                  {ex.workout_type.replace("_", " ")}
+                                  {(ex.workout_type || "workout").replace("_", " ")}
                                 </span>
                                 <span className="rf-exercise-name">{ex.exercise_name}</span>
                               </div>
 
-                              <div style={{ display: "flex", gap: 8 }}>
+                              <div className="rf-exercise-actions">
                                 <button
                                   type="button"
                                   className="rf-btn rf-btn--ghost rf-btn--sm"
@@ -397,10 +453,8 @@ export function Workouts() {
                             )}
 
                             {/* Sets Chips */}
-                            <div
-                              style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}
-                            >
-                              {ex.sets.map((set, sIdx) => (
+                            <div className="rf-exercise-sets">
+                              {(ex.sets || []).map((set, sIdx) => (
                                 <div
                                   key={set.id || sIdx}
                                   className={`rf-set-chip ${set.completed ? "rf-set-chip--done" : ""}`}
@@ -461,13 +515,4 @@ export function Workouts() {
       />
     </div>
   );
-}
-
-function formatDate(iso) {
-  if (!iso) return "";
-  return new Date(iso + "T00:00:00").toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
 }

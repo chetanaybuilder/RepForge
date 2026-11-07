@@ -29,7 +29,9 @@ function getAllowedOrigin(origin) {
     const parsed = new URL(origin);
     if (parsed.origin === "null") return null;
     if (ALLOWED_ORIGINS.includes(parsed.origin)) return parsed.origin;
-    if (parsed.hostname === "localhost" || parsed.hostname.endsWith("pages.dev")) return parsed.origin;
+    if (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1") {
+      return parsed.origin;
+    }
     return null;
   } catch {
     return null;
@@ -38,13 +40,15 @@ function getAllowedOrigin(origin) {
 
 function base64UrlDecode(value) {
   const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
-  const pad = normalized.length % 4 === 0 ? "" : "=".repeat(4 - (normalized.length % 4));
+  const pad =
+    normalized.length % 4 === 0 ? "" : "=".repeat(4 - (normalized.length % 4));
   return atob(normalized + pad);
 }
 
 function validateCsrfToken(c, user) {
   if (!user) return false;
-  const headerValue = c.req.header("X-CSRF-Token") || c.req.header("x-csrf-token");
+  const headerValue =
+    c.req.header("X-CSRF-Token") || c.req.header("x-csrf-token");
   const bodyValue = c.req.header("X-Csrf-Token");
   const expected = user.csrf_token;
   const provided = headerValue || bodyValue;
@@ -59,12 +63,19 @@ app.use("*", async (c, next) => {
   c.header("X-Frame-Options", "DENY");
   c.header("Referrer-Policy", "strict-origin-when-cross-origin");
   c.header("Cross-Origin-Opener-Policy", "same-origin");
+  c.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
   if (allowedOrigin) {
     c.header("Access-Control-Allow-Origin", allowedOrigin);
     c.header("Access-Control-Allow-Credentials", "true");
   }
-  c.header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
-  c.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-CSRF-Token");
+  c.header(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+  );
+  c.header(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization, X-CSRF-Token",
+  );
 
   if (c.req.method === "OPTIONS") {
     return c.text("", 204);
@@ -73,10 +84,23 @@ app.use("*", async (c, next) => {
   if (["POST", "PUT", "PATCH", "DELETE"].includes(c.req.method)) {
     const user = await getCurrentUser(c);
     if (!user) {
-      return c.json({ error: { code: "unauthorized", message: "Authentication required." } }, 401);
+      return c.json(
+        {
+          error: { code: "unauthorized", message: "Authentication required." },
+        },
+        401,
+      );
     }
     if (!validateCsrfToken(c, user)) {
-      return c.json({ error: { code: "csrf_error", message: "Invalid or missing CSRF token." } }, 403);
+      return c.json(
+        {
+          error: {
+            code: "csrf_error",
+            message: "Invalid or missing CSRF token.",
+          },
+        },
+        403,
+      );
     }
   }
 
@@ -95,7 +119,9 @@ function generateId() {
 async function parseJsonBody(c) {
   try {
     const body = await c.req.json();
-    return body && typeof body === "object" && !Array.isArray(body) ? body : null;
+    return body && typeof body === "object" && !Array.isArray(body)
+      ? body
+      : null;
   } catch {
     return null;
   }
@@ -138,7 +164,10 @@ async function getCurrentUser(c) {
 async function requireAuth(c, next) {
   const user = await getCurrentUser(c);
   if (!user) {
-    return c.json({ error: { code: "unauthorized", message: "Authentication required." } }, 401);
+    return c.json(
+      { error: { code: "unauthorized", message: "Authentication required." } },
+      401,
+    );
   }
   c.set("user", user);
   await next();
@@ -197,7 +226,10 @@ app.get("/api/me", async (c) => {
 });
 
 app.get("/auth/demo-login", (c) => {
-  return c.json({ error: { code: "disabled", message: "Demo login is disabled." } }, 403);
+  return c.json(
+    { error: { code: "disabled", message: "Demo login is disabled." } },
+    403,
+  );
 });
 
 app.get("/auth/csrf", async (c) => {
@@ -215,7 +247,9 @@ app.get("/auth/google", async (c) => {
   if (db) {
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
     await db
-      .prepare("INSERT INTO oauth_states (state, nonce, expires_at) VALUES (?, ?, ?)")
+      .prepare(
+        "INSERT INTO oauth_states (state, nonce, expires_at) VALUES (?, ?, ?)",
+      )
       .bind(state, nonce, expiresAt)
       .run();
   }
@@ -247,7 +281,9 @@ app.get("/auth/google/callback", async (c) => {
   }
 
   const stateRow = await db
-    .prepare("SELECT state, nonce, expires_at FROM oauth_states WHERE state = ?")
+    .prepare(
+      "SELECT state, nonce, expires_at FROM oauth_states WHERE state = ?",
+    )
     .bind(state)
     .first();
 
@@ -293,7 +329,11 @@ app.get("/auth/google/callback", async (c) => {
     if (payload.aud !== c.env.GOOGLE_CLIENT_ID) {
       return c.redirect(`${frontendUrl}/login?error=invalid_token`);
     }
-    if (!["accounts.google.com", "https://accounts.google.com"].includes(payload.iss)) {
+    if (
+      !["accounts.google.com", "https://accounts.google.com"].includes(
+        payload.iss,
+      )
+    ) {
       return c.redirect(`${frontendUrl}/login?error=invalid_token`);
     }
     if (payload.nonce !== stateRow.nonce || payload.exp <= nowSeconds) {
@@ -314,14 +354,23 @@ app.get("/auth/google/callback", async (c) => {
       const userId = generateId();
       await db
         .prepare(
-          "INSERT INTO users (id, google_id, email, name, avatar_url) VALUES (?, ?, ?, ?, ?)"
+          "INSERT INTO users (id, google_id, email, name, avatar_url) VALUES (?, ?, ?, ?, ?)",
         )
         .bind(userId, googleId, email, name, avatarUrl)
         .run();
-      user = { id: userId, google_id: googleId, email, name, avatar_url: avatarUrl };
+      user = {
+        id: userId,
+        google_id: googleId,
+        email,
+        name,
+        avatar_url: avatarUrl,
+      };
     }
 
-    await db.prepare("DELETE FROM oauth_states WHERE state = ?").bind(state).run();
+    await db
+      .prepare("DELETE FROM oauth_states WHERE state = ?")
+      .bind(state)
+      .run();
 
     const sessionId = generateRandomToken(32);
     const csrfToken = generateRandomToken(24);
@@ -330,7 +379,7 @@ app.get("/auth/google/callback", async (c) => {
 
     await db
       .prepare(
-        "INSERT INTO sessions (id, user_id, csrf_token, user_agent, ip_address, expires_at) VALUES (?, ?, ?, ?, ?, ?)"
+        "INSERT INTO sessions (id, user_id, csrf_token, user_agent, ip_address, expires_at) VALUES (?, ?, ?, ?, ?, ?)",
       )
       .bind(
         sessionId,
@@ -338,7 +387,7 @@ app.get("/auth/google/callback", async (c) => {
         csrfToken,
         c.req.header("User-Agent") || "",
         c.req.header("CF-Connecting-IP") || "",
-        expiresAt
+        expiresAt,
       )
       .run();
 
@@ -378,21 +427,34 @@ app.get("/api/exercises", async (c) => {
   const search = c.req.query("search");
   const favoritesOnly = c.req.query("favorites_only") === "true";
   const page = Math.max(1, parseInt(c.req.query("page") || "1", 10));
-  const limit = Math.min(100, Math.max(1, parseInt(c.req.query("limit") || "24", 10)));
+  const limit = Math.min(
+    100,
+    Math.max(1, parseInt(c.req.query("limit") || "24", 10)),
+  );
   const offset =
     c.req.query("offset") !== undefined
       ? Math.max(0, parseInt(c.req.query("offset"), 10))
       : (page - 1) * limit;
 
   if (!db) {
-    return c.json({ items: [], exercises: [], total: 0, page, limit, offset, total_pages: 0 });
+    return c.json({
+      items: [],
+      exercises: [],
+      total: 0,
+      page,
+      limit,
+      offset,
+      total_pages: 0,
+    });
   }
 
   let favoriteIds = new Set();
   if (user && db) {
     try {
       const favRes = await db
-        .prepare("SELECT exercise_id FROM user_favorite_exercises WHERE user_id = ?")
+        .prepare(
+          "SELECT exercise_id FROM user_favorite_exercises WHERE user_id = ?",
+        )
         .bind(user.id)
         .all();
       favoriteIds = new Set((favRes.results || []).map((r) => r.exercise_id));
@@ -425,7 +487,9 @@ app.get("/api/exercises", async (c) => {
     params.push(`%${search}%`);
   }
   if (favoritesOnly && user) {
-    conditions.push("id IN (SELECT exercise_id FROM user_favorite_exercises WHERE user_id = ?)");
+    conditions.push(
+      "id IN (SELECT exercise_id FROM user_favorite_exercises WHERE user_id = ?)",
+    );
     params.push(user.id);
   }
 
@@ -471,15 +535,19 @@ app.get("/api/exercises/filters", async (c) => {
   }
 
   const categoriesRes = await db
-    .prepare("SELECT DISTINCT category FROM exercises WHERE category IS NOT NULL ORDER BY category")
+    .prepare(
+      "SELECT DISTINCT category FROM exercises WHERE category IS NOT NULL ORDER BY category",
+    )
     .all();
   const equipmentRes = await db
     .prepare(
-      "SELECT DISTINCT equipment FROM exercises WHERE equipment IS NOT NULL ORDER BY equipment"
+      "SELECT DISTINCT equipment FROM exercises WHERE equipment IS NOT NULL ORDER BY equipment",
     )
     .all();
   const levelsRes = await db
-    .prepare("SELECT DISTINCT level FROM exercises WHERE level IS NOT NULL ORDER BY level")
+    .prepare(
+      "SELECT DISTINCT level FROM exercises WHERE level IS NOT NULL ORDER BY level",
+    )
     .all();
 
   // Known target muscle groups
@@ -514,11 +582,21 @@ app.get("/api/exercises/filters", async (c) => {
 app.get("/api/exercises/:id", async (c) => {
   const db = getDb(c);
   const id = c.req.param("id");
-  if (!db) return c.json({ error: { code: "not_found", message: "Exercise not found." } }, 404);
+  if (!db)
+    return c.json(
+      { error: { code: "not_found", message: "Exercise not found." } },
+      404,
+    );
 
-  const row = await db.prepare("SELECT * FROM exercises WHERE id = ?").bind(id).first();
+  const row = await db
+    .prepare("SELECT * FROM exercises WHERE id = ?")
+    .bind(id)
+    .first();
   if (!row) {
-    return c.json({ error: { code: "not_found", message: "Exercise not found." } }, 404);
+    return c.json(
+      { error: { code: "not_found", message: "Exercise not found." } },
+      404,
+    );
   }
 
   return c.json({
@@ -570,7 +648,7 @@ app.get("/api/exercises/favorites", requireAuth, async (c) => {
       `SELECT e.* FROM exercises e
        JOIN user_favorite_exercises f ON e.id = f.exercise_id
        WHERE f.user_id = ?
-       ORDER BY f.created_at DESC`
+       ORDER BY f.created_at DESC`,
     )
     .bind(user.id)
     .all();
@@ -592,7 +670,9 @@ app.post("/api/exercises/:id/favorite", requireAuth, async (c) => {
   const db = getDb(c);
   if (db) {
     await db
-      .prepare("INSERT OR IGNORE INTO user_favorite_exercises (user_id, exercise_id) VALUES (?, ?)")
+      .prepare(
+        "INSERT OR IGNORE INTO user_favorite_exercises (user_id, exercise_id) VALUES (?, ?)",
+      )
       .bind(user.id, exerciseId)
       .run();
   }
@@ -605,7 +685,9 @@ app.delete("/api/exercises/:id/favorite", requireAuth, async (c) => {
   const db = getDb(c);
   if (db) {
     await db
-      .prepare("DELETE FROM user_favorite_exercises WHERE user_id = ? AND exercise_id = ?")
+      .prepare(
+        "DELETE FROM user_favorite_exercises WHERE user_id = ? AND exercise_id = ?",
+      )
       .bind(user.id, exerciseId)
       .run();
   }
@@ -631,12 +713,16 @@ async function fetchUserWorkouts(db, userId) {
 }
 
 function computeStreak(workouts) {
-  if (!workouts || workouts.length === 0) return { current_streak: 0, longest_streak: 0 };
-  const dates = Array.from(new Set(workouts.map((w) => w.date.substring(0, 10)))).sort();
+  if (!workouts || workouts.length === 0)
+    return { current_streak: 0, longest_streak: 0 };
+  const dates = Array.from(
+    new Set(workouts.map((w) => w.date.substring(0, 10))),
+  ).sort();
   let longest = 1;
   let currentRun = 1;
   for (let i = 1; i < dates.length; i++) {
-    const diff = (new Date(dates[i]) - new Date(dates[i - 1])) / (1000 * 60 * 60 * 24);
+    const diff =
+      (new Date(dates[i]) - new Date(dates[i - 1])) / (1000 * 60 * 60 * 24);
     if (diff === 1) {
       currentRun++;
     } else {
@@ -648,7 +734,9 @@ function computeStreak(workouts) {
 
   // Compute active streak
   const today = new Date().toISOString().substring(0, 10);
-  const yesterday = new Date(Date.now() - 86400000).toISOString().substring(0, 10);
+  const yesterday = new Date(Date.now() - 86400000)
+    .toISOString()
+    .substring(0, 10);
   const dateSet = new Set(dates);
   let activeStreak = 0;
   let cursor = dateSet.has(today)
@@ -693,7 +781,9 @@ function computeVolumeTrend(workouts, weeks = 12) {
     if (d >= cutoff) {
       // ISO week format YYYY-Wxx
       const startOfYear = new Date(d.getFullYear(), 0, 1);
-      const weekNum = Math.ceil(((d - startOfYear) / 86400000 + startOfYear.getDay() + 1) / 7);
+      const weekNum = Math.ceil(
+        ((d - startOfYear) / 86400000 + startOfYear.getDay() + 1) / 7,
+      );
       const key = `${d.getFullYear()}-W${String(weekNum).padStart(2, "0")}`;
       const vol = Number(w.weight) * Number(w.reps);
       trend[key] = (trend[key] || 0) + vol;
@@ -747,7 +837,13 @@ function detectPlateaus(workouts) {
   return plateaus;
 }
 
-async function fetchHierarchicalWorkouts(db, userId, search = null, limit = 50, offset = 0) {
+async function fetchHierarchicalWorkouts(
+  db,
+  userId,
+  search = null,
+  limit = 50,
+  offset = 0,
+) {
   if (!db) return [];
 
   let dayQuery = `
@@ -773,7 +869,10 @@ async function fetchHierarchicalWorkouts(db, userId, search = null, limit = 50, 
   dayQuery += ` ORDER BY d.date DESC, d.created_at DESC LIMIT ? OFFSET ?`;
   dayParams.push(limit, offset);
 
-  const { results: days } = await db.prepare(dayQuery).bind(...dayParams).all();
+  const { results: days } = await db
+    .prepare(dayQuery)
+    .bind(...dayParams)
+    .all();
   if (!days || days.length === 0) return [];
 
   const dayIds = days.map((d) => d.id);
@@ -785,7 +884,10 @@ async function fetchHierarchicalWorkouts(db, userId, search = null, limit = 50, 
     WHERE workout_day_id IN (${placeholders})
     ORDER BY order_index ASC
   `;
-  const { results: exercises } = await db.prepare(exQuery).bind(...dayIds).all();
+  const { results: exercises } = await db
+    .prepare(exQuery)
+    .bind(...dayIds)
+    .all();
   const exerciseIds = (exercises || []).map((e) => e.id);
 
   let sets = [];
@@ -797,7 +899,10 @@ async function fetchHierarchicalWorkouts(db, userId, search = null, limit = 50, 
       WHERE workout_exercise_id IN (${setPlaceholders})
       ORDER BY set_number ASC
     `;
-    const setRes = await db.prepare(setQuery).bind(...exerciseIds).all();
+    const setRes = await db
+      .prepare(setQuery)
+      .bind(...exerciseIds)
+      .all();
     sets = setRes.results || [];
   }
 
@@ -816,7 +921,8 @@ async function fetchHierarchicalWorkouts(db, userId, search = null, limit = 50, 
 
   const exercisesByDay = {};
   for (const e of exercises || []) {
-    if (!exercisesByDay[e.workout_day_id]) exercisesByDay[e.workout_day_id] = [];
+    if (!exercisesByDay[e.workout_day_id])
+      exercisesByDay[e.workout_day_id] = [];
     exercisesByDay[e.workout_day_id].push({
       id: e.id,
       exercise_name: e.exercise_name,
@@ -840,10 +946,19 @@ app.get("/api/workouts", requireAuth, async (c) => {
   const user = c.get("user");
   const db = getDb(c);
   const search = c.req.query("search");
-  const limit = Math.min(500, Math.max(1, parseInt(c.req.query("limit") || "50", 10)));
+  const limit = Math.min(
+    500,
+    Math.max(1, parseInt(c.req.query("limit") || "50", 10)),
+  );
   const offset = Math.max(0, parseInt(c.req.query("offset") || "0", 10));
 
-  const days = await fetchHierarchicalWorkouts(db, user.id, search, limit, offset);
+  const days = await fetchHierarchicalWorkouts(
+    db,
+    user.id,
+    search,
+    limit,
+    offset,
+  );
   return c.json({ workouts: days, count: days.length });
 });
 
@@ -852,12 +967,23 @@ app.post("/api/workouts", requireAuth, async (c) => {
   const db = getDb(c);
   const body = await parseJsonBody(c);
   if (!body) {
-    return c.json({ error: { code: "validation_error", message: "Request body must be a JSON object." } }, 400);
+    return c.json(
+      {
+        error: {
+          code: "validation_error",
+          message: "Request body must be a JSON object.",
+        },
+      },
+      400,
+    );
   }
 
   const { date, day: dayLabel = null } = body;
   if (!date) {
-    return c.json({ error: { code: "validation_error", message: "Date is required." } }, 400);
+    return c.json(
+      { error: { code: "validation_error", message: "Date is required." } },
+      400,
+    );
   }
 
   // Normalize exercises list (supports both modal payload and flat logger)
@@ -882,21 +1008,33 @@ app.post("/api/workouts", requireAuth, async (c) => {
     ];
   } else {
     return c.json(
-      { error: { code: "validation_error", message: "At least one exercise is required." } },
-      400
+      {
+        error: {
+          code: "validation_error",
+          message: "At least one exercise is required.",
+        },
+      },
+      400,
     );
   }
 
   if (!db) {
     return c.json({
       success: true,
-      workout: { id: generateId(), date, day: dayLabel, exercises: exercisesList },
+      workout: {
+        id: generateId(),
+        date,
+        day: dayLabel,
+        exercises: exercisesList,
+      },
     });
   }
 
   // Determine next day_number
   const maxDayRow = await db
-    .prepare("SELECT COALESCE(MAX(day_number), 0) AS max_day FROM workout_days WHERE user_id = ?")
+    .prepare(
+      "SELECT COALESCE(MAX(day_number), 0) AS max_day FROM workout_days WHERE user_id = ?",
+    )
     .bind(user.id)
     .first();
   const nextDayNum = (maxDayRow?.max_day || 0) + 1;
@@ -905,7 +1043,7 @@ app.post("/api/workouts", requireAuth, async (c) => {
   const dayId = generateId();
   await db
     .prepare(
-      "INSERT INTO workout_days (id, user_id, date, day_label, day_number) VALUES (?, ?, ?, ?, ?)"
+      "INSERT INTO workout_days (id, user_id, date, day_label, day_number) VALUES (?, ?, ?, ?, ?)",
     )
     .bind(dayId, user.id, date, dayLabel, nextDayNum)
     .run();
@@ -917,9 +1055,16 @@ app.post("/api/workouts", requireAuth, async (c) => {
     const exerciseId = generateId();
     await db
       .prepare(
-        "INSERT INTO workout_exercises (id, workout_day_id, exercise_name, workout_type, notes, order_index) VALUES (?, ?, ?, ?, ?, ?)"
+        "INSERT INTO workout_exercises (id, workout_day_id, exercise_name, workout_type, notes, order_index) VALUES (?, ?, ?, ?, ?, ?)",
       )
-      .bind(exerciseId, dayId, ex.exercise_name, ex.workout_type, ex.notes || "", eIdx)
+      .bind(
+        exerciseId,
+        dayId,
+        ex.exercise_name,
+        ex.workout_type,
+        ex.notes || "",
+        eIdx,
+      )
       .run();
 
     const createdSets = [];
@@ -932,12 +1077,15 @@ app.post("/api/workouts", requireAuth, async (c) => {
       const s = setsArray[sIdx];
       const setId = generateId();
       const reps = Math.max(1, parseInt(s.reps || 10, 10));
-      const weight = Math.max(0, Number(s.weight !== undefined ? s.weight : s.weight_kg || 0));
+      const weight = Math.max(
+        0,
+        Number(s.weight !== undefined ? s.weight : s.weight_kg || 0),
+      );
       const completed = s.completed !== false ? 1 : 0;
 
       await db
         .prepare(
-          "INSERT INTO workout_sets (id, workout_exercise_id, set_number, reps, weight_kg, completed) VALUES (?, ?, ?, ?, ?, ?)"
+          "INSERT INTO workout_sets (id, workout_exercise_id, set_number, reps, weight_kg, completed) VALUES (?, ?, ?, ?, ?, ?)",
         )
         .bind(setId, exerciseId, sIdx + 1, reps, weight, completed)
         .run();
@@ -1003,7 +1151,8 @@ app.put("/api/workouts/:day_id", requireAuth, async (c) => {
   if (
     !body ||
     !dateIsValid ||
-    (body.day != null && (typeof body.day !== "string" || body.day.length > 50)) ||
+    (body.day != null &&
+      (typeof body.day !== "string" || body.day.length > 50)) ||
     !Array.isArray(body.exercises) ||
     body.exercises.length < 1 ||
     body.exercises.length > 30 ||
@@ -1015,7 +1164,8 @@ app.put("/api/workouts/:day_id", requireAuth, async (c) => {
         exercise.exercise_name.length > 500 ||
         !allowedTypes.has(exercise.workout_type) ||
         (exercise.notes != null &&
-          (typeof exercise.notes !== "string" || exercise.notes.length > 2000)) ||
+          (typeof exercise.notes !== "string" ||
+            exercise.notes.length > 2000)) ||
         !Array.isArray(exercise.sets) ||
         exercise.sets.length < 1 ||
         exercise.sets.length > 50 ||
@@ -1030,25 +1180,42 @@ app.put("/api/workouts/:day_id", requireAuth, async (c) => {
             weight < 0 ||
             weight > 1000
           );
-        })
+        }),
     )
   ) {
     return c.json(
-      { error: { code: "validation_error", message: "Workout session data is invalid." } },
-      400
+      {
+        error: {
+          code: "validation_error",
+          message: "Workout session data is invalid.",
+        },
+      },
+      400,
     );
   }
 
   if (!db) {
-    return c.json({ workout: { id: dayId, date: body.date, day: body.day || null, exercises: body.exercises } });
+    return c.json({
+      workout: {
+        id: dayId,
+        date: body.date,
+        day: body.day || null,
+        exercises: body.exercises,
+      },
+    });
   }
 
   const existing = await db
-    .prepare("SELECT id, day_number FROM workout_days WHERE id = ? AND user_id = ?")
+    .prepare(
+      "SELECT id, day_number FROM workout_days WHERE id = ? AND user_id = ?",
+    )
     .bind(dayId, user.id)
     .first();
   if (!existing) {
-    return c.json({ error: { code: "not_found", message: "Workout session not found." } }, 404);
+    return c.json(
+      { error: { code: "not_found", message: "Workout session not found." } },
+      404,
+    );
   }
 
   const exercises = body.exercises.map((exercise, exerciseIndex) => {
@@ -1062,9 +1229,16 @@ app.put("/api/workouts/:day_id", requireAuth, async (c) => {
       setStatements.push(
         db
           .prepare(
-            "INSERT INTO workout_sets (id, workout_exercise_id, set_number, reps, weight_kg, completed) VALUES (?, ?, ?, ?, ?, ?)"
+            "INSERT INTO workout_sets (id, workout_exercise_id, set_number, reps, weight_kg, completed) VALUES (?, ?, ?, ?, ?, ?)",
           )
-          .bind(setId, exerciseId, setIndex + 1, reps, weight, completed ? 1 : 0)
+          .bind(
+            setId,
+            exerciseId,
+            setIndex + 1,
+            reps,
+            weight,
+            completed ? 1 : 0,
+          ),
       );
       return {
         id: setId,
@@ -1085,7 +1259,7 @@ app.put("/api/workouts/:day_id", requireAuth, async (c) => {
       statements: [
         db
           .prepare(
-            "INSERT INTO workout_exercises (id, workout_day_id, exercise_name, workout_type, notes, order_index) VALUES (?, ?, ?, ?, ?, ?)"
+            "INSERT INTO workout_exercises (id, workout_day_id, exercise_name, workout_type, notes, order_index) VALUES (?, ?, ?, ?, ?, ?)",
           )
           .bind(
             exerciseId,
@@ -1093,7 +1267,7 @@ app.put("/api/workouts/:day_id", requireAuth, async (c) => {
             exercise.exercise_name.trim(),
             exercise.workout_type,
             exercise.notes || "",
-            exerciseIndex
+            exerciseIndex,
           ),
         ...setStatements,
       ],
@@ -1103,10 +1277,12 @@ app.put("/api/workouts/:day_id", requireAuth, async (c) => {
   const statements = [
     db
       .prepare(
-        "UPDATE workout_days SET date = ?, day_label = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?"
+        "UPDATE workout_days SET date = ?, day_label = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?",
       )
       .bind(body.date, body.day || null, dayId, user.id),
-    db.prepare("DELETE FROM workout_exercises WHERE workout_day_id = ?").bind(dayId),
+    db
+      .prepare("DELETE FROM workout_exercises WHERE workout_day_id = ?")
+      .bind(dayId),
     ...exercises.flatMap((exercise) => exercise.statements),
   ];
   await db.batch(statements);
@@ -1136,13 +1312,26 @@ app.put("/api/workouts/exercises/:exercise_id", requireAuth, async (c) => {
   const db = getDb(c);
   const body = await parseJsonBody(c);
   if (!body) {
-    return c.json({ error: { code: "validation_error", message: "Request body must be a JSON object." } }, 400);
+    return c.json(
+      {
+        error: {
+          code: "validation_error",
+          message: "Request body must be a JSON object.",
+        },
+      },
+      400,
+    );
   }
 
   if (!body.exercise_name || !body.workout_type) {
     return c.json(
-      { error: { code: "validation_error", message: "exercise_name and workout_type are required." } },
-      400
+      {
+        error: {
+          code: "validation_error",
+          message: "exercise_name and workout_type are required.",
+        },
+      },
+      400,
     );
   }
 
@@ -1155,37 +1344,46 @@ app.put("/api/workouts/exercises/:exercise_id", requireAuth, async (c) => {
     .prepare(
       `SELECT e.id, e.workout_day_id FROM workout_exercises e
        JOIN workout_days d ON e.workout_day_id = d.id
-       WHERE e.id = ? AND d.user_id = ?`
+       WHERE e.id = ? AND d.user_id = ?`,
     )
     .bind(exerciseId, user.id)
     .first();
 
   if (!existing) {
-    return c.json({ error: { code: "not_found", message: "Exercise not found." } }, 404);
+    return c.json(
+      { error: { code: "not_found", message: "Exercise not found." } },
+      404,
+    );
   }
 
   const { exercise_name, workout_type, notes = "", sets = [] } = body;
   await db
     .prepare(
       `UPDATE workout_exercises SET exercise_name = ?, workout_type = ?, notes = ?, updated_at = datetime('now')
-       WHERE id = ?`
+       WHERE id = ?`,
     )
     .bind(exercise_name, workout_type, notes, exerciseId)
     .run();
 
   // Delete existing sets and reinsert
-  await db.prepare("DELETE FROM workout_sets WHERE workout_exercise_id = ?").bind(exerciseId).run();
+  await db
+    .prepare("DELETE FROM workout_sets WHERE workout_exercise_id = ?")
+    .bind(exerciseId)
+    .run();
 
   const insertedSets = [];
   for (let s = 0; s < sets.length; s++) {
     const sItem = sets[s];
     const setId = sItem.id || generateId();
-    const w = Math.max(0, Number(sItem.weight !== undefined ? sItem.weight : sItem.weight_kg || 0));
+    const w = Math.max(
+      0,
+      Number(sItem.weight !== undefined ? sItem.weight : sItem.weight_kg || 0),
+    );
     const r = Math.max(1, parseInt(sItem.reps || 1, 10));
     const completed = sItem.completed !== false ? 1 : 0;
     await db
       .prepare(
-        "INSERT INTO workout_sets (id, workout_exercise_id, set_number, reps, weight_kg, completed) VALUES (?, ?, ?, ?, ?, ?)"
+        "INSERT INTO workout_sets (id, workout_exercise_id, set_number, reps, weight_kg, completed) VALUES (?, ?, ?, ?, ?, ?)",
       )
       .bind(setId, exerciseId, s + 1, r, w, completed)
       .run();
@@ -1225,24 +1423,35 @@ app.delete("/api/workouts/exercises/:exercise_id", requireAuth, async (c) => {
     .prepare(
       `SELECT e.id, e.workout_day_id FROM workout_exercises e
        JOIN workout_days d ON e.workout_day_id = d.id
-       WHERE e.id = ? AND d.user_id = ?`
+       WHERE e.id = ? AND d.user_id = ?`,
     )
     .bind(exerciseId, user.id)
     .first();
 
   if (!existing) {
-    return c.json({ error: { code: "not_found", message: "Exercise not found." } }, 404);
+    return c.json(
+      { error: { code: "not_found", message: "Exercise not found." } },
+      404,
+    );
   }
 
   const dayId = existing.workout_day_id;
 
   // Delete sets and exercise
-  await db.prepare("DELETE FROM workout_sets WHERE workout_exercise_id = ?").bind(exerciseId).run();
-  await db.prepare("DELETE FROM workout_exercises WHERE id = ?").bind(exerciseId).run();
+  await db
+    .prepare("DELETE FROM workout_sets WHERE workout_exercise_id = ?")
+    .bind(exerciseId)
+    .run();
+  await db
+    .prepare("DELETE FROM workout_exercises WHERE id = ?")
+    .bind(exerciseId)
+    .run();
 
   // If no exercises remain in this day, clean up day
   const remaining = await db
-    .prepare("SELECT COUNT(*) as count FROM workout_exercises WHERE workout_day_id = ?")
+    .prepare(
+      "SELECT COUNT(*) as count FROM workout_exercises WHERE workout_day_id = ?",
+    )
     .bind(dayId)
     .first();
 
@@ -1257,15 +1466,23 @@ app.get("/api/workouts/stats", requireAuth, async (c) => {
   const user = c.get("user");
   const db = getDb(c);
   const workouts = await fetchUserWorkouts(db, user.id);
-  const recentWorkouts = await fetchHierarchicalWorkouts(db, user.id, null, 10, 0);
+  const recentWorkouts = await fetchHierarchicalWorkouts(
+    db,
+    user.id,
+    null,
+    10,
+    0,
+  );
 
   const streak = computeStreak(workouts);
   const prs = computePRs(workouts);
   const totalVolume = workouts.reduce(
     (sum, w) => sum + (Number(w.weight) || 0) * (Number(w.reps) || 0),
-    0
+    0,
   );
-  const trainingDays = new Set(workouts.map((w) => (w.date || "").substring(0, 10))).size;
+  const trainingDays = new Set(
+    workouts.map((w) => (w.date || "").substring(0, 10)),
+  ).size;
   const uniqueExercises = new Set(workouts.map((w) => w.exercise_name)).size;
 
   return c.json({
@@ -1341,7 +1558,7 @@ app.delete("/api/workouts/:id", requireAuth, async (c) => {
            SELECT we.id FROM workout_exercises we
            JOIN workout_days wd ON we.workout_day_id = wd.id
            WHERE wd.user_id = ?
-         )`
+         )`,
       )
       .bind(id, user.id)
       .run();
@@ -1379,9 +1596,9 @@ function computeGoalProgress(goal, workouts) {
       workoutsForGoal
         .filter((w) => {
           const d = new Date(w.date);
-          return d >= monday && (!Number.isNaN(d.getTime()));
+          return d >= monday && !Number.isNaN(d.getTime());
         })
-        .map((w) => w.date.substring(0, 10))
+        .map((w) => w.date.substring(0, 10)),
     );
     current = sessionsThisWeek.size;
     unit = "sessions this week";
@@ -1398,11 +1615,15 @@ function computeGoalProgress(goal, workouts) {
       if (Number.isNaN(d.getTime())) return false;
       return !startDate || d >= startDate;
     });
-    current = relevant.reduce((sum, w) => sum + (Number(w.weight) || 0) * (Number(w.reps) || 0), 0);
+    current = relevant.reduce(
+      (sum, w) => sum + (Number(w.weight) || 0) * (Number(w.reps) || 0),
+      0,
+    );
     unit = "kg total volume";
   }
 
-  const progressPct = target > 0 ? Math.min(999.9, (current / target) * 100) : 0;
+  const progressPct =
+    target > 0 ? Math.min(999.9, (current / target) * 100) : 0;
   return {
     current_value: Number(current) || 0,
     target_value: Number(target) || 0,
@@ -1419,12 +1640,17 @@ app.get("/api/goals", requireAuth, async (c) => {
   if (!db) return c.json({ goals: [] });
 
   const { results } = await db
-    .prepare("SELECT * FROM goals WHERE user_id = ? AND is_active = 1 ORDER BY created_at DESC")
+    .prepare(
+      "SELECT * FROM goals WHERE user_id = ? AND is_active = 1 ORDER BY created_at DESC",
+    )
     .bind(user.id)
     .all();
 
   const workouts = await fetchUserWorkouts(db, user.id);
-  const goals = (results || []).map((goal) => ({ ...goal, progress: computeGoalProgress(goal, workouts) }));
+  const goals = (results || []).map((goal) => ({
+    ...goal,
+    progress: computeGoalProgress(goal, workouts),
+  }));
   return c.json({ goals });
 });
 
@@ -1474,7 +1700,15 @@ app.post("/api/goals", requireAuth, async (c) => {
   const db = getDb(c);
   const body = await parseJsonBody(c);
   if (!body) {
-    return c.json({ error: { code: "validation_error", message: "Request body must be a JSON object." } }, 400);
+    return c.json(
+      {
+        error: {
+          code: "validation_error",
+          message: "Request body must be a JSON object.",
+        },
+      },
+      400,
+    );
   }
 
   const {
@@ -1485,26 +1719,50 @@ app.post("/api/goals", requireAuth, async (c) => {
     period_end = null,
   } = body;
 
-  const allowedGoalTypes = new Set(["weekly_frequency", "exercise_pr", "volume"]);
+  const allowedGoalTypes = new Set([
+    "weekly_frequency",
+    "exercise_pr",
+    "volume",
+  ]);
   if (!goal_type || !allowedGoalTypes.has(goal_type)) {
     return c.json(
-      { error: { code: "validation_error", message: "goal_type must be one of weekly_frequency, exercise_pr, or volume." } },
-      400
+      {
+        error: {
+          code: "validation_error",
+          message:
+            "goal_type must be one of weekly_frequency, exercise_pr, or volume.",
+        },
+      },
+      400,
     );
   }
 
   const parsedTarget = Number(target_value);
-  if (!Number.isFinite(parsedTarget) || parsedTarget <= 0 || parsedTarget > 1000000) {
+  if (
+    !Number.isFinite(parsedTarget) ||
+    parsedTarget <= 0 ||
+    parsedTarget > 1000000
+  ) {
     return c.json(
-      { error: { code: "validation_error", message: "target_value must be a positive number under 1000000." } },
-      400
+      {
+        error: {
+          code: "validation_error",
+          message: "target_value must be a positive number under 1000000.",
+        },
+      },
+      400,
     );
   }
 
   if (goal_type === "exercise_pr" && !exercise_name) {
     return c.json(
-      { error: { code: "validation_error", message: "exercise_name is required for exercise_pr goals." } },
-      400
+      {
+        error: {
+          code: "validation_error",
+          message: "exercise_name is required for exercise_pr goals.",
+        },
+      },
+      400,
     );
   }
 
@@ -1512,9 +1770,17 @@ app.post("/api/goals", requireAuth, async (c) => {
   if (db) {
     await db
       .prepare(
-        "INSERT INTO goals (id, user_id, goal_type, exercise_name, target_value, period_start, period_end) VALUES (?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO goals (id, user_id, goal_type, exercise_name, target_value, period_start, period_end) VALUES (?, ?, ?, ?, ?, ?, ?)",
       )
-      .bind(id, user.id, goal_type, exercise_name, parsedTarget, period_start, period_end)
+      .bind(
+        id,
+        user.id,
+        goal_type,
+        exercise_name,
+        parsedTarget,
+        period_start,
+        period_end,
+      )
       .run();
   }
 
@@ -1524,7 +1790,16 @@ app.post("/api/goals", requireAuth, async (c) => {
     goal_type,
     exercise_name,
     target_value: parsedTarget,
-    progress: computeGoalProgress({ goal_type, target_value: parsedTarget, exercise_name, period_start, period_end }, workouts),
+    progress: computeGoalProgress(
+      {
+        goal_type,
+        target_value: parsedTarget,
+        exercise_name,
+        period_start,
+        period_end,
+      },
+      workouts,
+    ),
   };
   return c.json({ success: true, goal });
 });
@@ -1534,7 +1809,10 @@ app.delete("/api/goals/:id", requireAuth, async (c) => {
   const id = c.req.param("id");
   const db = getDb(c);
   if (db) {
-    await db.prepare("DELETE FROM goals WHERE id = ? AND user_id = ?").bind(id, user.id).run();
+    await db
+      .prepare("DELETE FROM goals WHERE id = ? AND user_id = ?")
+      .bind(id, user.id)
+      .run();
   }
   return c.json({ success: true, deleted_id: id });
 });
@@ -1556,66 +1834,102 @@ async function handleCoachInsight(c) {
   const db = getDb(c);
   const workouts = await fetchUserWorkouts(db, user.id);
   const daySets = workouts.filter((w) => w.day_id === dayId);
-
-  if (daySets.length === 0) {
-    const msg = "Great effort logging your session! Keep up the progressive overload.";
-    return c.json({
-      deep_review: msg,
-      good_points: [msg],
-      critical_points: [],
-      insight: msg,
-      insights: msg,
+  const sessionDay = daySets[0];
+  const sessionLabel =
+    sessionDay?.day_label ||
+    `Training session ${sessionDay?.day_number || ""}`.trim();
+  const exercisesById = new Map();
+  for (const set of daySets) {
+    let exercise = exercisesById.get(set.exercise_id);
+    if (!exercise) {
+      exercise = {
+        exercise_name: set.exercise_name,
+        workout_type: set.workout_type,
+        sets: [],
+      };
+      exercisesById.set(set.exercise_id, exercise);
+    }
+    exercise.sets.push({
+      set: set.set_number,
+      reps: Number(set.reps),
+      weight_kg: Number(set.weight),
+      completed: Boolean(set.completed),
     });
   }
+  const exerciseSummary = Array.from(exercisesById.values());
+  const analysisPrompt =
+    "You are an elite strength & hypertrophy coach. Format every response using clean, scannable bullet points, short punchy lines, and relevant emojis (🔥, 💪, 📈, ⚡, 🎯). NEVER write dense paragraphs. Structure your response into: 1) ⚡ **Session Highlights** (bulleted breakdown of top lifts), 2) 📈 **Progressive Overload & Volume Check**, and 3) 🎯 **Next Session Targets**. Always finish your final sentence completely.";
+  const normalizeInsight = (
+    deepReview,
+    goodPoints = [],
+    criticalPoints = [],
+  ) => {
+    const normalized = {
+      deep_review: String(deepReview || "").trim(),
+      good_points: Array.isArray(goodPoints) ? goodPoints : [],
+      critical_points: Array.isArray(criticalPoints) ? criticalPoints : [],
+    };
+    return {
+      ...normalized,
+      insight: normalized.deep_review,
+      insights: normalized,
+    };
+  };
 
-  const vol = daySets.reduce((sum, s) => sum + Number(s.weight) * Number(s.reps), 0);
-  const exercises = Array.from(new Set(daySets.map((s) => s.exercise_name))).join(", ");
+  if (daySets.length === 0) {
+    const msg =
+      "⚡ **Session Highlights**\n- No completed sets were found in this session yet.\n\n📈 **Progressive Overload & Volume Check**\n- There is not enough logged work to assess volume or progression.\n\n🎯 **Next Session Targets**\n- Add your exercises and working sets, then run the review again.";
+    return c.json(normalizeInsight(msg));
+  }
+
+  const vol = daySets.reduce(
+    (sum, s) => sum + Number(s.weight) * Number(s.reps),
+    0,
+  );
+  const exercises = Array.from(
+    new Set(daySets.map((s) => s.exercise_name)),
+  ).join(", ");
 
   const apiKey = c.env?.GROQ_API_KEY;
   if (apiKey) {
     try {
-      const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
+      const groqRes = await fetch(
+        "https://api.groq.com/openai/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: c.env?.GROQ_MODEL || DEFAULT_GROQ_MODEL,
+            messages: [
+              { role: "system", content: analysisPrompt },
+              {
+                role: "user",
+                content: JSON.stringify({
+                  athlete: user.name,
+                  session: sessionLabel,
+                  total_sets: daySets.length,
+                  total_volume_kg: Math.round(vol * 10) / 10,
+                  exercises: exerciseSummary,
+                  instruction:
+                    "Use the logged numbers only. Be specific, concise, and do not invent comparisons to earlier workouts.",
+                }),
+              },
+            ],
+            reasoning_effort: "low",
+            temperature: 0.4,
+            max_tokens: 1024,
+          }),
+          signal: AbortSignal.timeout(12000),
         },
-        body: JSON.stringify({
-          model: c.env?.GROQ_MODEL || DEFAULT_GROQ_MODEL,
-          messages: [
-            {
-              role: "system",
-              content:
-                "You are RepForge Neural Coach. Deliver a concise review with deep_review, good_points, and critical_points in JSON format.",
-            },
-            {
-              role: "user",
-              content: `Athlete: ${user.name}. Exercises: ${exercises}. Total sets: ${daySets.length}. Total volume: ${vol.toFixed(1)} kg.`,
-            },
-          ],
-          temperature: 0.4,
-          max_tokens: 220,
-        }),
-      });
+      );
       if (groqRes.ok) {
         const groqData = await groqRes.json();
         const text = groqData.choices?.[0]?.message?.content?.trim();
         if (text) {
-          try {
-            const parsed = JSON.parse(text.replace(/^```json\s*|```$/g, ""));
-            if (parsed && typeof parsed === "object") {
-              return c.json({
-                deep_review: parsed.deep_review || text,
-                good_points: parsed.good_points || [text],
-                critical_points: parsed.critical_points || [],
-                insight: parsed.deep_review || text,
-                insights: parsed.deep_review || text,
-              });
-            }
-          } catch {
-            // ignore malformed JSON and fall back below
-          }
-          return c.json({ deep_review: text, good_points: [text], critical_points: [], insight: text, insights: text });
+          return c.json(normalizeInsight(text));
         }
       }
     } catch (e) {
@@ -1623,14 +1937,8 @@ async function handleCoachInsight(c) {
     }
   }
 
-  const fallbackMsg = `Session Complete: ${daySets.length} sets logged across ${exercises}. Gross tonnage: ${vol.toFixed(1)} kg. Focus on progressive overload and post-workout protein for recovery!`;
-  return c.json({
-    deep_review: fallbackMsg,
-    good_points: [fallbackMsg],
-    critical_points: [],
-    insight: fallbackMsg,
-    insights: fallbackMsg,
-  });
+  const fallbackMsg = `⚡ **Session Highlights**\n- ${daySets.length} sets logged across ${exercises}.\n- Total volume: ${vol.toFixed(1)} kg.\n\n📈 **Progressive Overload & Volume Check**\n- Use these logged sets as your baseline; compare them with your previous session before increasing load.\n\n🎯 **Next Session Targets**\n- Keep the same loads and aim for one extra clean rep where you have room.`;
+  return c.json(normalizeInsight(fallbackMsg));
 }
 
 app.get("/api/coach/insights/:day_id", requireAuth, handleCoachInsight);
@@ -1639,29 +1947,55 @@ app.post("/api/coach/insights/:day_id", requireAuth, handleCoachInsight);
 app.post("/api/coach/chat", requireAuth, async (c) => {
   const user = c.get("user");
   const db = getDb(c);
-  const body = await parseJsonBody(c);
-  if (!body) {
-    return c.json({ error: { code: "validation_error", message: "Request body must be a JSON object." } }, 400);
-  }
-  const rawMessage = (body.message || "").trim();
-  const history = Array.isArray(body.history) ? body.history : [];
-
-  if (typeof body.message !== "string" || !rawMessage) {
-    return c.json({ error: { code: "validation_error", message: "message is required and must be a non-empty string." } }, 400);
-  }
-
-  const apiKey = c.env?.GROQ_API_KEY;
-  if (!apiKey) {
+  const contentLength = Number(c.req.header("Content-Length"));
+  if (Number.isFinite(contentLength) && contentLength > 64 * 1024) {
     return c.json(
       {
         error: {
-          code: "coach_not_configured",
-          message: "Coach is not configured on the server. Please contact support.",
+          code: "payload_too_large",
+          message: "Coach request must be under 64 KB.",
         },
       },
-      503
+      413,
     );
   }
+  const body = await parseJsonBody(c);
+  if (!body) {
+    return c.json(
+      {
+        error: {
+          code: "validation_error",
+          message: "Request body must be a JSON object.",
+        },
+      },
+      400,
+    );
+  }
+  if (typeof body.message !== "string") {
+    return c.json(
+      {
+        error: {
+          code: "validation_error",
+          message: "message must be a string.",
+        },
+      },
+      400,
+    );
+  }
+  const rawMessage = body.message.trim();
+  if (!rawMessage || rawMessage.length > 1500) {
+    return c.json(
+      {
+        error: {
+          code: "validation_error",
+          message: "message must contain between 1 and 1500 characters.",
+        },
+      },
+      400,
+    );
+  }
+
+  const apiKey = c.env?.GROQ_API_KEY;
 
   // Prompt injection & Medical refusal checks
   const sanitized = rawMessage
@@ -1694,6 +2028,7 @@ app.post("/api/coach/chat", requireAuth, async (c) => {
     if (!sessions.has(workout.day_id)) {
       sessions.set(workout.day_id, {
         date: workout.date,
+        day_number: workout.day_number,
         focus: workout.day_label,
         exercises: new Map(),
       });
@@ -1710,8 +2045,45 @@ app.post("/api/coach/chat", requireAuth, async (c) => {
       weight_kg: workout.weight,
     });
   }
-  const recentSessions = [...sessions.values()].slice(0, 4).map((session) => ({
+  const sessionEntries = [...sessions.values()];
+  const requestTokens = new Set(
+    sanitized
+      .toLowerCase()
+      .match(/[a-z0-9]+/g)
+      ?.filter(
+        (token) =>
+          token.length > 2 &&
+          !["analyze", "workout", "session", "review"].includes(token),
+      ) || [],
+  );
+  const requestedDay = sanitized.match(/\bday\s*(\d+)\b/i)?.[1];
+  const matchingSession = sessionEntries
+    .map((session) => {
+      const focusTokens =
+        (session.focus || "")
+          .toLowerCase()
+          .match(/[a-z0-9]+/g)
+          ?.filter((token) => token.length > 2 && token !== "day") || [];
+      const overlap = focusTokens.filter((token) =>
+        requestTokens.has(token),
+      ).length;
+      const dayMatch =
+        requestedDay && Number(requestedDay) === Number(session.day_number);
+      return { session, score: overlap + (dayMatch ? 2 : 0) };
+    })
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => b.score - a.score)[0]?.session;
+  const selectedSessions = matchingSession
+    ? [
+        matchingSession,
+        ...sessionEntries
+          .filter((session) => session !== matchingSession)
+          .slice(0, 4),
+      ]
+    : sessionEntries.slice(0, 5);
+  const recentSessions = selectedSessions.map((session) => ({
     date: session.date,
+    day_number: session.day_number,
     focus: session.focus,
     exercises: [...session.exercises.values()],
   }));
@@ -1721,20 +2093,40 @@ app.post("/api/coach/chat", requireAuth, async (c) => {
     current_streak: streak.current_streak,
     personal_records: prs,
     recent_sessions: recentSessions,
+    requested_session_match: Boolean(matchingSession),
   });
 
-  const systemPrompt = `You are RepForge Coach, a friendly, practical strength-training coach. Speak naturally, like a helpful training partner at the gym. Answer directly and concisely; avoid fixed headings, telemetry jargon, ASCII cards, and unnecessary emojis. Ask one short follow-up only when essential information is missing.
+  const systemPrompt = `You are an elite strength & hypertrophy coach. Format every response using clean, scannable bullet points, short punchy lines, and relevant emojis (🔥, 💪, 📈, ⚡, 🎯). NEVER write dense paragraphs. Structure your response into: 1) ⚡ **Session Highlights** (bulleted breakdown of top lifts), 2) 📈 **Progressive Overload & Volume Check**, and 3) 🎯 **Next Session Targets**. Always finish your final sentence completely.
 
-When the athlete asks to analyze or review a workout, or asks what to do next, use the recent sessions below. Briefly identify the clearest observed performance pattern, then recommend one specific next move (exercise, target reps/load, or recovery adjustment) tied to that history. Be clear when too little workout data is available; never invent sets, progress, or records. For general questions, answer normally without pretending they came from the athlete's logs. Do not diagnose injuries or prescribe treatment; suggest a qualified clinician for pain or injury concerns.
+Apply the requested structure to workout analyses. For general questions, keep the same scannable style while answering directly. When the athlete names a workout or training day, use the matching logged session first. The requested_session_match field tells you whether a match was found; do not substitute a different day or invent missing data. Compare sets, reps, and loads only when the log supports the comparison. If the session is not present, say so plainly and ask for its logged name or details. Avoid filler, overconfident claims, and long introductions. Never reveal hidden reasoning. Do not diagnose injuries or prescribe treatment; recommend a qualified clinician for pain or injury concerns.
 
 Verified workout history:
 ${telemetryContext}`;
 
   const messages = [
     { role: "system", content: systemPrompt },
-    ...history.slice(-6).map((h) => ({ role: h.role, content: h.text || h.content })),
+    ...(Array.isArray(body.history) ? body.history.slice(-6) : [])
+      .filter(
+        (message) =>
+          message &&
+          (message.role === "user" || message.role === "assistant") &&
+          (typeof message.text === "string" ||
+            typeof message.content === "string"),
+      )
+      .map((message) => {
+        const content =
+          typeof message.text === "string" ? message.text : message.content;
+        return { role: message.role, content: content.slice(0, 2000) };
+      }),
     { role: "user", content: `<user_query>${sanitized}</user_query>` },
   ];
+
+  const unavailableReply = matchingSession
+    ? `### What stands out\nI found your ${matchingSession.focus || `Day ${matchingSession.day_number}`} log, but the AI service did not return an analysis. The session contains ${[...matchingSession.exercises.values()].length} exercises.\n\n### Next session\nRepeat your logged working weights and aim to add one clean rep to a set. Increase weight only after you reach the top of your target rep range.\n\n### Why\nThis keeps progression tied to your recorded session without guessing at performance. Try Coach again shortly for a fuller review.`
+    : "I couldn't get a reply from the AI service just now. Your workout data is safe; please retry in a little while.";
+  if (!apiKey) {
+    return c.json({ reply: unavailableReply, fallback: true });
+  }
 
   // Check if client requested SSE stream
   const acceptHeader = c.req.header("Accept") || "";
@@ -1746,60 +2138,69 @@ ${telemetryContext}`;
     typeof c.env?.GROQ_FALLBACK_MODELS === "string"
       ? c.env.GROQ_FALLBACK_MODELS.split(",").map((model) => model.trim())
       : ["openai/gpt-oss-20b"];
-  const candidateModels = [...new Set([primaryModel, ...fallbackModels].filter(Boolean))].slice(0, 3);
+  const candidateModels = [
+    ...new Set([primaryModel, ...fallbackModels].filter(Boolean)),
+  ].slice(0, 2);
 
   let groqResponse = null;
+  let groqTimeout = null;
   let lastUpstreamStatus = null;
 
   for (const modelName of candidateModels) {
     const upstreamController = new AbortController();
-    const upstreamTimeout = setTimeout(() => upstreamController.abort(), 10000);
+    const upstreamTimeout = setTimeout(
+      () => upstreamController.abort(),
+      wantsStream ? 18000 : 8000,
+    );
+    let keepTimeout = false;
     try {
-      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
+      const res = await fetch(
+        "https://api.groq.com/openai/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: modelName,
+            messages,
+            reasoning_effort: "low",
+            temperature: 0.45,
+            max_tokens: 1500,
+            stream: wantsStream,
+          }),
+          signal: upstreamController.signal,
         },
-        body: JSON.stringify({
-          model: modelName,
-          messages,
-          temperature: 0.45,
-          max_tokens: 320,
-          stream: wantsStream,
-        }),
-        signal: upstreamController.signal,
-      });
-      clearTimeout(upstreamTimeout);
+      );
 
       if (res.ok) {
         groqResponse = res;
+        groqTimeout = upstreamTimeout;
+        keepTimeout = true;
         break;
       } else {
         lastUpstreamStatus = res.status;
-        console.warn(`Groq model ${modelName} returned status ${res.status}; trying fallback if available.`);
+        console.warn(
+          `Groq model ${modelName} returned status ${res.status}; trying fallback if available.`,
+        );
         await res.body?.cancel();
       }
     } catch (err) {
-      console.warn(`Groq request failed for model ${modelName}; trying fallback if available.`, err);
+      console.warn(
+        `Groq request failed for model ${modelName}; trying fallback if available.`,
+        err,
+      );
     } finally {
-      clearTimeout(upstreamTimeout);
+      if (!keepTimeout) clearTimeout(upstreamTimeout);
     }
   }
 
   if (!groqResponse || !groqResponse.ok) {
-    return c.json(
-      {
-        error: {
-          code: "coach_unavailable",
-          message:
-            lastUpstreamStatus === 429
-              ? "Coach is temporarily rate-limited by the AI provider. Please retry in a minute."
-              : "Coach is temporarily unavailable because the AI provider did not respond. Your message is saved; please retry shortly.",
-        },
-      },
-      503
+    console.warn(
+      `Groq is unavailable${lastUpstreamStatus ? ` (last status ${lastUpstreamStatus})` : ""}; returning the local training fallback.`,
     );
+    return c.json({ reply: unavailableReply, fallback: true });
   }
 
   if (wantsStream && groqResponse.body) {
@@ -1807,39 +2208,85 @@ ${telemetryContext}`;
       const reader = groqResponse.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
+      let accumulatedReply = "";
+      let streamFinished = false;
 
       try {
-        while (true) {
+        while (!streamFinished) {
           const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
+          buffer += done
+            ? decoder.decode()
+            : decoder.decode(value, { stream: true });
+          const lines = buffer.split(/\r?\n/);
           buffer = lines.pop() || "";
 
           for (const line of lines) {
             const trimmed = line.trim();
-            if (trimmed.startsWith("data: ")) {
-              const raw = trimmed.slice(6);
+            if (trimmed.startsWith("data:")) {
+              const raw = trimmed.slice(5).trim();
               if (raw === "[DONE]") {
-                await stream.writeSSE({ data: "[DONE]" });
-                return;
+                streamFinished = true;
+                break;
               }
               try {
                 const parsed = JSON.parse(raw);
-                const delta = parsed.choices?.[0]?.delta?.content || "";
+                const delta = extractGroqText(
+                  parsed.choices?.[0]?.delta?.content ??
+                    parsed.text ??
+                    parsed.output_text,
+                );
                 if (delta) {
-                  await stream.writeSSE({ data: JSON.stringify({ text: delta }) });
+                  accumulatedReply += delta;
+                  await stream.writeSSE({
+                    data: JSON.stringify({ text: delta }),
+                  });
                 }
               } catch {
-                // Ignore malformed upstream chunks without failing the stream.
+                console.warn("Groq returned an unreadable streaming event.");
+              }
+            }
+          }
+          if (done) streamFinished = true;
+        }
+
+        if (buffer.trim()) {
+          const finalLine = buffer.trim();
+          if (finalLine.startsWith("data:")) {
+            const raw = finalLine.slice(5).trim();
+            if (raw && raw !== "[DONE]") {
+              try {
+                const parsed = JSON.parse(raw);
+                const delta = extractGroqText(
+                  parsed.choices?.[0]?.delta?.content ??
+                    parsed.text ??
+                    parsed.output_text,
+                );
+                if (delta) {
+                  accumulatedReply += delta;
+                  await stream.writeSSE({
+                    data: JSON.stringify({ text: delta }),
+                  });
+                }
+              } catch {
+                console.warn(
+                  "Groq returned an unreadable final streaming event.",
+                );
               }
             }
           }
         }
       } catch (err) {
         console.error("Groq stream interrupted:", err);
+      } finally {
+        clearTimeout(groqTimeout);
+      }
+
+      if (!accumulatedReply.trim()) {
+        console.warn(
+          "Groq stream completed without a visible answer; returning a safe fallback.",
+        );
         await stream.writeSSE({
-          data: JSON.stringify({ text: "\n\nCoach connection was interrupted. Please retry." }),
+          data: JSON.stringify({ text: unavailableReply }),
         });
       }
       await stream.writeSSE({ data: "[DONE]" });
@@ -1847,9 +2294,14 @@ ${telemetryContext}`;
   } else {
     try {
       const data = await groqResponse.json();
-      const reply = data.choices?.[0]?.message?.content;
+      const reply = extractGroqText(
+        data.choices?.[0]?.message?.content ?? data.output_text,
+      );
       if (typeof reply !== "string" || !reply.trim()) {
-        throw new Error("Groq response did not contain a reply.");
+        console.warn(
+          "Groq returned an empty non-streaming response; using the safe fallback.",
+        );
+        return c.json({ reply: unavailableReply, fallback: true });
       }
       return c.json({ reply });
     } catch (err) {
@@ -1858,21 +2310,46 @@ ${telemetryContext}`;
         {
           error: {
             code: "coach_invalid_response",
-            message: "Coach received an invalid response from the AI provider. Please retry shortly.",
+            message:
+              "Coach received an invalid response from the AI provider. Please retry shortly.",
           },
         },
-        502
+        502,
       );
+    } finally {
+      clearTimeout(groqTimeout);
     }
   }
 });
 
+function extractGroqText(value) {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    return value
+      .map((part) =>
+        typeof part === "string"
+          ? part
+          : typeof part?.text === "string"
+            ? part.text
+            : "",
+      )
+      .join("");
+  }
+  return "";
+}
+
 // Fallback 404 for unknown API routes
 app.all("/api/*", (c) =>
-  c.json({ error: { code: "not_found", message: "API endpoint not found." } }, 404)
+  c.json(
+    { error: { code: "not_found", message: "API endpoint not found." } },
+    404,
+  ),
 );
 app.all("/auth/*", (c) =>
-  c.json({ error: { code: "not_found", message: "Auth endpoint not found." } }, 404)
+  c.json(
+    { error: { code: "not_found", message: "Auth endpoint not found." } },
+    404,
+  ),
 );
 
 // Delegate all client-side SPA routes and static assets to Cloudflare Assets

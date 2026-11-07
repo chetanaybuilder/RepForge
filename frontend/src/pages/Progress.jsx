@@ -1,4 +1,10 @@
-import { useEffect, useState } from "react";
+/**
+ * frontend\src\pages\Progress.jsx
+ * Implements this RepForge module's single responsibility while preserving its existing public behavior.
+ */
+
+import { useEffect, useRef, useState } from "react";
+import { formatNumber } from "../utils/format";
 import {
   ResponsiveContainer,
   LineChart,
@@ -18,10 +24,29 @@ import { useFetch } from "../hooks/useFetch";
 import { ErrorState, EmptyState, LoadingState } from "../components/StateViews";
 import { SkeletonGrid } from "../components/Skeleton";
 import { TiltCard } from "../components/TiltCard";
+import { useAuth } from "../context/AuthContext";
 
 const CHART_COLORS = ["#00f2fe", "#8a5cf6", "#ff3366", "#00f5a0", "#ffb800", "#38bdf8"];
 
+export function getProgressExerciseUrl(exerciseName) {
+  return `/api/workouts/progress/${encodeURIComponent(exerciseName)}`;
+}
+
+export function getProgressExerciseNames(workouts = []) {
+  return Array.from(
+    new Set(
+      workouts.flatMap((workout) =>
+        (workout.exercises || [])
+          .filter(Boolean)
+          .map((exercise) => exercise.exercise_name?.trim())
+          .filter(Boolean)
+      )
+    )
+  ).sort((a, b) => a.localeCompare(b));
+}
+
 export function Progress() {
+  const { user } = useAuth();
   const {
     data: analytics,
     status,
@@ -31,41 +56,55 @@ export function Progress() {
     () => api.get("/api/workouts/analytics"),
     [],
     () => false,
-    null,
-    { dashboard_stats: {}, volume_trend: [], frequency_by_type: [], plateaus: [] }
+    `progress:analytics:${user?.id ?? "anonymous"}`,
+    { volume_trend: [], frequency_by_type: [], plateaus: [] }
   );
-  const { data: exercisesData } = useFetch(
-    () => api.get("/api/workouts/exercises"),
+  const { data: statsData } = useFetch(
+    () => api.get("/api/workouts/stats"),
     [],
     () => false,
-    null,
-    { exercises: [] }
+    `progress:stats:${user?.id ?? "anonymous"}`,
+    { stats: { total_workouts: 0 } }
+  );
+  const { data: workoutsData } = useFetch(
+    () => api.get("/api/workouts", { limit: 500 }),
+    [],
+    () => false,
+    `progress:workouts:${user?.id ?? "anonymous"}`,
+    { workouts: [] }
   );
 
   const [selectedExercise, setSelectedExercise] = useState("");
   const [progression, setProgression] = useState(null);
   const [progressionStatus, setProgressionStatus] = useState("idle");
+  const progressionRequestId = useRef(0);
 
   useEffect(() => {
-    if (exercisesData?.exercises?.length && !selectedExercise) {
-      setSelectedExercise(exercisesData.exercises[0]);
+    const exerciseNames = getProgressExerciseNames(workoutsData?.workouts || []);
+
+    if (exerciseNames.length && !selectedExercise) {
+      setSelectedExercise(exerciseNames[0]);
     }
-  }, [exercisesData, selectedExercise]);
+  }, [workoutsData, selectedExercise]);
 
   useEffect(() => {
     if (!selectedExercise) return;
+    const requestId = ++progressionRequestId.current;
     setProgressionStatus("loading");
     api
-      .get("/api/workouts/progress", { exercise: selectedExercise })
+      .get(getProgressExerciseUrl(selectedExercise))
       .then((data) => {
-        setProgression(data.exercise_progression || []);
+        if (requestId !== progressionRequestId.current) return;
+        setProgression(Array.isArray(data?.progression) ? data.progression : []);
         setProgressionStatus("success");
       })
-      .catch(() => setProgressionStatus("error"));
+      .catch(() => {
+        if (requestId === progressionRequestId.current) setProgressionStatus("error");
+      });
   }, [selectedExercise]);
 
-  const dashboardStats = analytics?.dashboard_stats || {};
-  const totalWorkouts = dashboardStats.total_workouts ?? 0;
+  const totalWorkouts = statsData?.stats?.total_workouts ?? 0;
+  const exerciseNames = getProgressExerciseNames(workoutsData?.workouts || []);
   const volumeTrend = Array.isArray(analytics?.volume_trend) ? analytics.volume_trend : [];
   const frequencyByType = Array.isArray(analytics?.frequency_by_type)
     ? analytics.frequency_by_type
@@ -200,7 +239,7 @@ export function Progress() {
                   value={selectedExercise}
                   onChange={(e) => setSelectedExercise(e.target.value)}
                 >
-                  {(exercisesData?.exercises || []).map((ex) => (
+                  {exerciseNames.map((ex) => (
                     <option key={ex} value={ex}>
                       {ex}
                     </option>
@@ -211,6 +250,9 @@ export function Progress() {
 
             {progressionStatus === "loading" && (
               <LoadingState label="Synthesizing progression curve…" />
+            )}
+            {progressionStatus === "error" && (
+              <ErrorState message="Couldn't load data for this exercise." />
             )}
 
             {progressionStatus === "success" && safeProgression.length > 0 && (
@@ -233,7 +275,7 @@ export function Progress() {
                     />
                     <Line
                       type="monotone"
-                      dataKey="max_weight"
+                      dataKey="weight"
                       name="Top Set (kg)"
                       stroke="#00f2fe"
                       strokeWidth={2.5}
@@ -285,7 +327,12 @@ export function Progress() {
                       outerRadius={95}
                       innerRadius={50}
                       paddingAngle={4}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      label={({ name, percent }) => {
+                        const label = String(name || "")
+                          .replace(/_/g, " ")
+                          .replace(/\b\w/g, (c) => c.toUpperCase());
+                        return `${label} ${(percent * 100).toFixed(0)}%`;
+                      }}
                     >
                       {frequencyByType.map((_, i) => (
                         <Cell
@@ -363,10 +410,4 @@ export function Progress() {
       )}
     </div>
   );
-}
-
-function formatNumber(n) {
-  const val = Number(n);
-  if (isNaN(val)) return "0";
-  return new Intl.NumberFormat().format(Math.round(val));
 }

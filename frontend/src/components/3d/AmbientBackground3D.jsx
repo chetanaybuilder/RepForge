@@ -7,6 +7,9 @@
  */
 
 import { LazyThree } from "./LazyThree";
+import { useGraphicsTier } from "../../utils/graphicsTier";
+
+const loadAmbientScene = () => import("./AmbientScene3D");
 
 function FallbackNebula() {
   return (
@@ -25,7 +28,7 @@ function FallbackNebula() {
 }
 
 export function AmbientBackground3D() {
-  return (
-    <LazyThree loadComponent={() => import("./AmbientScene3D")} fallback={<FallbackNebula />} />
-  );
+  const { tier } = useGraphicsTier();
+  if (tier !== "high") return <FallbackNebula />;
+  return <LazyThree loadComponent={loadAmbientScene} fallback={<FallbackNebula />} />;
 }

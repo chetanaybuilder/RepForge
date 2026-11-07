@@ -1,237 +1,230 @@
-import { useState, useEffect, useRef } from "react";
-
 /**
- * Produces a lightweight offline beep when a rest interval finishes.
+ * frontend\src\components\RestTimer.jsx
+ * Implements this RepForge module's single responsibility while preserving its existing public behavior.
  */
+
+import { createPortal } from "react-dom";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useRestTimer } from "../context/RestTimerContext";
+
+let sharedAudioCtx = null;
+
+export async function unlockAudio() {
+  try {
+    if (!sharedAudioCtx) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      sharedAudioCtx = new AudioContext();
+    }
+    if (sharedAudioCtx.state === "suspended") await sharedAudioCtx.resume();
+  } catch {
+    // Audio playback is optional; continue without surfacing an error.
+  }
+}
+
 function playRestBeep() {
   try {
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContext) return;
-    const ctx = new AudioContext();
-
-    const osc1 = ctx.createOscillator();
-    const gain1 = ctx.createGain();
-    osc1.type = "sine";
-    osc1.frequency.setValueAtTime(880, ctx.currentTime); // A5 note
-    gain1.gain.setValueAtTime(0.15, ctx.currentTime);
-    gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
-    osc1.connect(gain1);
-    gain1.connect(ctx.destination);
-    osc1.start();
-    osc1.stop(ctx.currentTime + 0.25);
-
-    setTimeout(() => {
-      const osc2 = ctx.createOscillator();
-      const gain2 = ctx.createGain();
-      osc2.type = "sine";
-      osc2.frequency.setValueAtTime(1320, ctx.currentTime); // E6 note
-      gain2.gain.setValueAtTime(0.2, ctx.currentTime);
-      gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
-      osc2.connect(gain2);
-      gain2.connect(ctx.destination);
-      osc2.start();
-      osc2.stop(ctx.currentTime + 0.4);
-    }, 180);
+    const ctx = sharedAudioCtx;
+    if (!ctx || ctx.state !== "running") return;
+    const beep = (frequency, delay, duration, volume) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(frequency, ctx.currentTime + delay);
+      gain.gain.setValueAtTime(volume, ctx.currentTime + delay);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + delay);
+      osc.stop(ctx.currentTime + delay + duration);
+    };
+    beep(880, 0, 0.25, 0.15);
+    beep(1320, 0.18, 0.4, 0.2);
   } catch {
-    // AudioContext blocked or unavailable
+    // AudioContext blocked or unavailable.
   }
 }
 
-/**
- * Emits a brief vibration pulse on mobile devices when the rest timer ends.
- */
-function triggerHapticPulse() {
-  try {
-    if ("vibrate" in navigator) {
-      navigator.vibrate([150, 80, 200]);
-    }
-  } catch {
-    // ignore
-  }
-}
-
-export function RestTimer({ initialSeconds = 90, onComplete, onClose }) {
-  const [totalSeconds, setTotalSeconds] = useState(initialSeconds);
+export function RestTimer({
+  initialSeconds = 90,
+  onComplete,
+  onClose,
+  bottomOffset = 24,
+  defaultMinimized = false,
+}) {
+  const key = useId();
+  const { activeKey, acquire, release } = useRestTimer();
   const [secondsLeft, setSecondsLeft] = useState(initialSeconds);
+  const [totalSeconds, setTotalSeconds] = useState(initialSeconds);
   const [isActive, setIsActive] = useState(true);
-  const [minimized, setMinimized] = useState(false);
+  const [minimized, setMinimized] = useState(defaultMinimized);
   const intervalRef = useRef(null);
+  const endTimeRef = useRef(Date.now() + initialSeconds * 1000);
 
   useEffect(() => {
-    if (!isActive) {
-      clearInterval(intervalRef.current);
-      return;
+    acquire(key);
+    return () => release(key);
+  }, [acquire, release, key]);
+
+  useEffect(() => {
+    if (activeKey !== key || !isActive) {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      intervalRef.current = null;
+      return undefined;
     }
 
-    // Use a functional update so each tick reads the latest value, not the effect's captured state.
-    intervalRef.current = setInterval(() => {
-      setSecondsLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(intervalRef.current);
-          setIsActive(false);
-          playRestBeep();
-          triggerHapticPulse();
-          if (onComplete) onComplete();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((endTimeRef.current - Date.now()) / 1000));
+      setSecondsLeft(remaining);
+      if (remaining === 0) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+        setIsActive(false);
+        playRestBeep();
+        if ("vibrate" in navigator) navigator.vibrate([150, 80, 200]);
+        onComplete?.();
+      }
+    };
+    tick();
+    intervalRef.current = setInterval(tick, 1000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    };
+  }, [activeKey, isActive, key, onComplete]);
 
-    return () => clearInterval(intervalRef.current);
-  }, [isActive, onComplete]);
+  const addTime = useCallback(
+    (secs) => {
+      const next = Math.max(0, secondsLeft + secs);
+      setSecondsLeft(next);
+      setTotalSeconds((current) => Math.max(current, next));
+      endTimeRef.current = Date.now() + next * 1000;
+      setIsActive(next > 0);
+      unlockAudio();
+    },
+    [secondsLeft]
+  );
 
-  const addTime = (secs) => {
-    setSecondsLeft((prev) => {
-      const next = Math.max(0, prev + secs);
-      if (next > totalSeconds) setTotalSeconds(next);
-      return next;
-    });
-    if (!isActive) setIsActive(true);
-  };
-
-  const setPreset = (secs) => {
+  const setPreset = useCallback((secs) => {
     setTotalSeconds(secs);
     setSecondsLeft(secs);
+    endTimeRef.current = Date.now() + secs * 1000;
     setIsActive(true);
-  };
+    unlockAudio();
+  }, []);
+
+  const togglePause = useCallback(() => {
+    unlockAudio();
+    if (isActive) {
+      setIsActive(false);
+      return;
+    }
+    const resumeSeconds = secondsLeft === 0 ? totalSeconds : secondsLeft;
+    endTimeRef.current = Date.now() + resumeSeconds * 1000;
+    setSecondsLeft(resumeSeconds);
+    setIsActive(true);
+  }, [isActive, secondsLeft, totalSeconds]);
+
+  if (activeKey !== key) return null;
 
   const minutes = Math.floor(secondsLeft / 60);
   const seconds = secondsLeft % 60;
   const timeFormatted = `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
   const progressPct = totalSeconds > 0 ? (secondsLeft / totalSeconds) * 100 : 0;
+  const safeBottom = `calc(${bottomOffset}px + env(safe-area-inset-bottom, 0px))`;
+  const safeRight = `max(16px, env(safe-area-inset-right))`;
   const isFinished = secondsLeft === 0;
 
   if (minimized) {
-    return (
-      <div
+    return createPortal(
+      <button
+        type="button"
         onClick={() => setMinimized(false)}
+        role="timer"
+        aria-live="polite"
+        aria-label={`Rest timer, ${timeFormatted}, minimized`}
         style={{
           position: "fixed",
-          bottom: 24,
-          right: 24,
+          bottom: safeBottom,
+          right: safeRight,
           zIndex: 9999,
           background: isFinished ? "rgba(0, 245, 160, 0.95)" : "rgba(12, 12, 24, 0.92)",
-          backdropFilter: "blur(16px)",
-          border: isFinished ? "1px solid var(--rf-emerald)" : "1px solid rgba(0, 242, 254, 0.4)",
-          borderRadius: "999px",
+          border: isFinished ? "1px solid var(--rf-emerald)" : "1px solid rgba(0,242,254,0.4)",
+          borderRadius: 999,
           padding: "8px 16px",
           display: "flex",
           alignItems: "center",
           gap: 8,
           cursor: "pointer",
-          boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
           color: isFinished ? "#000" : "#fff",
           fontWeight: 700,
           fontFamily: "var(--rf-font-mono)",
           fontSize: "0.85rem",
-          animation: isFinished ? "rf-pulse 1s infinite alternate" : "none",
         }}
       >
-        <span>{isFinished ? "🦾 READY" : "⏱️"}</span>
+        <span>{isFinished ? "READY" : "\u23F1"}</span>
         <span>{isFinished ? "NEXT SET" : timeFormatted}</span>
-      </div>
+      </button>,
+      document.body
     );
   }
 
-  return (
+  return createPortal(
     <div
+      role="timer"
+      aria-live="polite"
+      aria-label={`Rest timer, ${timeFormatted}`}
       style={{
         position: "fixed",
-        bottom: 24,
-        right: 24,
+        bottom: safeBottom,
+        right: safeRight,
         zIndex: 9999,
         width: "min(340px, calc(100vw - 32px))",
-        background: "rgba(10, 10, 22, 0.95)",
-        backdropFilter: "blur(24px) saturate(180%)",
-        border: isFinished ? "1px solid var(--rf-emerald)" : "1px solid rgba(0, 242, 254, 0.35)",
+        background: "rgba(10,10,22,0.95)",
+        border: isFinished ? "1px solid var(--rf-emerald)" : "1px solid rgba(0,242,254,0.35)",
         borderRadius: "var(--rf-radius-lg)",
-        padding: "16px",
-        boxShadow: "0 12px 40px rgba(0,0,0,0.7), 0 0 24px -6px rgba(0,242,254,0.2)",
+        padding: 16,
         display: "flex",
         flexDirection: "column",
         gap: 12,
       }}
     >
-      {/* Rest Timer Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ fontSize: "1rem" }}>⏱️</span>
-          <span
-            className="rf-telemetry-tag"
-            style={{
-              color: isFinished ? "var(--rf-emerald)" : "var(--rf-cyan)",
-              fontSize: "0.72rem",
-            }}
-          >
-            {isFinished ? "REST COMPLETE" : "INTER-SET REST TIMER"}
-          </span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <button
-            type="button"
-            onClick={() => setMinimized(true)}
-            style={{
-              background: "transparent",
-              color: "var(--rf-text-sub)",
-              cursor: "pointer",
-              fontSize: "0.8rem",
-              padding: "2px 6px",
-            }}
-            title="Minimize"
-          >
-            —
+        <span
+          className="rf-telemetry-tag"
+          style={{
+            color: isFinished ? "var(--rf-emerald)" : "var(--rf-cyan)",
+            fontSize: "0.72rem",
+          }}
+        >
+          {isFinished ? "REST COMPLETE" : "INTER-SET REST TIMER"}
+        </span>
+        <div style={{ display: "flex", gap: 6 }}>
+          <button type="button" onClick={() => setMinimized(true)} aria-label="Minimize rest timer">
+            -
           </button>
           {onClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              style={{
-                background: "transparent",
-                color: "var(--rf-text-sub)",
-                cursor: "pointer",
-                fontSize: "0.85rem",
-                padding: "2px 6px",
-              }}
-              title="Close"
-            >
-              ✕
+            <button type="button" onClick={onClose} aria-label="Close rest timer">
+              X
             </button>
           )}
         </div>
       </div>
-
-      {/* Countdown Visual Display */}
       <div
         style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "8px 0",
+          textAlign: "center",
+          fontFamily: "var(--rf-font-mono)",
+          fontSize: "2.6rem",
+          fontWeight: 800,
         }}
       >
-        <div
-          style={{
-            fontFamily: "var(--rf-font-mono)",
-            fontSize: "2.6rem",
-            fontWeight: 800,
-            letterSpacing: "-0.04em",
-            color: isFinished ? "var(--rf-emerald)" : "var(--rf-text-pure)",
-            textShadow: isFinished
-              ? "0 0 20px rgba(0, 245, 160, 0.6)"
-              : "0 0 20px rgba(0, 242, 254, 0.3)",
-          }}
-        >
-          {isFinished ? "0:00" : timeFormatted}
-        </div>
+        {timeFormatted}
       </div>
-
-      {/* Progress Bar */}
       <div
         style={{
           width: "100%",
           height: 4,
-          background: "rgba(255, 255, 255, 0.08)",
+          background: "rgba(255,255,255,0.08)",
           borderRadius: 999,
           overflow: "hidden",
         }}
@@ -242,63 +235,25 @@ export function RestTimer({ initialSeconds = 90, onComplete, onClose }) {
             width: `${progressPct}%`,
             background: isFinished
               ? "var(--rf-emerald)"
-              : "linear-gradient(90deg, var(--rf-cyan), var(--rf-violet))",
+              : "linear-gradient(90deg,var(--rf-cyan),var(--rf-violet))",
             transition: "width 1s linear",
           }}
         />
       </div>
-
-      {/* Preset Quick Chips */}
-      <div
-        style={{
-          display: "flex",
-          gap: 6,
-          justifyContent: "center",
-          flexWrap: "wrap",
-        }}
-      >
-        {[
-          { label: "30s", val: 30 },
-          { label: "60s", val: 60 },
-          { label: "90s", val: 90 },
-          { label: "120s", val: 120 },
-          { label: "180s", val: 180 },
-        ].map((p) => (
+      <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
+        {[30, 60, 90, 120, 180].map((preset) => (
           <button
-            key={p.val}
+            key={preset}
             type="button"
-            onClick={() => setPreset(p.val)}
-            style={{
-              padding: "3px 8px",
-              fontSize: "0.68rem",
-              fontFamily: "var(--rf-font-mono)",
-              fontWeight: totalSeconds === p.val ? 800 : 600,
-              borderRadius: "var(--rf-radius-sm)",
-              background:
-                totalSeconds === p.val ? "rgba(0, 242, 254, 0.2)" : "rgba(255, 255, 255, 0.05)",
-              border:
-                totalSeconds === p.val
-                  ? "1px solid var(--rf-cyan)"
-                  : "1px solid rgba(255, 255, 255, 0.1)",
-              color: totalSeconds === p.val ? "var(--rf-cyan)" : "var(--rf-text-sub)",
-              cursor: "pointer",
-            }}
+            onClick={() => setPreset(preset)}
+            className="rf-btn rf-btn--ghost rf-btn--sm"
           >
-            {p.label}
+            {preset}s
           </button>
         ))}
       </div>
-
-      {/* Controls Bar */}
       <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 8,
-          borderTop: "1px solid rgba(255, 255, 255, 0.06)",
-          paddingTop: 10,
-        }}
+        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}
       >
         <div style={{ display: "flex", gap: 6 }}>
           <button
@@ -306,7 +261,6 @@ export function RestTimer({ initialSeconds = 90, onComplete, onClose }) {
             onClick={() => addTime(-15)}
             disabled={secondsLeft <= 0}
             className="rf-btn rf-btn--ghost rf-btn--sm"
-            style={{ padding: "4px 8px", fontSize: "0.72rem" }}
           >
             -15s
           </button>
@@ -314,21 +268,20 @@ export function RestTimer({ initialSeconds = 90, onComplete, onClose }) {
             type="button"
             onClick={() => addTime(30)}
             className="rf-btn rf-btn--ghost rf-btn--sm"
-            style={{ padding: "4px 8px", fontSize: "0.72rem" }}
           >
             +30s
           </button>
         </div>
-
         <button
           type="button"
-          onClick={() => setIsActive((prev) => !prev)}
+          onClick={togglePause}
           className={`rf-btn rf-btn--sm ${isActive ? "rf-btn--secondary" : "rf-btn--primary"}`}
-          style={{ padding: "4px 12px", fontSize: "0.75rem" }}
+          aria-label={isActive ? "Pause rest timer" : "Resume rest timer"}
         >
           {isActive ? "Pause" : "Resume"}
         </button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

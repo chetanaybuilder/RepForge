@@ -1,48 +1,38 @@
-import { useCallback, useEffect, useState } from "react";
-
 /**
- * Maximum entries retained in the module-level universal fetch cache.
- * Bounded to prevent memory accumulation in long-lived browser sessions.
+ * frontend\src\hooks\useFetch.js
+ * Implements this RepForge module's single responsibility while preserving its existing public behavior.
  */
+
+import { useCallback, useEffect, useRef, useState } from "react";
+
 const MAX_CACHE_SIZE = 50;
-
-/**
- * Shared in-memory query cache keyed by dependency hash or explicit cacheKey.
- * Prevents flashing loaders and redundant network roundtrips on tab switching.
- * @type {Map<string, any>}
- */
+const CACHE_TTL_MS = 5 * 60 * 1000;
 const globalCache = new Map();
 
-/**
- * Stores a key-value pair in globalCache with bounded FIFO eviction.
- * @param {string} key
- * @param {any} value
- */
+function getCachedValue(key) {
+  const entry = globalCache.get(key);
+  if (!entry) return undefined;
+  if (entry.expiresAt <= Date.now()) {
+    globalCache.delete(key);
+    return undefined;
+  }
+  globalCache.delete(key);
+  globalCache.set(key, entry);
+  return entry.value;
+}
+
 function setBoundedCache(key, value) {
   if (globalCache.size >= MAX_CACHE_SIZE) {
     const oldestKey = globalCache.keys().next().value;
     if (oldestKey) globalCache.delete(oldestKey);
   }
-  globalCache.set(key, value);
+  globalCache.set(key, { value, expiresAt: Date.now() + CACHE_TTL_MS });
 }
 
-/**
- * Universal async data-fetching hook with caching, status state machine,
- * and safe default fallbacks.
- *
- * @template T
- * @param {() => Promise<T>} fetcher Async fetch function returning payload
- * @param {Array} [deps=[]] React dependency array triggering re-fetch on change
- * @param {(data: T) => boolean} [emptyCheck=() => false] Custom predicate for empty state
- * @param {string|null} [cacheKey=null] Optional explicit cache key override
- * @param {T|null} [initialData=null] Safe fallback schema to prevent undefined evaluations
- * @returns {{
- *   data: T,
- *   status: "loading" | "success" | "empty" | "error",
- *   error: Error | null,
- *   reload: (forceSilent?: boolean) => Promise<void>
- * }}
- */
+export function clearFetchCache() {
+  globalCache.clear();
+}
+
 export function useFetch(
   fetcher,
   deps = [],
@@ -51,44 +41,67 @@ export function useFetch(
   initialData = null
 ) {
   const key = cacheKey || JSON.stringify(deps);
+  const requestId = useRef(0);
+  const mounted = useRef(true);
 
-  const [data, setData] = useState(() => globalCache.get(key) || initialData);
+  const [data, setData] = useState(() => {
+    const cached = getCachedValue(key);
+    return cached !== undefined ? cached : initialData;
+  });
   const [status, setStatus] = useState(() => {
-    if (globalCache.has(key)) {
-      const cached = globalCache.get(key);
-      return emptyCheck(cached) ? "empty" : "success";
-    }
-    return "loading";
+    const cached = getCachedValue(key);
+    if (cached === undefined) return "loading";
+    return emptyCheck(cached) ? "empty" : "success";
   });
   const [error, setError] = useState(null);
 
-  /**
-   * Execute fetch operation and synchronize memory cache.
-   * @param {boolean} [forceSilent=false] If true, omits setting loading status
-   */
+  // fetcher/emptyCheck are supplied by the caller alongside cacheKey/key.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const load = useCallback(
     async (forceSilent = false) => {
-      if (!globalCache.has(key) && !forceSilent) {
-        setStatus("loading");
-      }
+      forceSilent = forceSilent === true;
+      const id = ++requestId.current;
+      const cached = getCachedValue(key);
+      if (cached === undefined && !forceSilent) setStatus("loading");
       setError(null);
+
       try {
         const result = await fetcher();
+        if (!mounted.current || id !== requestId.current) return;
         setBoundedCache(key, result);
         setData(result);
         setStatus(emptyCheck(result) ? "empty" : "success");
       } catch (err) {
+        if (!mounted.current || id !== requestId.current) return;
         setError(err);
-        if (!globalCache.has(key)) setStatus("error");
+        if (getCachedValue(key) === undefined) setStatus("error");
       }
     },
+    // Keep dependencies tied to the cache key; fetcher and emptyCheck are caller-selected for that key.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [key]
-  );
+  ); // fetcher is intentionally selected by the caller's cache/dependency key.
 
   useEffect(() => {
+    mounted.current = true;
+    const cached = getCachedValue(key);
+    setData(cached !== undefined ? cached : initialData);
+    setStatus(cached !== undefined ? (emptyCheck(cached) ? "empty" : "success") : "loading");
+    setError(null);
     load();
-  }, [load]);
+    return () => {
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      requestId.current++;
+    };
+  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(
+    () => () => {
+      mounted.current = false;
+      requestId.current++;
+    },
+    []
+  );
 
   return { data, status, error, reload: load };
 }

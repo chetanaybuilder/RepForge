@@ -1,9 +1,15 @@
+/**
+ * frontend\src\components\AppShell.jsx
+ * Implements this RepForge module's single responsibility while preserving its existing public behavior.
+ */
+
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { AmbientBackground3D } from "./3d/AmbientBackground3D";
 import { AnimatePresence, motion } from "framer-motion";
-import { RestTimer } from "./RestTimer";
+import { RestTimer, unlockAudio } from "./RestTimer";
+import { useModalBodyLock } from "../hooks/useModalBodyLock";
 
 /**
  * Shared navigation shell for the authenticated app.
@@ -36,14 +42,21 @@ export const APP_SECTIONS = [
     to: "/coach",
     number: "04",
     label: "COACH",
-    desc: "Ask a strength coach about your training",
+    desc: "Ask about your training",
     icon: "◈",
   },
   {
-    to: "/goals",
+    to: "/progress",
     number: "05",
+    label: "PROGRESS",
+    desc: "Training trends and performance analytics",
+    icon: "⌁",
+  },
+  {
+    to: "/goals",
+    number: "06",
     label: "GOALS",
-    desc: "Performance objectives, milestones & crystals",
+    desc: "Performance objectives and milestones",
     icon: "◎",
   },
 ];
@@ -55,23 +68,27 @@ export function AppShell() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const handleEscape = (event) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [menuOpen]);
+
   // Find active destination
   const activeSection = APP_SECTIONS.find((sec) => sec.to === location.pathname) || {
-    number: "02",
-    label: "DASHBOARD",
+    number: "404",
+    label: "NOT FOUND",
   };
 
-  // Lock body scroll when mobile full-screen menu is open
-  useEffect(() => {
-    if (menuOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [menuOpen]);
+  // Lock body scroll when mobile full-screen menu is open (ref-counted, shared with modals)
+  useModalBodyLock(menuOpen);
 
   // Handle mobile destination tap: close navigation immediately and navigate to full-screen page
   const handleSelectDestination = (to) => {
@@ -84,21 +101,21 @@ export function AppShell() {
       <AmbientBackground3D />
 
       {/* Desktop navigation rail */}
-      <aside className="rf-desktop-rail">
+      <aside className="rf-desktop-rail" aria-label="Primary navigation">
         <div className="rf-rail-header">
           <div className="rf-brand-group">
             <div className="rf-brand-glyph">RF</div>
             <div>
               <div className="rf-brand-text">RepForge</div>
               <div className="rf-telemetry-tag" style={{ fontSize: "0.62rem" }}>
-                AI OS v2.4
+                Training Platform
               </div>
             </div>
           </div>
           <div className="rf-status-beacon" title="Subsystem online" />
         </div>
 
-        <nav className="rf-rail-nav">
+        <nav className="rf-rail-nav" aria-label="App sections">
           {APP_SECTIONS.map((item) => (
             <NavLink
               key={item.to}
@@ -150,7 +167,7 @@ export function AppShell() {
                   color: "#fff",
                 }}
               >
-                {user?.name?.[0] || "U"}
+                {user?.name?.[0]?.toUpperCase() || "U"}
               </div>
             )}
             <div style={{ overflow: "hidden", flex: 1 }}>
@@ -183,7 +200,10 @@ export function AppShell() {
           <button
             type="button"
             className="rf-btn rf-btn--outline rf-btn--sm rf-btn--full"
-            onClick={() => setShowGlobalTimer((prev) => !prev)}
+            onClick={() => {
+              unlockAudio();
+              setShowGlobalTimer((prev) => !prev);
+            }}
             style={{
               borderColor: "rgba(0, 242, 254, 0.3)",
               color: "var(--rf-cyan)",
@@ -196,9 +216,9 @@ export function AppShell() {
           <button
             type="button"
             className="rf-btn rf-btn--ghost rf-btn--sm rf-btn--full"
-            onClick={logout}
+            onClick={() => logout()}
           >
-            Disconnect
+            Sign out
           </button>
         </div>
       </aside>
@@ -218,7 +238,10 @@ export function AppShell() {
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <button
             type="button"
-            onClick={() => setShowGlobalTimer((prev) => !prev)}
+            onClick={() => {
+              unlockAudio();
+              setShowGlobalTimer((prev) => !prev);
+            }}
             style={{
               padding: "6px 10px",
               fontFamily: "var(--rf-font-mono)",
@@ -259,6 +282,9 @@ export function AppShell() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
             className="rf-fullscreen-menu"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation menu"
           >
             {/* Menu Header */}
             <div className="rf-menu-topbar">
@@ -350,7 +376,7 @@ export function AppShell() {
                       color: "#fff",
                     }}
                   >
-                    {user?.name?.[0] || "U"}
+                    {user?.name?.[0]?.toUpperCase() || "U"}
                   </div>
                 )}
                 <div>
@@ -373,7 +399,7 @@ export function AppShell() {
                   logout();
                 }}
               >
-                Disconnect
+                Sign out
               </button>
             </div>
           </motion.div>

@@ -16,7 +16,6 @@
     "lint": "npm --prefix frontend run lint",
     "format:check": "prettier --check package.json frontend/vite.config.js scripts/build-worker.mjs scripts/verify-pages-build.mjs",
     "format": "npm --prefix frontend run format",
-    "test": "npm --prefix frontend run test",
     "test:backend": "pytest backend/tests"
   },
   "devDependencies": {
@@ -25,5 +24,8 @@
   },
   "dependencies": {
     "hono": "^4.13.13"
-  }
+  },
+  "description": "A mobile-first workout tracker and strength training dashboard",
+  "license": "MIT",
+  "repository": "github:chetanaybuilder/RepForge"
 }

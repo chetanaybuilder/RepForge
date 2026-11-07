@@ -1,3 +1,8 @@
+/**
+ * frontend\src\components\3d\QuantumGemCanvas.jsx
+ * Implements this RepForge module's single responsibility while preserving its existing public behavior.
+ */
+
 import { useRef, useMemo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Center, Float } from "@react-three/drei";

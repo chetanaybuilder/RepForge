@@ -9,15 +9,15 @@
  * - Direct "+ Add to Workout" navigation bridging into the workout logging pipeline.
  */
 
-import { useState, useEffect, useCallback } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { api, getExerciseImageUrl } from "../services/api";
 import { useToast } from "../context/ToastContext";
 import { TiltCard } from "../components/TiltCard";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { SkeletonGrid } from "../components/Skeleton";
 import { ExerciseDetailModal } from "../components/ExerciseDetailModal";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 const PRIMARY_MUSCLE_OPTIONS = [
   { value: "", label: "All Muscles" },
@@ -40,9 +40,11 @@ export function ExerciseLibrary() {
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const exerciseRequestId = useRef(0);
 
   // Filters
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedMuscle, setSelectedMuscle] = useState("");
   const [selectedEquipment, setSelectedEquipment] = useState("");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
@@ -56,6 +58,11 @@ export function ExerciseLibrary() {
   const [inspectedExercise, setInspectedExercise] = useState(null);
   const toast = useToast();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
+    return () => window.clearTimeout(timer);
+  }, [search]);
 
   // Load filter taxonomy options once
   useEffect(() => {
@@ -75,6 +82,7 @@ export function ExerciseLibrary() {
 
   // Fetch exercises matching current parameters
   const loadExercises = useCallback(async () => {
+    const requestId = ++exerciseRequestId.current;
     setLoading(true);
     setError(null);
     try {
@@ -82,21 +90,23 @@ export function ExerciseLibrary() {
         limit: pageSize,
         offset: page * pageSize,
       };
-      if (search.trim()) params.search = search.trim();
+      if (debouncedSearch) params.search = debouncedSearch;
       if (selectedMuscle) params.muscle = selectedMuscle;
       if (selectedEquipment) params.equipment = selectedEquipment;
       if (favoritesOnly) params.favorites_only = true;
 
       const res = await api.get("/api/exercises", params);
       const items = res?.items || res?.exercises || [];
+      if (requestId !== exerciseRequestId.current) return;
       setExercises(items);
       setTotalCount(res?.total || items.length || 0);
     } catch (err) {
+      if (requestId !== exerciseRequestId.current) return;
       setError(err?.message || "Failed to load exercise catalog.");
     } finally {
-      setLoading(false);
+      if (requestId === exerciseRequestId.current) setLoading(false);
     }
-  }, [search, selectedMuscle, selectedEquipment, favoritesOnly, page]);
+  }, [debouncedSearch, selectedMuscle, selectedEquipment, favoritesOnly, page]);
 
   useEffect(() => {
     loadExercises();
@@ -142,6 +152,9 @@ export function ExerciseLibrary() {
       setExercises((prev) =>
         prev.map((ex) => (ex.id === exerciseId ? { ...ex, is_favorite: !ex.is_favorite } : ex))
       );
+      if (inspectedExercise && inspectedExercise.id === exerciseId) {
+        setInspectedExercise((prev) => (prev ? { ...prev, is_favorite: !prev.is_favorite } : prev));
+      }
       toast.error(err?.message || "Could not update favorite state.");
     }
   };
@@ -154,7 +167,7 @@ export function ExerciseLibrary() {
       <div className="rf-page-header">
         <div>
           <div className="rf-telemetry-tag" style={{ marginBottom: 6 }}>
-            05 — MOVEMENT ARCHIVE
+            03 — MOVEMENT ARCHIVE
           </div>
           <h1 className="rf-page-title">
             Exercise <span className="rf-gradient-text">Library</span>
@@ -164,9 +177,9 @@ export function ExerciseLibrary() {
             form instructions.
           </p>
         </div>
-        <Link to="/workouts">
-          <PrimaryButton className="rf-btn--sm">+ Log Session</PrimaryButton>
-        </Link>
+        <PrimaryButton className="rf-btn--sm" onClick={() => navigate("/workouts?new=1")}>
+          + Log Session
+        </PrimaryButton>
       </div>
 
       {/* Filter Toolbar Pod */}
@@ -182,7 +195,7 @@ export function ExerciseLibrary() {
       >
         {/* Search & Favorites Row */}
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-          <div style={{ position: "relative", flex: "1 1 280px" }}>
+          <div style={{ position: "relative", flex: "1 1 280px", minWidth: 0, maxWidth: "100%" }}>
             <input
               type="text"
               className="rf-input"

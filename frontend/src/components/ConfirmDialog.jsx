@@ -1,5 +1,13 @@
+/**
+ * frontend\src\components\ConfirmDialog.jsx
+ * Implements this RepForge module's single responsibility while preserving its existing public behavior.
+ */
+
 import { motion, AnimatePresence } from "framer-motion";
+import { createPortal } from "react-dom";
+import { useEffect, useRef, useState } from "react";
 import { PrimaryButton } from "./PrimaryButton";
+import { useModalBodyLock } from "../hooks/useModalBodyLock";
 
 export function ConfirmDialog({
   open,
@@ -10,9 +18,28 @@ export function ConfirmDialog({
   onCancel,
   danger = true,
 }) {
+  useModalBodyLock(open);
+  const cancelRef = useRef(null);
+  const confirmingRef = useRef(false);
+  const [confirming, setConfirming] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      confirmingRef.current = false;
+      setConfirming(false);
+      return undefined;
+    }
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") onCancel();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    cancelRef.current?.focus();
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open, onCancel]);
+
   if (!open) return null;
 
-  return (
+  return createPortal(
     <AnimatePresence>
       <div className="rf-modal-overlay" onClick={onCancel}>
         <motion.div
@@ -41,13 +68,23 @@ export function ConfirmDialog({
                 className="rf-btn rf-btn--ghost"
                 style={{ flex: 1 }}
                 onClick={onCancel}
+                ref={cancelRef}
               >
                 Cancel
               </button>
               <PrimaryButton
                 variant={danger ? "danger" : "cyan"}
                 style={{ flex: 1 }}
-                onClick={onConfirm}
+                disabled={confirming}
+                onClick={() => {
+                  if (confirmingRef.current) return;
+                  confirmingRef.current = true;
+                  setConfirming(true);
+                  Promise.resolve(onConfirm()).finally(() => {
+                    confirmingRef.current = false;
+                    setConfirming(false);
+                  });
+                }}
               >
                 {confirmLabel}
               </PrimaryButton>
@@ -55,6 +92,7 @@ export function ConfirmDialog({
           </div>
         </motion.div>
       </div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

@@ -1,10 +1,17 @@
+/**
+ * frontend\src\components\ExerciseEditModal.jsx
+ * Implements this RepForge module's single responsibility while preserving its existing public behavior.
+ */
+
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { DAY_WORKOUT_TYPES } from "./DayFormModal";
 import { PrimaryButton } from "./PrimaryButton";
 import { WeightScrollInput } from "./WeightScrollInput";
-import { RestTimer } from "./RestTimer";
+import { RestTimer, unlockAudio } from "./RestTimer";
+import { useModalBodyLock } from "../hooks/useModalBodyLock";
 
-const EMPTY_SET = { reps: 10, weight: 60, completed: true };
+const EMPTY_SET = { reps: 10, weight: 60, completed: false };
 const EMPTY_EXERCISE = {
   workout_type: "push",
   exercise_name: "",
@@ -18,6 +25,22 @@ export function ExerciseEditModal({ open, initialValue, onSave, onClose }) {
   const [saving, setSaving] = useState(false);
   const [showRestTimer, setShowRestTimer] = useState(false);
 
+  useModalBodyLock(open);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key !== "Escape") return;
+      if (showRestTimer) {
+        setShowRestTimer(false);
+      } else {
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open, showRestTimer, onClose]);
+
   useEffect(() => {
     if (open && initialValue) {
       setForm({
@@ -26,7 +49,11 @@ export function ExerciseEditModal({ open, initialValue, onSave, onClose }) {
         notes: initialValue.notes || "",
         sets:
           initialValue.sets && initialValue.sets.length > 0
-            ? initialValue.sets.map(({ plate_count, ...set }) => set)
+            ? initialValue.sets.map((set) => {
+                const nextSet = { ...set };
+                delete nextSet.plate_count;
+                return nextSet;
+              })
             : [{ ...EMPTY_SET }],
       });
       setErrors({});
@@ -52,7 +79,7 @@ export function ExerciseEditModal({ open, initialValue, onSave, onClose }) {
       {
         weight: lastSet.weight,
         reps: lastSet.reps,
-        completed: true,
+        completed: false,
       },
     ]);
   };
@@ -84,7 +111,12 @@ export function ExerciseEditModal({ open, initialValue, onSave, onClose }) {
         newErrors[`s_${sIdx}_reps`] = "Invalid";
         isValid = false;
       }
-      if (typeof s.weight !== "number" || Number.isNaN(s.weight) || s.weight < 0) {
+      if (
+        typeof s.weight !== "number" ||
+        !Number.isFinite(s.weight) ||
+        s.weight < 0 ||
+        s.weight > 1000
+      ) {
         newErrors[`s_${sIdx}_weight`] = "Invalid";
         isValid = false;
       }
@@ -105,7 +137,7 @@ export function ExerciseEditModal({ open, initialValue, onSave, onClose }) {
     }
   };
 
-  return (
+  return createPortal(
     <div className="rf-modal-overlay" onClick={onClose}>
       <div
         className="rf-modal rf-modal--md"
@@ -219,6 +251,8 @@ export function ExerciseEditModal({ open, initialValue, onSave, onClose }) {
                         type="number"
                         step="1"
                         min="1"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         className="rf-set-input"
                         value={set.reps === 0 ? "" : set.reps}
                         placeholder="0"
@@ -242,6 +276,7 @@ export function ExerciseEditModal({ open, initialValue, onSave, onClose }) {
                           const nextCompleted = !set.completed;
                           updateSet(sIdx, "completed", nextCompleted);
                           if (nextCompleted) {
+                            unlockAudio();
                             setShowRestTimer(true);
                           }
                         }}
@@ -296,8 +331,11 @@ export function ExerciseEditModal({ open, initialValue, onSave, onClose }) {
           </div>
         </form>
 
-        {showRestTimer && <RestTimer onClose={() => setShowRestTimer(false)} />}
+        {showRestTimer && (
+          <RestTimer bottomOffset={88} defaultMinimized onClose={() => setShowRestTimer(false)} />
+        )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

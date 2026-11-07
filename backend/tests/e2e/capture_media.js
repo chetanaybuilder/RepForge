@@ -3,7 +3,7 @@ import { execSync } from "child_process";
 import fs from "fs";
 import path from "path";
 
-const BASE_URL = process.env.BASE_URL || "https://repforge.chetanaybatra03-8b2.workers.dev";
+const BASE_URL = process.env.BASE_URL || "http://localhost:8787";
 const OUTPUT_DIR = path.resolve("docs/media");
 const TEMP_VIDEOS = path.resolve("docs/media/temp_videos");
 const FFMPEG_PATH = "C:\\Users\\batra\\AppData\\Local\\ms-playwright\\ffmpeg-1013\\ffmpeg-win64.exe";

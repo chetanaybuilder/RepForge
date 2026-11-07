@@ -1,9 +1,16 @@
+/**
+ * frontend\src\components\DayFormModal.jsx
+ * Implements this RepForge module's single responsibility while preserving its existing public behavior.
+ */
+
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { PrimaryButton } from "./PrimaryButton";
 import { ExercisePickerModal } from "./ExercisePickerModal";
 import { WeightScrollInput } from "./WeightScrollInput";
-import { RestTimer } from "./RestTimer";
+import { RestTimer, unlockAudio } from "./RestTimer";
+import { useModalBodyLock } from "../hooks/useModalBodyLock";
+import { toLocalISODate, safeFormatDate, isValidLocalDate } from "../utils/date";
 
 export const DAY_WORKOUT_TYPES = [
   { value: "push", label: "Push (Chest/Shoulders/Triceps)" },
@@ -18,7 +25,7 @@ export const DAY_WORKOUT_TYPES = [
   { value: "other", label: "Custom Protocol" },
 ];
 
-const EMPTY_SET = { reps: 10, weight: 0, completed: true };
+const EMPTY_SET = { reps: 10, weight: 0, completed: false };
 const EMPTY_EXERCISE = {
   workout_type: "push",
   exercise_name: "",
@@ -28,13 +35,12 @@ const EMPTY_EXERCISE = {
 
 const EMPTY_FORM = {
   day: "",
-  date: new Date().toISOString().slice(0, 10),
+  date: "",
   exercises: [{ ...EMPTY_EXERCISE }],
 };
+let nextEditorId = 1;
+const createEditorId = (prefix) => `${prefix}-${nextEditorId++}`;
 
-/**
- * Keeps session editing local so nested exercise and set changes are saved atomically.
- */
 export function DayFormModal({ open, onSave, onClose, initialExercise, initialDay = null }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
@@ -42,203 +48,268 @@ export function DayFormModal({ open, onSave, onClose, initialExercise, initialDa
   const [pickerActiveIndex, setPickerActiveIndex] = useState(null);
   const [showRestTimer, setShowRestTimer] = useState(false);
 
+  useModalBodyLock(open);
+
   useEffect(() => {
-    if (open) {
-      setForm(
-        initialDay
-          ? {
-              day: initialDay.day || "",
-              date: (initialDay.date || new Date().toISOString()).slice(0, 10),
-              exercises: initialDay.exercises.map((exercise) => ({
-                workout_type: exercise.workout_type || "other",
-                exercise_name: exercise.exercise_name || "",
-                notes: exercise.notes || "",
-                sets: exercise.sets.map((set) => ({
-                  reps: Number(set.reps),
-                  weight: Number(set.weight ?? set.weight_kg ?? 0),
-                  completed: Boolean(set.completed),
-                })),
+    if (!open) return undefined;
+
+    const handleKeyDown = (e) => {
+      if (e.key !== "Escape") return;
+      if (pickerActiveIndex !== null) {
+        setPickerActiveIndex(null);
+      } else if (showRestTimer) {
+        setShowRestTimer(false);
+      } else {
+        onClose();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open, showRestTimer, pickerActiveIndex, onClose]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const today = toLocalISODate();
+    setForm(
+      initialDay
+        ? {
+            day: initialDay.day || "",
+            date: safeFormatDate(initialDay.date) || today,
+            exercises: initialDay.exercises.map((exercise) => ({
+              _id: createEditorId("exercise"),
+              workout_type: exercise.workout_type || "other",
+              exercise_name: exercise.exercise_name || "",
+              notes: exercise.notes || "",
+              sets: exercise.sets.map((set) => ({
+                _id: createEditorId("set"),
+                reps: Number(set.reps),
+                weight: Number(set.weight ?? set.weight_kg ?? 0),
+                completed: Boolean(set.completed),
               })),
-            }
-          : {
-              ...EMPTY_FORM,
-              date: new Date().toISOString().slice(0, 10),
-              exercises: [
-                {
-                  ...EMPTY_EXERCISE,
-                  exercise_name: initialExercise || "",
-                  sets: [{ ...EMPTY_SET }],
-                },
-              ],
-            }
-      );
-      setErrors({});
-    }
+            })),
+          }
+        : {
+            ...EMPTY_FORM,
+            date: today,
+            exercises: [
+              {
+                ...EMPTY_EXERCISE,
+                _id: createEditorId("exercise"),
+                exercise_name: initialExercise || "",
+                sets: [{ ...EMPTY_SET, _id: createEditorId("set") }],
+              },
+            ],
+          }
+    );
+    setErrors({});
   }, [open, initialExercise, initialDay]);
 
   if (!open) return null;
 
   const setField = (field, value) => {
-    setForm((f) => ({ ...f, [field]: value }));
-  };
-
-  const updateExercise = (eIdx, field, value) => {
-    const newExs = [...form.exercises];
-    newExs[eIdx] = { ...newExs[eIdx], [field]: value };
-    setField("exercises", newExs);
-  };
-
-  const moveExercise = (fromIdx, toIdx) => {
-    if (toIdx < 0 || toIdx >= form.exercises.length) return;
-    const newExs = [...form.exercises];
-    const [moved] = newExs.splice(fromIdx, 1);
-    newExs.splice(toIdx, 0, moved);
-    setField("exercises", newExs);
+    setForm((current) => ({ ...current, [field]: value }));
   };
 
   const addExercise = () => {
     const lastWorkoutType = form.exercises[form.exercises.length - 1]?.workout_type || "push";
-    setField("exercises", [
+    const nextIndex = form.exercises.length;
+    const nextExercises = [
       ...form.exercises,
       {
+        _id: createEditorId("exercise"),
         workout_type: lastWorkoutType,
         exercise_name: "",
         notes: "",
-        sets: [{ ...EMPTY_SET }],
+        sets: [{ ...EMPTY_SET, _id: createEditorId("set") }],
       },
-    ]);
+    ];
+
+    setField("exercises", nextExercises);
+
+    setTimeout(() => {
+      const card = document.querySelector(`[data-exercise-index="${nextIndex}"]`);
+      card?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+    }, 0);
+  };
+
+  const updateExercise = (eIdx, field, value) => {
+    const nextExercises = [...form.exercises];
+    nextExercises[eIdx] = { ...nextExercises[eIdx], [field]: value };
+    setField("exercises", nextExercises);
+  };
+
+  const moveExercise = (fromIdx, toIdx) => {
+    if (toIdx < 0 || toIdx >= form.exercises.length) return;
+    const nextExercises = [...form.exercises];
+    const [moved] = nextExercises.splice(fromIdx, 1);
+    nextExercises.splice(toIdx, 0, moved);
+    setField("exercises", nextExercises);
+  };
+
+  const addSet = (eIdx) => {
+    setForm((current) => {
+      const exercise = current.exercises[eIdx];
+      if (!exercise) return current;
+      const lastSet = exercise.sets[exercise.sets.length - 1] || EMPTY_SET;
+      const exercises = [...current.exercises];
+      exercises[eIdx] = {
+        ...exercise,
+        sets: [
+          ...exercise.sets,
+          {
+            _id: createEditorId("set"),
+            weight: lastSet.weight,
+            reps: lastSet.reps,
+            completed: false,
+          },
+        ],
+      };
+      return { ...current, exercises };
+    });
+  };
+
+  const updateSet = (eIdx, sIdx, field, value) => {
+    const nextExercises = [...form.exercises];
+    const nextSets = [...nextExercises[eIdx].sets];
+    nextSets[sIdx] = { ...nextSets[sIdx], [field]: value };
+    nextExercises[eIdx] = { ...nextExercises[eIdx], sets: nextSets };
+    setField("exercises", nextExercises);
   };
 
   const removeExercise = (eIdx) => {
     if (form.exercises.length <= 1) return;
-    const newExs = form.exercises.filter((_, i) => i !== eIdx);
-    setField("exercises", newExs);
+    const nextExercises = form.exercises.filter((_, idx) => idx !== eIdx);
+    setField("exercises", nextExercises);
   };
 
-  const updateSet = (eIdx, sIdx, field, value) => {
-    // Clone each changed level so React sees updates without mutating sibling sets or exercises.
-    const newExs = [...form.exercises];
-    const newSets = [...newExs[eIdx].sets];
-    newSets[sIdx] = { ...newSets[sIdx], [field]: value };
-    newExs[eIdx] = { ...newExs[eIdx], sets: newSets };
-    setField("exercises", newExs);
-  };
-
-  const addSet = (eIdx) => {
-    const newExs = [...form.exercises];
-    const lastSet = newExs[eIdx].sets[newExs[eIdx].sets.length - 1] || EMPTY_SET;
-    newExs[eIdx].sets = [
-      ...newExs[eIdx].sets,
-      {
-        weight: lastSet.weight,
-        reps: lastSet.reps,
-        completed: true,
-      },
-    ];
-    setField("exercises", newExs);
+  const removeSet = (eIdx, sIdx) => {
+    setForm((current) => {
+      const exercise = current.exercises[eIdx];
+      if (!exercise || exercise.sets.length <= 1) return current;
+      const exercises = [...current.exercises];
+      exercises[eIdx] = { ...exercise, sets: exercise.sets.filter((_, idx) => idx !== sIdx) };
+      return { ...current, exercises };
+    });
   };
 
   const handleSelectFromPicker = (selectedEx) => {
-    if (pickerActiveIndex !== null && pickerActiveIndex < form.exercises.length) {
-      updateExercise(pickerActiveIndex, "exercise_name", selectedEx.name);
+    if (pickerActiveIndex !== null) {
       const muscle = (selectedEx.primary_muscles?.[0] || "").toLowerCase();
-      if (["chest", "shoulders", "triceps"].includes(muscle)) {
-        updateExercise(pickerActiveIndex, "workout_type", "push");
-      } else if (["back", "lats", "biceps", "traps", "forearms"].includes(muscle)) {
-        updateExercise(pickerActiveIndex, "workout_type", "pull");
-      } else if (["quadriceps", "hamstrings", "glutes", "calves"].includes(muscle)) {
-        updateExercise(pickerActiveIndex, "workout_type", "legs");
-      } else if (["abdominals"].includes(muscle)) {
-        updateExercise(pickerActiveIndex, "workout_type", "core");
-      }
+      const mappedType = ["chest", "shoulders", "triceps"].includes(muscle)
+        ? "push"
+        : ["back", "lats", "middle back", "lower back", "biceps", "traps", "forearms"].includes(
+              muscle
+            )
+          ? "pull"
+          : ["quadriceps", "hamstrings", "glutes", "calves", "adductors", "abductors"].includes(
+                muscle
+              )
+            ? "legs"
+            : muscle === "abdominals"
+              ? "core"
+              : null;
+      setForm((current) => {
+        if (pickerActiveIndex < 0 || pickerActiveIndex >= current.exercises.length) return current;
+        const exercises = [...current.exercises];
+        exercises[pickerActiveIndex] = {
+          ...exercises[pickerActiveIndex],
+          exercise_name: selectedEx.name,
+          ...(mappedType ? { workout_type: mappedType } : {}),
+        };
+        return { ...current, exercises };
+      });
     }
     setPickerActiveIndex(null);
   };
 
-  const removeSet = (eIdx, sIdx) => {
-    const newExs = [...form.exercises];
-    if (newExs[eIdx].sets.length <= 1) return;
-    newExs[eIdx].sets = newExs[eIdx].sets.filter((_, i) => i !== sIdx);
-    setField("exercises", newExs);
-  };
-
   const validate = () => {
+    const nextErrors = {};
     let isValid = true;
-    const newErrors = {};
 
     if (!form.date) {
-      newErrors.date = "Date is required.";
+      nextErrors.date = "Date is required.";
+      isValid = false;
+    } else if (!isValidLocalDate(form.date)) {
+      nextErrors.date = "Enter a valid date.";
       isValid = false;
     }
 
     if (form.exercises.length === 0) {
-      newErrors.general = "Add at least one exercise.";
+      nextErrors.general = "Add at least one exercise.";
       isValid = false;
     }
 
-    form.exercises.forEach((ex, eIdx) => {
-      if (!ex.exercise_name.trim()) {
-        newErrors[`ex_${eIdx}_name`] = "Exercise name required";
+    form.exercises.forEach((exercise, eIdx) => {
+      if (!exercise.exercise_name.trim()) {
+        nextErrors[`ex_${eIdx}_name`] = "Exercise name required";
         isValid = false;
       }
-      if (ex.sets.length === 0) {
-        newErrors[`ex_${eIdx}_general`] = "Add at least one set.";
+      if (exercise.sets.length === 0) {
+        nextErrors[`ex_${eIdx}_general`] = "Add at least one set.";
         isValid = false;
       }
-      ex.sets.forEach((s, sIdx) => {
-        if (!Number.isInteger(s.reps) || s.reps < 1) {
-          newErrors[`ex_${eIdx}_s_${sIdx}_reps`] = "Invalid";
+
+      exercise.sets.forEach((set, sIdx) => {
+        if (!Number.isInteger(set.reps) || set.reps < 1) {
+          nextErrors[`ex_${eIdx}_s_${sIdx}_reps`] = "Invalid";
           isValid = false;
         }
-        if (typeof s.weight !== "number" || Number.isNaN(s.weight) || s.weight < 0) {
-          newErrors[`ex_${eIdx}_s_${sIdx}_weight`] = "Invalid";
+        if (
+          typeof set.weight !== "number" ||
+          !Number.isFinite(set.weight) ||
+          set.weight < 0 ||
+          set.weight > 1000
+        ) {
+          nextErrors[`ex_${eIdx}_s_${sIdx}_weight`] = "Invalid";
           isValid = false;
         }
       });
     });
 
-    setErrors(newErrors);
+    setErrors(nextErrors);
     return isValid;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     if (!validate()) return;
+
     setSaving(true);
     try {
-      await onSave({ ...form, day: form.day || null });
+      await onSave({
+        day: form.day || null,
+        date: form.date,
+        exercises: form.exercises.map((exercise) => ({
+          exercise_name: exercise.exercise_name,
+          workout_type: exercise.workout_type,
+          notes: exercise.notes,
+          sets: exercise.sets.map((set) => ({
+            reps: set.reps,
+            weight: set.weight,
+            completed: Boolean(set.completed),
+          })),
+        })),
+      });
     } finally {
       setSaving(false);
     }
   };
 
   return createPortal(
-    <div
-      className="rf-modal-overlay"
-      onClick={onClose}
-      style={{
-        display: "flex",
-        alignItems: "stretch",
-        justifyContent: "center",
-      }}
-    >
+    <div className="rf-modal-overlay rf-modal-overlay--sheet" onClick={onClose}>
       <div
         className="rf-modal rf-modal--lg rf-day-form-modal"
-        onClick={(e) => e.stopPropagation()}
+        onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          height: "100%",
-          width: "100%",
-          maxWidth: "100%",
-        }}
       >
-        <div className="rf-modal-handle" style={{ flexShrink: 0 }} />
-        <div className="rf-modal-header" style={{ flexShrink: 0 }}>
+        <div className="rf-modal-handle" />
+
+        <div className="rf-modal-header">
           <div>
-            <div className="rf-telemetry-tag" style={{ marginBottom: 2 }}>
+            <div className="rf-telemetry-tag rf-day-form-kicker">
               {initialDay ? "EDIT SAVED SESSION" : "TRAINING SESSION PROTOCOL"}
             </div>
             <h3 className="rf-modal-title">
@@ -250,34 +321,13 @@ export function DayFormModal({ open, onSave, onClose, initialExercise, initialDa
           </button>
         </div>
 
-        <div
-          className="rf-modal-body"
-          style={{
-            flex: 1,
-            overflowY: "auto",
-            WebkitOverflowScrolling: "touch",
-            paddingBottom: 120,
-            minHeight: 0,
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <form
-            onSubmit={handleSubmit}
-            className="rf-day-form"
-            style={{
-              width: "100%",
-              minWidth: 0,
-            }}
-          >
+        <form id="day-form" noValidate onSubmit={handleSubmit} className="rf-day-form">
+          <div className="rf-modal-body">
             {errors.general && (
-              <div className="rf-field-error" style={{ marginBottom: 14 }}>
-                {errors.general}
-              </div>
+              <div className="rf-field-error rf-day-form-error">{errors.general}</div>
             )}
 
-            {/* Session Metadata Grid */}
-            <div className="rf-form-grid rf-form-grid--2" style={{ gap: 12, marginBottom: 16 }}>
+            <div className="rf-form-grid rf-form-grid--2 rf-day-form-grid">
               <div className="rf-field">
                 <label className="rf-label" htmlFor="wf-date">
                   Execution Date
@@ -287,7 +337,7 @@ export function DayFormModal({ open, onSave, onClose, initialExercise, initialDa
                   type="date"
                   className="rf-input rf-input--compact"
                   value={form.date}
-                  onChange={(e) => setField("date", e.target.value)}
+                  onChange={(event) => setField("date", event.target.value)}
                   required
                 />
                 {errors.date && <span className="rf-field-error">{errors.date}</span>}
@@ -303,36 +353,28 @@ export function DayFormModal({ open, onSave, onClose, initialExercise, initialDa
                   className="rf-input rf-input--compact"
                   placeholder="e.g. Heavy Push Focus"
                   value={form.day}
-                  onChange={(e) => setField("day", e.target.value)}
+                  onChange={(event) => setField("day", event.target.value)}
                   maxLength={50}
                 />
               </div>
             </div>
 
-            {/* Exercises Section */}
             <div className="rf-workout-exercise-list">
-              {form.exercises.map((ex, eIdx) => (
+              {form.exercises.map((exercise, eIdx) => (
                 <div
-                  key={eIdx}
-                  className="rf-pod rf-workout-exercise-card"
-                  style={{
-                    background: "rgba(14, 14, 26, 0.85)",
-                    border: "1px solid var(--rf-border-laser)",
-                    padding: "14px 14px",
-                    position: "relative",
-                  }}
+                  key={exercise._id || eIdx}
+                  data-exercise-index={eIdx}
+                  className="rf-pod rf-workout-exercise-card rf-day-form-exercise-card"
                 >
-                  {/* Exercise Header with Reorder and Delete Controls */}
                   <div className="rf-exercise-card-header">
                     <div className="rf-exercise-card-title-group">
-                      <span
-                        className="rf-telemetry-tag"
-                        style={{ color: "var(--rf-cyan)", fontSize: "0.68rem" }}
-                      >
+                      <span className="rf-telemetry-tag rf-day-form-movement">
                         MOVEMENT #{String(eIdx + 1).padStart(2, "0")}
                       </span>
-                      {ex.exercise_name && (
-                        <span className="rf-exercise-card-name-preview">· {ex.exercise_name}</span>
+                      {exercise.exercise_name && (
+                        <span className="rf-exercise-card-name-preview">
+                          · {exercise.exercise_name}
+                        </span>
                       )}
                     </div>
 
@@ -371,52 +413,33 @@ export function DayFormModal({ open, onSave, onClose, initialExercise, initialDa
                     </div>
                   </div>
 
-                  {/* Split and Exercise Name Grid */}
-                  <div
-                    className="rf-form-grid rf-form-grid--2"
-                    style={{ gap: 10, marginBottom: 8 }}
-                  >
+                  <div className="rf-form-grid rf-form-grid--2 rf-day-form-compact-grid">
                     <div className="rf-field">
-                      <label className="rf-label" style={{ fontSize: "0.72rem" }}>
-                        Target Split
-                      </label>
+                      <label className="rf-label rf-day-form-compact-label">Target Split</label>
                       <select
                         className="rf-select rf-select--compact"
-                        value={ex.workout_type}
-                        onChange={(e) => updateExercise(eIdx, "workout_type", e.target.value)}
+                        value={exercise.workout_type}
+                        onChange={(event) =>
+                          updateExercise(eIdx, "workout_type", event.target.value)
+                        }
                       >
-                        {DAY_WORKOUT_TYPES.map((t) => (
-                          <option key={t.value} value={t.value}>
-                            {t.label}
+                        {DAY_WORKOUT_TYPES.map((type) => (
+                          <option key={type.value} value={type.value}>
+                            {type.label}
                           </option>
                         ))}
                       </select>
                     </div>
 
                     <div className="rf-field">
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          marginBottom: 4,
-                        }}
-                      >
-                        <label className="rf-label" style={{ fontSize: "0.72rem", margin: 0 }}>
+                      <div className="rf-day-form-name-header">
+                        <label className="rf-label rf-day-form-compact-label rf-day-form-name-label">
                           Exercise Name
                         </label>
                         <button
                           type="button"
                           onClick={() => setPickerActiveIndex(eIdx)}
-                          className="rf-telemetry-tag"
-                          style={{
-                            background: "transparent",
-                            border: "none",
-                            color: "var(--rf-cyan)",
-                            cursor: "pointer",
-                            fontSize: "0.68rem",
-                            padding: "0 2px",
-                          }}
+                          className="rf-telemetry-tag rf-day-form-picker-button"
                         >
                           ✦ Choose from Library
                         </button>
@@ -424,12 +447,12 @@ export function DayFormModal({ open, onSave, onClose, initialExercise, initialDa
                       <input
                         type="text"
                         className="rf-input rf-input--compact"
-                        placeholder={
-                          eIdx === 0 ? "Enter first exercise" : "Enter another exercise"
-                        }
+                        placeholder={eIdx === 0 ? "Enter first exercise" : "Enter another exercise"}
                         aria-label={`Exercise ${eIdx + 1} name`}
-                        value={ex.exercise_name}
-                        onChange={(e) => updateExercise(eIdx, "exercise_name", e.target.value)}
+                        value={exercise.exercise_name}
+                        onChange={(event) =>
+                          updateExercise(eIdx, "exercise_name", event.target.value)
+                        }
                         required
                       />
                       {errors[`ex_${eIdx}_name`] && (
@@ -438,18 +461,16 @@ export function DayFormModal({ open, onSave, onClose, initialExercise, initialDa
                     </div>
                   </div>
 
-                  {/* Optional Biomechanical Cue */}
-                  <div className="rf-field" style={{ marginBottom: 12 }}>
+                  <div className="rf-field rf-day-form-notes-field">
                     <input
                       type="text"
                       className="rf-input rf-input--subtle"
                       placeholder="Execution / Tempo Notes (e.g. 3s eccentric, paused) — optional"
-                      value={ex.notes}
-                      onChange={(e) => updateExercise(eIdx, "notes", e.target.value)}
+                      value={exercise.notes}
+                      onChange={(event) => updateExercise(eIdx, "notes", event.target.value)}
                     />
                   </div>
 
-                  {/* Clean Set Table Architecture */}
                   <div className="rf-set-table">
                     <div className="rf-set-table-head">
                       <span className="rf-set-th rf-set-th--idx">SET</span>
@@ -460,50 +481,47 @@ export function DayFormModal({ open, onSave, onClose, initialExercise, initialDa
                       </span>
                     </div>
 
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      {ex.sets.map((set, sIdx) => (
+                    <div className="rf-day-form-set-list">
+                      {exercise.sets.map((set, sIdx) => (
                         <div
-                          key={sIdx}
+                          key={set._id || sIdx}
                           className={`rf-set-row ${set.completed ? "rf-set-row--done" : ""}`}
                         >
-                          {/* Lightweight Set Index */}
                           <div className="rf-set-cell rf-set-cell--idx">
                             <span className="rf-set-num">{sIdx + 1}</span>
                           </div>
 
-                          {/* Total weight entered directly in kilograms */}
                           <div className="rf-set-cell rf-set-cell--weight">
                             <WeightScrollInput
                               value={set.weight}
-                              onChange={(val) => updateSet(eIdx, sIdx, "weight", val)}
+                              onChange={(value) => updateSet(eIdx, sIdx, "weight", value)}
                               ariaLabel={`Set ${sIdx + 1} weight (kg)`}
                             />
                           </div>
 
-                          {/* Minimal Reps Input */}
                           <div className="rf-set-cell rf-set-cell--reps">
                             <input
                               type="number"
                               step="1"
                               min="1"
+                              max="1000"
                               inputMode="numeric"
                               pattern="[0-9]*"
                               className="rf-set-input"
                               value={set.reps === 0 ? "" : set.reps}
                               placeholder="0"
-                              onChange={(e) =>
+                              onChange={(event) =>
                                 updateSet(
                                   eIdx,
                                   sIdx,
                                   "reps",
-                                  e.target.value === "" ? 0 : Number(e.target.value)
+                                  event.target.value === "" ? 0 : Number(event.target.value)
                                 )
                               }
                               aria-label={`Set ${sIdx + 1} reps`}
                             />
                           </div>
 
-                          {/* Completion and removal share the final action column */}
                           <div className="rf-set-cell rf-set-cell--actions">
                             <button
                               type="button"
@@ -512,6 +530,7 @@ export function DayFormModal({ open, onSave, onClose, initialExercise, initialDa
                                 const nextCompleted = !set.completed;
                                 updateSet(eIdx, sIdx, "completed", nextCompleted);
                                 if (nextCompleted) {
+                                  unlockAudio();
                                   setShowRestTimer(true);
                                 }
                               }}
@@ -524,7 +543,7 @@ export function DayFormModal({ open, onSave, onClose, initialExercise, initialDa
                             >
                               ✓
                             </button>
-                            {ex.sets.length > 1 ? (
+                            {exercise.sets.length > 1 ? (
                               <button
                                 type="button"
                                 className="rf-set-delete-btn"
@@ -540,7 +559,6 @@ export function DayFormModal({ open, onSave, onClose, initialExercise, initialDa
                       ))}
                     </div>
 
-                    {/* + Add Set Action Button */}
                     <button
                       type="button"
                       className="rf-btn rf-btn--ghost rf-add-set-btn"
@@ -552,7 +570,6 @@ export function DayFormModal({ open, onSave, onClose, initialExercise, initialDa
                 </div>
               ))}
 
-              {/* Explicit + Add Exercise Button */}
               <button
                 type="button"
                 className="rf-btn rf-btn--ghost rf-add-exercise-btn"
@@ -561,18 +578,9 @@ export function DayFormModal({ open, onSave, onClose, initialExercise, initialDa
                 + Add Exercise
               </button>
             </div>
-          </form>
-        </div>
+          </div>
 
-        <div
-          className="rf-modal-footer"
-          style={{
-            position: "sticky",
-            bottom: 0,
-            zIndex: 50,
-            flexShrink: 0,
-          }}
-        >
+          <div className="rf-modal-footer">
             <button
               type="button"
               className="rf-btn rf-btn--ghost"
@@ -581,7 +589,7 @@ export function DayFormModal({ open, onSave, onClose, initialExercise, initialDa
             >
               Cancel
             </button>
-            <PrimaryButton type="submit" disabled={saving}>
+            <PrimaryButton type="submit" form="day-form" disabled={saving}>
               {saving
                 ? initialDay
                   ? "Saving Session…"
@@ -591,6 +599,7 @@ export function DayFormModal({ open, onSave, onClose, initialExercise, initialDa
                   : "Save Session"}
             </PrimaryButton>
           </div>
+        </form>
 
         <ExercisePickerModal
           open={pickerActiveIndex !== null}
@@ -598,7 +607,9 @@ export function DayFormModal({ open, onSave, onClose, initialExercise, initialDa
           onClose={() => setPickerActiveIndex(null)}
         />
 
-        {showRestTimer && <RestTimer onClose={() => setShowRestTimer(false)} />}
+        {showRestTimer && (
+          <RestTimer bottomOffset={88} defaultMinimized onClose={() => setShowRestTimer(false)} />
+        )}
       </div>
     </div>,
     document.body

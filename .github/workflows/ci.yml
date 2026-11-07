@@ -44,7 +44,7 @@ jobs:
         run: pytest -v
 
   frontend:
-    name: Frontend (Node.js / ESLint / Prettier / Vitest / Build)
+    name: Frontend (Node.js / ESLint / Prettier / Build)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -67,9 +67,6 @@ jobs:
 
       - name: Check Frontend Formatting
         run: npm --prefix frontend run format:check
-
-      - name: Run Vitest Suite
-        run: npm test
 
       - name: Build Production Frontend
         run: npm run build

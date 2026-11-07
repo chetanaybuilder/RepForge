@@ -1,4 +1,11 @@
 /**
+ * frontend\src\components\3d\DashboardHero2D.jsx
+ * Implements this RepForge module's single responsibility while preserving its existing public behavior.
+ */
+
+import { useId } from "react";
+
+/**
  * RepForge 2040 - 2D Holographic Fallback for Dashboard Hero
  *
  * Responsibilities:
@@ -8,6 +15,11 @@
  */
 
 export function DashboardHero2D() {
+  const gradientPrefix = useId().replace(/:/g, "");
+  const cyanId = `${gradientPrefix}-cyan`;
+  const violetId = `${gradientPrefix}-violet`;
+  const centerGlowId = `${gradientPrefix}-center`;
+
   return (
     <div
       className="rf-dashboard-hero-2d"
@@ -33,22 +45,22 @@ export function DashboardHero2D() {
         }}
       >
         <defs>
-          <linearGradient id="rfHoloCyan" x1="0%" y1="0%" x2="100%" y2="100%">
+          <linearGradient id={cyanId} x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#00f2fe" stopOpacity="0.8" />
             <stop offset="100%" stopColor="#8a5cf6" stopOpacity="0.2" />
           </linearGradient>
-          <linearGradient id="rfHoloViolet" x1="100%" y1="0%" x2="0%" y2="100%">
+          <linearGradient id={violetId} x1="100%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stopColor="#8a5cf6" stopOpacity="0.8" />
             <stop offset="100%" stopColor="#ff3366" stopOpacity="0.2" />
           </linearGradient>
-          <radialGradient id="rfCenterGlow" cx="50%" cy="50%" r="50%">
+          <radialGradient id={centerGlowId} cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="#00f2fe" stopOpacity="0.2" />
             <stop offset="100%" stopColor="transparent" stopOpacity="0" />
           </radialGradient>
         </defs>
 
         {/* Center Glow Mesh */}
-        <circle cx="200" cy="200" r="140" fill="url(#rfCenterGlow)" />
+        <circle cx="200" cy="200" r="140" fill={`url(#${centerGlowId})`} />
 
         {/* Outer Orbit Ring */}
         <circle
@@ -56,7 +68,7 @@ export function DashboardHero2D() {
           cy="200"
           r="130"
           fill="none"
-          stroke="url(#rfHoloCyan)"
+          stroke={`url(#${cyanId})`}
           strokeWidth="1.5"
           strokeDasharray="8 6"
           className="rf-spin-slow"
@@ -69,7 +81,7 @@ export function DashboardHero2D() {
           cy="200"
           r="95"
           fill="none"
-          stroke="url(#rfHoloViolet)"
+          stroke={`url(#${violetId})`}
           strokeWidth="2"
           strokeDasharray="16 12"
           className="rf-spin-reverse"
@@ -102,7 +114,7 @@ export function DashboardHero2D() {
         {/* Original blue-flame strength athlete silhouette */}
         <path
           d="M265 90c-12 14-9 24-2 34-15-8-20-19-17-34-15 13-19 29-10 44-16-6-23-19-21-36-19 18-18 42-4 57-15-2-25-11-31-25-10 24 1 45 19 56-13 2-24-3-34-13 1 22 15 37 35 42-13 7-27 7-42 2 10 19 29 27 49 23 8 13 21 20 39 20 18 0 31-7 39-20 20 4 39-4 49-23-15 5-29 5-42-2 20-5 34-20 35-42-10 10-21 15-34 13 18-11 29-32 19-56-6 14-16 23-31 25 14-15 15-39-4-57 2 17-5 30-21 36 9-15 5-31-10-44 3 15-2 26-17 34 7-10 10-20-2-34Z"
-          fill="url(#rfHoloCyan)"
+          fill={`url(#${cyanId})`}
           opacity="0.16"
           stroke="#42d9ff"
           strokeWidth="2"

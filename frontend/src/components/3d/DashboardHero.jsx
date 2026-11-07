@@ -6,14 +6,8 @@
  * - Instantly displays lightweight SVG telemetry rings on mobile, low-tier, or reduced-motion.
  */
 
-import { LazyThree } from "./LazyThree";
 import { DashboardHero2D } from "./DashboardHero2D";
 
 export function DashboardHero() {
-  return (
-    <>
-      <LazyThree loadComponent={() => import("./DashboardHero3D")} fallback={null} />
-      <DashboardHero2D />
-    </>
-  );
+  return <DashboardHero2D />;
 }

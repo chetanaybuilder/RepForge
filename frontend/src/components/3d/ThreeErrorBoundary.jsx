@@ -1,3 +1,8 @@
+/**
+ * frontend\src\components\3d\ThreeErrorBoundary.jsx
+ * Implements this RepForge module's single responsibility while preserving its existing public behavior.
+ */
+
 import React from "react";
 
 export class ThreeErrorBoundary extends React.Component {

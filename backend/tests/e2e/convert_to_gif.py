@@ -4,7 +4,9 @@ import subprocess
 
 from PIL import Image
 
-FFMPEG = r"C:\Users\batra\AppData\Local\ms-playwright\ffmpeg-1013\ffmpeg-win64.exe"
+# Resolve the Playwright-managed FFmpeg executable from PATH so capture scripts
+# do not contain machine-specific absolute paths.
+FFMPEG = "ffmpeg"
 
 
 def make_gif_from_webm(webm_path, gif_path, fps=8, max_width=640):

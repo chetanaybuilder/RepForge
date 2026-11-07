@@ -1,5 +1,10 @@
-import { useEffect } from "react";
-import { useNavigate, useSearchParams, Link } from "react-router-dom";
+/**
+ * frontend\src\pages\Login.jsx
+ * Implements this RepForge module's single responsibility while preserving its existing public behavior.
+ */
+
+import { useEffect, useRef } from "react";
+import { useNavigate, useSearchParams, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { motion } from "framer-motion";
@@ -8,25 +13,39 @@ const ERROR_MESSAGES = {
   access_denied: "Authentication request cancelled by user.",
   invalid_state: "Security handshake expired. Please re-authenticate.",
   missing_code: "OAuth provider response incomplete.",
-  auth_failed: "Biometric identity verification unsuccessful.",
+  auth_failed: "Authentication was unsuccessful.",
 };
 
 export function Login() {
   const { loginWithGoogle, status } = useAuth();
   const navigate = useNavigate();
-  const [params] = useSearchParams();
+  const location = useLocation();
+  const [params, setSearchParams] = useSearchParams();
   const toast = useToast();
+  const shownErrorRef = useRef(null);
 
   useEffect(() => {
-    if (status === "authenticated") navigate("/dashboard", { replace: true });
-  }, [status, navigate]);
+    if (status === "authenticated") {
+      const destination = location.state?.from || "/dashboard";
+      navigate(destination, { replace: true });
+    }
+  }, [status, navigate, location.state]);
 
   useEffect(() => {
     const error = params.get("error");
-    if (error) {
-      toast.error(ERROR_MESSAGES[error] || "Authentication handshake error.");
-    }
-  }, [params, toast]);
+    if (!error || shownErrorRef.current === error) return;
+
+    shownErrorRef.current = error;
+    toast.error(ERROR_MESSAGES[error] || "Authentication handshake error.");
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("error");
+        return next;
+      },
+      { replace: true }
+    );
+  }, [params, setSearchParams, toast]);
 
   return (
     <div className="rf-auth-page">
@@ -49,11 +68,11 @@ export function Login() {
         </Link>
 
         <div className="rf-telemetry-tag" style={{ marginBottom: 8, justifyContent: "center" }}>
-          BIOMETRIC AUTHENTICATION TERMINAL
+          Account Access
         </div>
 
         <h1 style={{ fontSize: "1.6rem", marginBottom: 8, color: "var(--rf-text-pure)" }}>
-          Access Your Telemetry
+          Access Your Account
         </h1>
         <p style={{ color: "var(--rf-text-sub)", fontSize: "0.88rem", marginBottom: 24 }}>
           Connect securely via Google to synchronize your workout logs, PR milestones, and AI
@@ -75,8 +94,7 @@ export function Login() {
             lineHeight: 1.5,
           }}
         >
-          RepForge utilizes verified OAuth identity protocols. Your credentials and training logs
-          are encrypted in isolation.
+          Sign in securely with Google to access your workouts and training history.
         </div>
       </motion.div>
     </div>

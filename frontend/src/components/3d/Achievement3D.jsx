@@ -1,4 +1,12 @@
+/**
+ * frontend\src\components\3d\Achievement3D.jsx
+ * Implements this RepForge module's single responsibility while preserving its existing public behavior.
+ */
+
 import { LazyThree } from "./LazyThree";
+import { useEffect, useState } from "react";
+
+const loadQuantumGem = () => import("./QuantumGemCanvas");
 
 /**
  * Lightweight hardware-accelerated CSS badge fallback for inactive badges
@@ -30,6 +38,30 @@ function FallbackGem({ color = "#8a5cf6", active, size = 56 }) {
   );
 }
 
+let liveGemSlots = 0;
+
+function useGemSlot(want) {
+  const [allowed, setAllowed] = useState(false);
+
+  useEffect(() => {
+    if (!want) {
+      setAllowed(false);
+      return undefined;
+    }
+    if (liveGemSlots >= 3) {
+      setAllowed(false);
+      return undefined;
+    }
+    liveGemSlots += 1;
+    setAllowed(true);
+    return () => {
+      liveGemSlots -= 1;
+    };
+  }, [want]);
+
+  return allowed;
+}
+
 /**
  * 3D Achievement Gem Component with dynamic context budgeting and lazy loading.
  *
@@ -37,14 +69,17 @@ function FallbackGem({ color = "#8a5cf6", active, size = 56 }) {
  */
 export function Achievement3D({ color = "#8a5cf6", active = true, size = 56 }) {
   const fallback = <FallbackGem color={color} active={active} size={size} />;
+  const allowed = useGemSlot(active);
 
   if (!active) {
     return fallback;
   }
 
+  if (!allowed) return fallback;
+
   return (
     <LazyThree
-      loadComponent={() => import("./QuantumGemCanvas")}
+      loadComponent={loadQuantumGem}
       fallback={fallback}
       props={{ color, active, size, fallback }}
     />

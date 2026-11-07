@@ -45,6 +45,19 @@
 }
 
 /* Page Header */
+.rf-dashboard-hero-2d {
+  justify-content: flex-end !important;
+  padding-right: 3%;
+}
+
+@media (max-width: 700px) {
+  .rf-dashboard-hero-2d {
+    opacity: 0.35;
+    justify-content: center !important;
+    padding: 0;
+  }
+}
+
 .rf-page-header {
   display: flex;
   flex-direction: column;
@@ -2547,6 +2560,36 @@
   .rf-saas-footer > span {
     display: none;
   }
+}
+
+.rf-status-beacon {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 999px;
+  background: var(--rf-emerald, #00f5a0);
+  box-shadow: 0 0 12px rgba(0, 245, 160, 0.55);
+}
+
+.rf-saas-hero-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(0, 240, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 240, 255, 0.04) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: radial-gradient(circle at center, black, transparent 78%);
+}
+
+.rf-saas-log-set--filled {
+  border-color: rgba(0, 240, 255, 0.35);
+  background: rgba(0, 240, 255, 0.08);
+}
+
+.rf-saas-volume-panel,
+.rf-saas-consistency {
+  min-width: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {

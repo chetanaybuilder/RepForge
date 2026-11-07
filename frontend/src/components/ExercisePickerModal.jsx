@@ -10,6 +10,7 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { api, getExerciseImageUrl } from "../services/api";
+import { useModalBodyLock } from "../hooks/useModalBodyLock";
 
 const COMMON_MUSCLES = [
   "all",
@@ -30,11 +31,25 @@ export function ExercisePickerModal({ open, onSelect, onClose }) {
   const [selectedMuscle, setSelectedMuscle] = useState("all");
   const [exercises, setExercises] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
+
+  useModalBodyLock(open);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open, onClose]);
 
   useEffect(() => {
     if (!open) return;
     let isCancelled = false;
     setLoading(true);
+    setError(null);
 
     const timer = setTimeout(async () => {
       try {
@@ -48,8 +63,11 @@ export function ExercisePickerModal({ open, onSelect, onClose }) {
         if (!isCancelled) {
           setExercises(data?.items || data?.exercises || []);
         }
-      } catch {
-        if (!isCancelled) setExercises([]);
+      } catch (requestError) {
+        if (!isCancelled) {
+          setExercises([]);
+          setError(requestError?.message || "Could not load exercises. Please try again.");
+        }
       } finally {
         if (!isCancelled) setLoading(false);
       }
@@ -59,7 +77,7 @@ export function ExercisePickerModal({ open, onSelect, onClose }) {
       isCancelled = true;
       clearTimeout(timer);
     };
-  }, [open, search, selectedMuscle]);
+  }, [open, search, selectedMuscle, retryCount]);
 
   if (!open) return null;
 
@@ -76,7 +94,7 @@ export function ExercisePickerModal({ open, onSelect, onClose }) {
       <div
         className="rf-modal rf-modal--lg"
         style={{
-          maxHeight: "min(85svh, 720px)",
+          maxHeight: "min(85dvh, 720px)",
           display: "flex",
           flexDirection: "column",
           gap: 16,
@@ -98,10 +116,13 @@ export function ExercisePickerModal({ open, onSelect, onClose }) {
         </div>
 
         {/* Search input */}
-        <div style={{ position: "relative" }}>
+        <div style={{ position: "relative", width: "100%", minWidth: 0 }}>
           <input
             type="text"
             className="rf-input"
+            inputMode="search"
+            enterKeyHint="search"
+            autoComplete="off"
             placeholder="Search 800+ movements (e.g. Incline Bench, Squat, Pull-Up)..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -197,7 +218,21 @@ export function ExercisePickerModal({ open, onSelect, onClose }) {
             </div>
           )}
 
-          {!loading && exercises.length === 0 && (
+          {!loading && error && (
+            <div className="rf-state rf-state--error" role="alert">
+              <div className="rf-state-glyph rf-state-glyph--error">⚠</div>
+              <p className="rf-state-desc">{error}</p>
+              <button
+                type="button"
+                className="rf-btn rf-btn--ghost"
+                onClick={() => setRetryCount((count) => count + 1)}
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
+          {!loading && !error && exercises.length === 0 && (
             <div style={{ textAlign: "center", padding: "40px 0", color: "var(--rf-text-faint)" }}>
               No exercises match your query. Try a different muscle group or keyword.
             </div>
@@ -209,7 +244,8 @@ export function ExercisePickerModal({ open, onSelect, onClose }) {
               const thumb = ex.images?.[0] ? getExerciseImageUrl(ex.images[0]) : null;
 
               return (
-                <div
+                <button
+                  type="button"
                   key={ex.id}
                   onClick={() => {
                     onSelect(ex);
@@ -219,7 +255,11 @@ export function ExercisePickerModal({ open, onSelect, onClose }) {
                     display: "flex",
                     alignItems: "center",
                     gap: 14,
+                    width: "100%",
                     padding: "10px 14px",
+                    color: "inherit",
+                    font: "inherit",
+                    textAlign: "left",
                     borderRadius: "var(--rf-radius-md)",
                     background: "rgba(255, 255, 255, 0.03)",
                     border: "1px solid rgba(255, 255, 255, 0.06)",
@@ -234,8 +274,6 @@ export function ExercisePickerModal({ open, onSelect, onClose }) {
                     e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.06)";
                     e.currentTarget.style.background = "rgba(255, 255, 255, 0.03)";
                   }}
-                  role="button"
-                  tabIndex={0}
                 >
                   {/* Thumbnail */}
                   <div
@@ -305,7 +343,7 @@ export function ExercisePickerModal({ open, onSelect, onClose }) {
                   <div style={{ color: "var(--rf-cyan)", fontSize: "1.2rem", fontWeight: 700 }}>
                     +
                   </div>
-                </div>
+                </button>
               );
             })}
         </div>

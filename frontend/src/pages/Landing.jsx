@@ -1,3 +1,8 @@
+/**
+ * frontend\src\pages\Landing.jsx
+ * Implements this RepForge module's single responsibility while preserving its existing public behavior.
+ */
+
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
@@ -57,11 +62,11 @@ const FEATURES = [
 function WorkoutHeatmap() {
   return (
     <div className="rf-saas-heatmap" aria-label="Workout consistency across the last 12 weeks">
-      {["M", "T", "W", "T", "F", "S", "S"].map((day, index) => (
-        <span className="rf-saas-heatmap-day" key={`${day}-${index}`}>
-          {day}
-        </span>
-      ))}
+      <div className="rf-saas-heatmap-day">
+        {["M", "T", "W", "T", "F", "S", "S"].map((day, index) => (
+          <span key={`${day}-${index}`}>{day}</span>
+        ))}
+      </div>
       <div className="rf-saas-heatmap-grid">
         {HEATMAP_LEVELS.map((level, index) => (
           <span
@@ -233,7 +238,7 @@ function DashboardPreview() {
         <div className="rf-saas-timer-row">
           <span className="rf-saas-timer-indicator" />
           <span>REST TIMER</span>
-          <strong>02:01:07</strong>
+          <strong>01:30</strong>
         </div>
         <div className="rf-saas-mobile-exercises">
           {EXERCISES.map((exercise) => (

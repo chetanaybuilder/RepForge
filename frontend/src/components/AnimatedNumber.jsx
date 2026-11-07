@@ -1,4 +1,9 @@
-import { motion, useSpring, useMotionValueEvent } from "framer-motion";
+/**
+ * frontend\src\components\AnimatedNumber.jsx
+ * Implements this RepForge module's single responsibility while preserving its existing public behavior.
+ */
+
+import { useSpring, useMotionValueEvent } from "framer-motion";
 import { useEffect, useState } from "react";
 
 export function AnimatedNumber({ value, format = (n) => Math.round(n) }) {
@@ -26,7 +31,11 @@ export function AnimatedNumber({ value, format = (n) => Math.round(n) }) {
   });
 
   useEffect(() => {
+    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     spring.set(numVal);
+    if (reducedMotion) {
+      setDisplay(format(numVal) + suffix);
+    }
   }, [numVal, spring]);
 
   return <span>{display || format(numVal) + suffix}</span>;

@@ -1,4 +1,10 @@
-import { useState } from "react";
+/**
+ * frontend\src\pages\Goals.jsx
+ * Implements this RepForge module's single responsibility while preserving its existing public behavior.
+ */
+
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { api } from "../services/api";
 import { useFetch } from "../hooks/useFetch";
 import { useToast } from "../context/ToastContext";
@@ -8,6 +14,8 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { Achievement3D } from "../components/3d/Achievement3D";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { motion } from "framer-motion";
+import { useAuth } from "../context/AuthContext";
+import { useModalBodyLock } from "../hooks/useModalBodyLock";
 
 const GOAL_TYPES = [
   { value: "weekly_frequency", label: "Weekly Training Frequency", unit: "sessions / week" },
@@ -16,6 +24,7 @@ const GOAL_TYPES = [
 ];
 
 export function Goals() {
+  const { user } = useAuth();
   const {
     data: goalsData,
     status,
@@ -25,14 +34,14 @@ export function Goals() {
     () => api.get("/api/goals"),
     [],
     () => false,
-    null,
+    `goals:list:${user?.id ?? "anonymous"}`,
     { goals: [] }
   );
   const { data: achievementsData, status: achStatus } = useFetch(
     () => api.get("/api/goals/achievements"),
     [],
     () => false,
-    null,
+    `goals:achievements:${user?.id ?? "anonymous"}`,
     { achievements: [] }
   );
   const toast = useToast();
@@ -71,12 +80,10 @@ export function Goals() {
       <div className="rf-page-header">
         <div>
           <div className="rf-telemetry-tag" style={{ marginBottom: 6 }}>
-            04 — GOALS & ACHIEVEMENTS
+            06 — GOALS & ACHIEVEMENTS
           </div>
           <h1 className="rf-page-title">Goals & Achievements</h1>
-          <p className="rf-page-subtitle">
-            Active performance targets, progression milestones, and quantum crystals.
-          </p>
+          <p className="rf-page-subtitle">Active performance targets and progression milestones.</p>
         </div>
         <PrimaryButton className="rf-btn--sm" onClick={() => setFormOpen(true)}>
           + Set Target
@@ -118,11 +125,8 @@ export function Goals() {
           ==================================================================== */}
       <div className="rf-section-head">
         <h2 className="rf-section-title">
-          <span>✦</span> Quantum Milestone Crystals
+          <span>✦</span> Achievements
         </h2>
-        <span className="rf-telemetry-tag" style={{ color: "var(--rf-text-faint)" }}>
-          HARDWARE VERIFIED
-        </span>
       </div>
 
       {achStatus === "loading" && <LoadingState label="Synthesizing achievement matrix…" />}
@@ -240,7 +244,7 @@ function GoalCard({ goal, onDelete }) {
   const typeLabel =
     GOAL_TYPES.find((t) => t.value === goal?.goal_type)?.label || goal?.goal_type || "Objective";
   const progress = goal?.progress || {};
-  const pct = Math.min(100, Math.round(progress?.progress_pct || 0));
+  const pct = Math.max(0, Math.min(100, Math.round(Number(progress?.progress_pct) || 0)));
 
   return (
     <div className="rf-pod">
@@ -295,10 +299,19 @@ function GoalCard({ goal, onDelete }) {
 function GoalFormModal({ onClose, onCreated }) {
   const [goalType, setGoalType] = useState("weekly_frequency");
   const [exerciseName, setExerciseName] = useState("");
-  const [targetValue, setTargetValue] = useState(3);
+  const [targetValue, setTargetValue] = useState("3");
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const toast = useToast();
+
+  useModalBodyLock(true);
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
 
   const unit = GOAL_TYPES.find((t) => t.value === goalType)?.unit;
 
@@ -309,7 +322,8 @@ function GoalFormModal({ onClose, onCreated }) {
       setErrorMsg("Exercise name is required for a Peak PR objective.");
       return;
     }
-    if (!targetValue || targetValue <= 0) {
+    const numericTarget = Number(targetValue);
+    if (!Number.isFinite(numericTarget) || numericTarget <= 0) {
       setErrorMsg("Target value must be greater than zero.");
       return;
     }
@@ -318,7 +332,7 @@ function GoalFormModal({ onClose, onCreated }) {
       await api.post("/api/goals", {
         goal_type: goalType,
         exercise_name: goalType === "exercise_pr" ? exerciseName.trim() : null,
-        target_value: Number(targetValue),
+        target_value: numericTarget,
       });
       toast.success("New objective synthesized.");
       onCreated();
@@ -329,7 +343,7 @@ function GoalFormModal({ onClose, onCreated }) {
     }
   };
 
-  return (
+  return createPortal(
     <div className="rf-modal-overlay" onClick={onClose}>
       <div
         className="rf-modal rf-modal--sm"
@@ -393,11 +407,12 @@ function GoalFormModal({ onClose, onCreated }) {
               <input
                 id="goal-target"
                 type="number"
-                step="0.5"
+                inputMode={goalType === "weekly_frequency" ? "numeric" : "decimal"}
+                step={goalType === "weekly_frequency" ? "1" : "0.5"}
                 min="0"
                 className="rf-input"
                 value={targetValue}
-                onChange={(e) => setTargetValue(e.target.valueAsNumber)}
+                onChange={(e) => setTargetValue(e.target.value)}
                 required
               />
             </div>
@@ -424,6 +439,7 @@ function GoalFormModal({ onClose, onCreated }) {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

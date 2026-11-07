@@ -4,7 +4,7 @@ import subprocess
 
 from PIL import Image
 
-FFMPEG = r"C:\Users\batra\AppData\Local\ms-playwright\ffmpeg-1013\ffmpeg-win64.exe"
+FFMPEG = os.environ.get("FFMPEG_PATH", "ffmpeg")
 
 def make_gif_from_webm(webm_path, gif_path, fps=8, max_width=640):
     temp_dir = os.path.join(os.path.dirname(gif_path), "temp_frames")

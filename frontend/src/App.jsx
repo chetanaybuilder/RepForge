@@ -1,7 +1,12 @@
+/**
+ * frontend\src\App.jsx
+ * Implements this RepForge module's single responsibility while preserving its existing public behavior.
+ */
+
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "./context/AuthContext";
 import { ToastProvider } from "./context/ToastContext";
+import { RestTimerProvider } from "./context/RestTimerContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AppShell } from "./components/AppShell";
 import { AppErrorBoundary, PageErrorBoundary } from "./components/ErrorBoundary";
@@ -16,24 +21,18 @@ import { Progress } from "./pages/Progress";
 import { Goals } from "./pages/Goals";
 import { NotFound } from "./pages/NotFound";
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 2 * 60 * 1000, // 2 minutes — cached data is fresh
-      gcTime: 10 * 60 * 1000, // 10 minutes — keep in cache
-      retry: 1, // retry once on failure
-      refetchOnWindowFocus: false, // don't spam the API on tab switch
-    },
-  },
-});
-
 export default function App() {
   return (
     <AppErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <ToastProvider>
-            <BrowserRouter>
+      <AuthProvider>
+        <ToastProvider>
+          <RestTimerProvider>
+            <BrowserRouter
+              future={{
+                v7_startTransition: true,
+                v7_relativeSplatPath: true,
+              }}
+            >
               <Routes>
                 <Route
                   path="/"
@@ -114,9 +113,9 @@ export default function App() {
                 <Route path="*" element={<Navigate to="/404" replace />} />
               </Routes>
             </BrowserRouter>
-          </ToastProvider>
-        </AuthProvider>
-      </QueryClientProvider>
+          </RestTimerProvider>
+        </ToastProvider>
+      </AuthProvider>
     </AppErrorBoundary>
   );
 }

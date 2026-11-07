@@ -1,11 +1,18 @@
-import { useCallback, useEffect, useState } from "react";
+/**
+ * frontend\src\hooks\useWorkouts.js
+ * Implements this RepForge module's single responsibility while preserving its existing public behavior.
+ */
+
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 /**
  * Maximum entries retained in the module-level workouts cache.
  * Bounded to prevent memory leaks during prolonged single-page sessions.
  */
 const MAX_CACHE_SIZE = 25;
+const CACHE_TTL_MS = 5 * 60 * 1000;
 
 /**
  * In-memory response cache for workout queries keyed by filter state.
@@ -24,7 +31,23 @@ function setBoundedCache(key, value) {
     const oldestKey = globalWorkoutsCache.keys().next().value;
     if (oldestKey) globalWorkoutsCache.delete(oldestKey);
   }
-  globalWorkoutsCache.set(key, value);
+  globalWorkoutsCache.set(key, { value, expiresAt: Date.now() + CACHE_TTL_MS });
+}
+
+function getCachedValue(key) {
+  const entry = globalWorkoutsCache.get(key);
+  if (!entry) return undefined;
+  if (entry.expiresAt <= Date.now()) {
+    globalWorkoutsCache.delete(key);
+    return undefined;
+  }
+  globalWorkoutsCache.delete(key);
+  globalWorkoutsCache.set(key, entry);
+  return entry.value;
+}
+
+export function clearWorkoutsCache() {
+  globalWorkoutsCache.clear();
 }
 
 /**
@@ -41,13 +64,16 @@ function setBoundedCache(key, value) {
  * }} Workouts list, status, errors, and mutation handlers
  */
 export function useWorkouts(filters = {}) {
-  const key = JSON.stringify(filters);
+  const { user } = useAuth();
+  const key = `${user?.id ?? "anonymous"}:${JSON.stringify(filters)}`;
+  const requestId = useRef(0);
+  const mounted = useRef(true);
   const [workouts, setWorkouts] = useState(() => {
-    const cached = globalWorkoutsCache.get(key);
+    const cached = getCachedValue(key);
     return Array.isArray(cached) ? cached : [];
   });
   const [status, setStatus] = useState(() =>
-    globalWorkoutsCache.has(key) ? "success" : "loading"
+    getCachedValue(key) !== undefined ? "success" : "loading"
   );
   const [error, setError] = useState(null);
 
@@ -57,19 +83,22 @@ export function useWorkouts(filters = {}) {
    */
   const load = useCallback(
     async (forceSilent = false) => {
-      if (!globalWorkoutsCache.has(key) && !forceSilent) {
+      const id = ++requestId.current;
+      if (getCachedValue(key) === undefined && !forceSilent) {
         setStatus("loading");
       }
       setError(null);
       try {
         const data = await api.get("/api/workouts", filters);
+        if (!mounted.current || id !== requestId.current) return;
         const safeWorkouts = Array.isArray(data?.workouts) ? data.workouts : [];
         setBoundedCache(key, safeWorkouts);
         setWorkouts(safeWorkouts);
         setStatus("success");
       } catch (err) {
+        if (!mounted.current || id !== requestId.current) return;
         setError(err);
-        if (!globalWorkoutsCache.has(key)) setStatus("error");
+        if (getCachedValue(key) === undefined) setStatus("error");
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -77,21 +106,54 @@ export function useWorkouts(filters = {}) {
   );
 
   useEffect(() => {
+    mounted.current = true;
     load();
+    return () => {
+      mounted.current = false;
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      requestId.current++;
+    };
   }, [load]);
+
+  useEffect(() => {
+    const reset = () => {
+      clearWorkoutsCache();
+      requestId.current++;
+      setWorkouts([]);
+      setStatus("loading");
+      setError(null);
+    };
+    window.addEventListener("repforge:auth-reset", reset);
+    return () => window.removeEventListener("repforge:auth-reset", reset);
+  }, []);
+
+  useEffect(() => {
+    const cached = getCachedValue(key);
+    setWorkouts(Array.isArray(cached) ? cached : []);
+    setStatus(cached !== undefined ? "success" : "loading");
+    setError(null);
+  }, [key]);
 
   /**
    * Optimistically prepend a newly created workout session day.
    * @param {Object} payload Workout day payload
    * @returns {Promise<Object>} Created workout day
    */
-  const createWorkout = useCallback(async (payload) => {
-    const data = await api.post("/api/workouts", payload);
-    if (data?.workout) {
-      setWorkouts((prev) => [data.workout, ...prev]);
-    }
-    return data?.workout;
-  }, []);
+  const createWorkout = useCallback(
+    async (payload) => {
+      const data = await api.post("/api/workouts", payload);
+      if (data?.workout) {
+        setWorkouts((prev) => [data.workout, ...prev]);
+        for (const cacheKey of [...globalWorkoutsCache.keys()]) {
+          if (cacheKey.startsWith(`${user?.id ?? "anonymous"}:`)) {
+            globalWorkoutsCache.delete(cacheKey);
+          }
+        }
+      }
+      return data?.workout;
+    },
+    [user?.id]
+  );
 
   return {
     workouts: Array.isArray(workouts) ? workouts : [],

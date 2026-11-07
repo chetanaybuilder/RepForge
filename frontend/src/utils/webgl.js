@@ -1,3 +1,8 @@
+/**
+ * frontend\src\utils\webgl.js
+ * Implements this RepForge module's single responsibility while preserving its existing public behavior.
+ */
+
 let _webglSupported = null;
 
 export function isWebGLAvailable() {
@@ -8,6 +13,10 @@ export function isWebGLAvailable() {
     const canvas = document.createElement("canvas");
     const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
     _webglSupported = Boolean(gl && gl instanceof WebGLRenderingContext);
+    if (gl && typeof gl.getExtension === "function") {
+      const loseContext = gl.getExtension("WEBGL_lose_context");
+      loseContext?.loseContext?.();
+    }
   } catch {
     _webglSupported = false;
   }

@@ -1,3 +1,8 @@
+/**
+ * frontend\src\components\Skeleton.jsx
+ * Implements this RepForge module's single responsibility while preserving its existing public behavior.
+ */
+
 export function Skeleton({
   width = "100%",
   height = "20px",

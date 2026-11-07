@@ -21,6 +21,70 @@
   .rf-stat-grid--6 {
     grid-template-columns: repeat(6, 1fr);
   }
+
+  .rf-stat-grid--dashboard {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 900px) and (max-width: 1199px) {
+  .rf-stat-grid--dashboard {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.rf-dashboard .rf-hero-pod {
+  border-color: rgba(0, 242, 254, 0.2);
+  box-shadow: 0 16px 40px -16px rgba(0, 0, 0, 0.7);
+}
+
+.rf-dashboard .rf-stat-card {
+  min-height: 124px;
+  background: linear-gradient(145deg, rgba(20, 20, 36, 0.86), rgba(10, 10, 18, 0.96));
+}
+
+.rf-dashboard .rf-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px -12px rgba(0, 0, 0, 0.7);
+}
+
+.rf-workouts-page .rf-page-header {
+  margin-bottom: 20px;
+}
+
+.rf-workouts-page {
+  padding-top: 8px;
+}
+
+.rf-workouts-page .rf-search-wrapper {
+  max-width: 680px;
+}
+
+.rf-workouts-page .rf-workout-card {
+  margin-bottom: 0;
+  background: linear-gradient(145deg, rgba(22, 27, 38, 0.75), rgba(13, 17, 24, 0.9));
+  border: 1px solid rgba(56, 189, 248, 0.14);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px -16px rgba(0, 0, 0, 0.85);
+  transition:
+    border-color var(--rf-transition-base),
+    box-shadow var(--rf-transition-base),
+    transform var(--rf-transition-base);
+}
+
+.rf-workouts-page .rf-workout-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(56, 189, 248, 0.3);
+  box-shadow:
+    0 14px 30px -18px rgba(0, 0, 0, 0.9),
+    0 0 18px -12px rgba(56, 189, 248, 0.45);
+}
+
+@media (max-width: 599px) {
+  .rf-stat-grid--dashboard {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Biometric KPI Card */
@@ -141,6 +205,26 @@
   min-width: 0;
 }
 
+.rf-workout-header-toggle {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  gap: 16px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  touch-action: manipulation;
+}
+
+.rf-workout-header-toggle:focus-visible {
+  border-radius: var(--rf-radius-sm);
+}
+
 .rf-workout-identity,
 .rf-workout-title-group {
   flex: 1;
@@ -198,6 +282,21 @@
   gap: 12px;
 }
 
+.rf-workout-day-badge .rf-workout-session-name {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  padding: 5px 10px;
+  border: 1px solid rgba(56, 189, 248, 0.18);
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.08);
+  color: #d7f6ff;
+  font-size: 0.74rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .rf-workout-session-name {
   min-width: 0;
   overflow: hidden;
@@ -214,6 +313,10 @@
   font-size: 0.7rem;
   font-weight: 500;
   white-space: nowrap;
+  padding: 4px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.035);
 }
 
 .rf-workout-summary {
@@ -222,6 +325,7 @@
   gap: 7px;
   color: var(--rf-text-sub);
   font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .rf-workout-chevron {
@@ -279,21 +383,54 @@
 
 .rf-exercise-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 12px;
   margin-bottom: 10px;
 }
 
+.rf-exercise-identity {
+  display: flex;
+  align-items: flex-start;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.rf-exercise-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rf-exercise-actions .rf-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+}
+
 .rf-exercise-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-family: var(--rf-font-display);
   font-weight: 700;
   font-size: 1rem;
   color: var(--rf-text-pure);
 }
 
+.rf-exercise-sets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(145px, 100%), 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
 /* Set Tag Chips */
 .rf-set-chip {
-  display: inline-flex;
+  display: flex;
+  min-width: 0;
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
@@ -303,6 +440,14 @@
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--rf-border-subtle);
   color: var(--rf-text-sub);
+  font-variant-numeric: tabular-nums;
+}
+
+.rf-workouts-page .rf-set-chip--done {
+  border-color: rgba(56, 189, 248, 0.3);
+  box-shadow:
+    0 0 10px -5px rgba(16, 185, 129, 0.45),
+    inset 0 0 12px -10px rgba(56, 189, 248, 0.8);
 }
 
 .rf-set-chip--done {
@@ -310,6 +455,23 @@
   border-color: rgba(0, 245, 160, 0.35);
   color: #00f5a0;
   box-shadow: 0 0 10px -2px rgba(0, 245, 160, 0.2);
+}
+
+.rf-coach-review {
+  margin: 16px 0;
+}
+
+.rf-coach-review .rf-coach-reply {
+  margin-bottom: 14px;
+  color: var(--rf-text-bright);
+  font-size: 0.92rem;
+}
+
+.rf-coach-review-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 16px 0;
 }
 
 /* PR Hologram Card */

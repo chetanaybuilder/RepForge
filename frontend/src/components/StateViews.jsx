@@ -1,3 +1,8 @@
+/**
+ * frontend\src\components\StateViews.jsx
+ * Implements this RepForge module's single responsibility while preserving its existing public behavior.
+ */
+
 import { PrimaryButton } from "./PrimaryButton";
 
 export function LoadingState({ label = "Synthesizing biometric telemetry…" }) {
@@ -17,12 +22,12 @@ export function ErrorState({ message = "Neural subsystem synchronization error."
     <div className="rf-state rf-state--error">
       <div className="rf-state-glyph rf-state-glyph--error">⚠</div>
       <h3 className="rf-state-title" style={{ color: "var(--rf-ember)" }}>
-        Telemetry Interruption
+        Couldn't load data
       </h3>
       <p className="rf-state-desc">{message}</p>
       {onRetry && (
         <PrimaryButton variant="ghost" onClick={onRetry}>
-          Re-establish Connection
+          Try again
         </PrimaryButton>
       )}
     </div>

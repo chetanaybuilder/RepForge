@@ -8,10 +8,11 @@
  */
 
 import { useState, useEffect, useRef, Component } from "react";
-import { API_URL, getCsrfToken } from "../services/api";
+import { API_URL, getCsrfToken, notifyUnauthorized } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { motion } from "framer-motion";
 import { PrimaryButton } from "../components/PrimaryButton";
+import { CoachReply } from "../components/CoachReply";
 
 const QUICK_PROMPTS = [
   "Analyze my last workout and tell me what to do next",
@@ -83,44 +84,92 @@ export function Coach() {
   const [chatError, setChatError] = useState(null);
   const [retryMessage, setRetryMessage] = useState(null);
   const [copiedIdx, setCopiedIdx] = useState(null);
+  const [copyErrorIdx, setCopyErrorIdx] = useState(null);
+  const copyTimerRef = useRef(null);
   const scrollRef = useRef(null);
+  const terminalRef = useRef(null);
+  const requestControllerRef = useRef(null);
+  const nearBottomRef = useRef(true);
 
-  const handleCopy = (text, idx) => {
+  useEffect(
+    () => () => {
+      requestControllerRef.current?.abort();
+      window.clearTimeout(copyTimerRef.current);
+    },
+    []
+  );
+
+  useEffect(
+    () => () => {
+      window.clearTimeout(copyTimerRef.current);
+    },
+    []
+  );
+
+  const handleCopy = async (text, idx) => {
     try {
-      navigator.clipboard.writeText(typeof text === "string" ? text : JSON.stringify(text));
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(typeof text === "string" ? text : JSON.stringify(text));
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = typeof text === "string" ? text : JSON.stringify(text);
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        const copied = document.execCommand("copy");
+        textarea.remove();
+        if (!copied) throw new Error("Clipboard access is unavailable.");
+      }
+      setCopyErrorIdx(null);
       setCopiedIdx(idx);
-      setTimeout(() => setCopiedIdx(null), 2000);
-    } catch {
-      // ignore
+      window.clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = window.setTimeout(() => setCopiedIdx(null), 2000);
+    } catch (error) {
+      console.warn("RepForge could not copy the Coach reply.", error);
+      setCopiedIdx(null);
+      setCopyErrorIdx(idx);
+      window.clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = window.setTimeout(() => setCopyErrorIdx(null), 2000);
     }
   };
 
   // Restore saved conversation when the athlete opens Coach.
   useEffect(() => {
+    if (isStreaming) return;
     if (!user?.id) return;
-    const saved = localStorage.getItem(`rf_coach_${user.id}`);
-    if (saved) {
-      try {
+    try {
+      const saved = localStorage.getItem(`rf_coach_${user.id}`);
+      if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
           setChatHistory(parsed);
-          return;
         }
-      } catch {
-        // ignore storage parse error
       }
+    } catch (error) {
+      console.warn("RepForge could not restore the saved Coach conversation.", error);
     }
   }, [user?.id]);
 
   // Save to local storage whenever history changes (bounded to last 20 messages)
   useEffect(() => {
-    if (!user?.id || chatHistory.length === 0) return;
-    localStorage.setItem(`rf_coach_${user.id}`, JSON.stringify(chatHistory.slice(-20)));
-  }, [chatHistory, user?.id]);
+    if (isStreaming) return;
+    if (!user?.id) return;
+    try {
+      const key = `rf_coach_${user.id}`;
+      if (chatHistory.length === 0) {
+        localStorage.removeItem(key);
+      } else {
+        localStorage.setItem(key, JSON.stringify(chatHistory.slice(-20)));
+      }
+    } catch (error) {
+      console.warn("RepForge could not save the Coach conversation in this browser.", error);
+    }
+  }, [chatHistory, user?.id, isStreaming]);
 
   // Scroll to bottom when history updates
   useEffect(() => {
-    if (scrollRef.current) {
+    if (scrollRef.current && nearBottomRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [chatHistory, chatLoading, isStreaming]);
@@ -138,7 +187,10 @@ export function Coach() {
       chatHistory.at(-1)?.role === "user" && chatHistory.at(-1)?.text === textToSend;
     const historyForRequest = hasPendingMessage ? chatHistory.slice(0, -1) : [...chatHistory];
     const updatedHistory = hasPendingMessage ? chatHistory : [...chatHistory, userMessage];
-    setChatHistory(updatedHistory);
+    setChatHistory(updatedHistory.slice(-20));
+    const requestController = new AbortController();
+    requestControllerRef.current = requestController;
+    const requestTimeout = setTimeout(() => requestController.abort(), 45000);
 
     try {
       const csrf = getCsrfToken();
@@ -147,15 +199,17 @@ export function Coach() {
         Accept: "text/event-stream",
       };
       if (csrf) headers["X-CSRF-Token"] = csrf;
+      const requestBody = JSON.stringify({
+        message: textToSend,
+        history: historyForRequest,
+      });
 
       const response = await fetch(`${API_URL}/api/coach/chat`, {
         method: "POST",
         headers,
         credentials: "include",
-        body: JSON.stringify({
-          message: textToSend,
-          history: historyForRequest,
-        }),
+        signal: requestController.signal,
+        body: requestBody,
       });
 
       if (!response.ok) {
@@ -167,6 +221,7 @@ export function Coach() {
           );
         }
         if (response.status === 401 || response.status === 403) {
+          if (response.status === 401) notifyUnauthorized();
           throw new Error(
             errorData?.error?.message ||
               "Your session has expired. Sign in again to continue with Coach."
@@ -196,7 +251,7 @@ export function Coach() {
         while (!streamFinished) {
           const { done, value } = await reader.read();
           if (done) {
-            streamBuffer += decoder.decode();
+            streamBuffer += `${decoder.decode()}\n`;
             streamFinished = true;
           } else {
             streamBuffer += decoder.decode(value, { stream: true });
@@ -234,7 +289,24 @@ export function Coach() {
           }
         }
         if (!accumulatedReply.trim()) {
-          throw new Error("Coach returned an empty response. Please retry.");
+          const recoveryResponse = await fetch(`${API_URL}/api/coach/chat`, {
+            method: "POST",
+            headers: { ...headers, Accept: "application/json" },
+            credentials: "include",
+            signal: requestController.signal,
+            body: requestBody,
+          });
+          const recoveryData = await recoveryResponse.json().catch(() => null);
+          if (!recoveryResponse.ok) {
+            throw new Error(
+              recoveryData?.error?.message || "Coach could not complete this request. Please retry."
+            );
+          }
+          const recoveryText = extractReplyText(recoveryData);
+          if (!recoveryText.trim()) {
+            throw new Error("Coach is temporarily unavailable. Please retry in a moment.");
+          }
+          setChatHistory([...updatedHistory, { role: "assistant", text: recoveryText }].slice(-20));
         }
       } else {
         const data = await response.json();
@@ -242,16 +314,20 @@ export function Coach() {
         if (!replyText.trim()) {
           throw new Error("Coach returned an empty response. Please retry.");
         }
-        setChatHistory([...updatedHistory, { role: "assistant", text: replyText }]);
+        setChatHistory([...updatedHistory, { role: "assistant", text: replyText }].slice(-20));
       }
       setRetryMessage(null);
     } catch (error) {
-      setChatHistory(updatedHistory);
+      setChatHistory(updatedHistory.slice(-20));
       setRetryMessage(textToSend);
       setChatError(
-        error?.message || "Coach could not complete this request. Check your connection and retry."
+        error?.name === "AbortError"
+          ? "Coach took too long to respond. Your message is saved; please retry."
+          : error?.message ||
+              "Coach could not complete this request. Check your connection and retry."
       );
     } finally {
+      clearTimeout(requestTimeout);
       setChatLoading(false);
       setIsStreaming(false);
     }
@@ -282,7 +358,7 @@ export function Coach() {
 
       <div className="rf-coach-layout rf-coach-layout--chat-only">
         {/* Left Column: Conversational Terminal */}
-        <div className="rf-coach-terminal-box rf-coach-terminal-box--visible">
+        <div ref={terminalRef} className="rf-coach-terminal-box rf-coach-terminal-box--visible">
           {/* Terminal Sub-Header */}
           <div
             style={{
@@ -308,6 +384,21 @@ export function Coach() {
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {chatHistory.length > 0 && !chatLoading && !isStreaming && (
+                <button
+                  type="button"
+                  className="rf-btn rf-btn--ghost rf-btn--sm"
+                  onClick={() => {
+                    requestControllerRef.current?.abort();
+                    setChatHistory([]);
+                    setChatError(null);
+                    setRetryMessage(null);
+                    nearBottomRef.current = true;
+                  }}
+                >
+                  Clear chat
+                </button>
+              )}
               {(chatLoading || isStreaming) && (
                 <span className="rf-coach-provider rf-coach-provider--active">
                   <span className="rf-spin" style={{ display: "inline-block", marginRight: 4 }}>
@@ -322,6 +413,13 @@ export function Coach() {
           {/* Dialogue Scroll Stage with Touch Momentum */}
           <div
             ref={scrollRef}
+            onScroll={() => {
+              const element = scrollRef.current;
+              if (element) {
+                nearBottomRef.current =
+                  element.scrollHeight - element.scrollTop - element.clientHeight < 120;
+              }
+            }}
             style={{
               flex: 1,
               minHeight: 0,
@@ -399,7 +497,11 @@ export function Coach() {
                             className="rf-copy-btn"
                             title="Copy advice"
                           >
-                            {copiedIdx === idx ? "✓ Copied" : "📋 Copy"}
+                            {copiedIdx === idx
+                              ? "✓ Copied"
+                              : copyErrorIdx === idx
+                                ? "Copy failed"
+                                : "📋 Copy"}
                           </button>
                         )}
                       </div>
@@ -411,7 +513,7 @@ export function Coach() {
                           lineHeight: 1.6,
                         }}
                       >
-                        {formatCoachReply(msg.text)}
+                        <CoachReply text={msg.text} />
                       </div>
                     </div>
                   </motion.div>
@@ -490,6 +592,7 @@ export function Coach() {
 
           {/* Sticky Mobile Input Pinned to Viewport Bottom */}
           <form
+            className="rf-coach-input-form"
             onSubmit={(e) => {
               e.preventDefault();
               handleSendMessage();
@@ -498,30 +601,24 @@ export function Coach() {
               padding: "10px 14px",
               paddingBottom: "max(12px, env(safe-area-inset-bottom))",
               borderTop: "1px solid rgba(0, 242, 254, 0.2)",
-              display: "flex",
-              gap: 8,
               background: "rgba(8, 8, 18, 0.98)",
-              position: "sticky",
-              bottom: 0,
-              zIndex: 30,
-              flexShrink: 0,
             }}
           >
-            <input
-              type="text"
-              className="rf-input rf-coach-chat-input"
-              placeholder="Message your strength coach..."
-              aria-label="Message your strength coach"
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              disabled={chatLoading || isStreaming}
-              style={{
-                flex: 1,
-                background: "rgba(255, 255, 255, 0.05)",
-                borderColor: "rgba(255, 255, 255, 0.15)",
-                color: "#ffffff",
-              }}
-            />
+            <div className="rf-coach-chat-input-shell">
+              <input
+                type="text"
+                className="rf-input rf-coach-chat-input"
+                placeholder="Message your strength coach..."
+                aria-label="Message your strength coach"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                style={{
+                  background: "rgba(255, 255, 255, 0.05)",
+                  borderColor: "rgba(255, 255, 255, 0.15)",
+                  color: "#ffffff",
+                }}
+              />
+            </div>
             <PrimaryButton
               type="submit"
               disabled={!chatInput.trim() || chatLoading || isStreaming}
@@ -543,132 +640,4 @@ function extractReplyText(data) {
   if (typeof data?.message === "string") return data.message;
   if (typeof data?.insights?.deep_review === "string") return data.insights.deep_review;
   return "";
-}
-
-function formatCoachReply(text) {
-  try {
-    let cleanText = "";
-    if (typeof text === "string") {
-      cleanText = text;
-    } else if (text && typeof text === "object") {
-      cleanText =
-        text?.reply || text?.message || text?.deep_review || text?.text || JSON.stringify(text);
-    } else {
-      cleanText = String(text ?? "");
-    }
-
-    // Split text by markdown code blocks (``` ... ```)
-    const codeBlockRegex = /```([\s\S]*?)```/g;
-    const segments = [];
-    let lastIndex = 0;
-    let match;
-
-    while ((match = codeBlockRegex.exec(cleanText)) !== null) {
-      if (match.index > lastIndex) {
-        segments.push({ type: "text", content: cleanText.substring(lastIndex, match.index) });
-      }
-      segments.push({ type: "code", content: match[1].trim() });
-      lastIndex = match.index + match[0].length;
-    }
-    if (lastIndex < cleanText.length) {
-      segments.push({ type: "text", content: cleanText.substring(lastIndex) });
-    }
-
-    return (
-      <div style={{ lineHeight: 1.6, display: "flex", flexDirection: "column", gap: 10 }}>
-        {segments.map((segment, segIdx) => {
-          if (segment.type === "code") {
-            return (
-              <pre key={segIdx} className="rf-coach-visual-card">
-                {segment.content}
-              </pre>
-            );
-          }
-
-          const paragraphs = segment.content
-            .split(/\n{2,}/)
-            .map((p) => p.trim())
-            .filter(Boolean);
-
-          return paragraphs.map((paragraph, pIdx) => {
-            // Header with emojis or ###
-            if (
-              paragraph.startsWith("### ") ||
-              paragraph.startsWith("## ") ||
-              paragraph.startsWith("# ")
-            ) {
-              const title = paragraph.replace(/^#+\s+/, "");
-              return (
-                <div key={`${segIdx}-${pIdx}`} className="rf-coach-section-header">
-                  {title}
-                </div>
-              );
-            }
-
-            // Bullet points
-            if (
-              paragraph.includes("\n- ") ||
-              paragraph.includes("\n* ") ||
-              paragraph.startsWith("- ") ||
-              paragraph.startsWith("* ")
-            ) {
-              const items = paragraph
-                .split(/\n(?=[-*\u2022]\s+)/)
-                .map((it) => it.replace(/^[-*\u2022]\s+/, "").trim())
-                .filter(Boolean);
-
-              return (
-                <ul
-                  key={`${segIdx}-${pIdx}`}
-                  style={{
-                    margin: "4px 0",
-                    paddingLeft: 18,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 6,
-                  }}
-                >
-                  {items.map((item, iIdx) => (
-                    <li key={iIdx} style={{ color: "var(--rf-text-pure)", fontSize: "0.92rem" }}>
-                      {renderFormattedInline(item)}
-                    </li>
-                  ))}
-                </ul>
-              );
-            }
-
-            return (
-              <p
-                key={`${segIdx}-${pIdx}`}
-                style={{
-                  margin: 0,
-                  color: "#ffffff",
-                  fontSize: "0.92rem",
-                  lineHeight: 1.6,
-                }}
-              >
-                {renderFormattedInline(paragraph)}
-              </p>
-            );
-          });
-        })}
-      </div>
-    );
-  } catch {
-    return <p style={{ margin: 0 }}>{String(text)}</p>;
-  }
-}
-
-function renderFormattedInline(str) {
-  const parts = str.split(/(\*\*[^*]+\*\*)/g);
-  return parts.map((part, idx) => {
-    if (part.startsWith("**") && part.endsWith("**")) {
-      return (
-        <strong key={idx} style={{ color: "var(--rf-cyan)", fontWeight: 700 }}>
-          {part.slice(2, -2)}
-        </strong>
-      );
-    }
-    return part;
-  });
 }

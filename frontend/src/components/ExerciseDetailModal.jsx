@@ -9,15 +9,33 @@
  * - Direct "+ Add to Workout" action to start logging sets.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { getExerciseImageUrl } from "../services/api";
 import { PrimaryButton } from "./PrimaryButton";
+import { useModalBodyLock } from "../hooks/useModalBodyLock";
 
 export function ExerciseDetailModal({ exercise, open, onClose, onToggleFavorite }) {
   const [activeImageIdx, setActiveImageIdx] = useState(0);
+  const [imageFailed, setImageFailed] = useState(false);
   const navigate = useNavigate();
+
+  useModalBodyLock(open && Boolean(exercise));
+
+  useEffect(() => {
+    setActiveImageIdx(0);
+    setImageFailed(false);
+  }, [exercise?.id]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open, onClose]);
 
   if (!open || !exercise) return null;
 
@@ -46,7 +64,7 @@ export function ExerciseDetailModal({ exercise, open, onClose, onToggleFavorite 
       <div
         className="rf-modal rf-modal--lg"
         style={{
-          maxHeight: "90vh",
+          maxHeight: "min(90dvh, 720px)",
           overflowY: "auto",
           display: "flex",
           flexDirection: "column",
@@ -143,18 +161,25 @@ export function ExerciseDetailModal({ exercise, open, onClose, onToggleFavorite 
                 borderRadius: "var(--rf-radius-sm)",
               }}
             >
-              <img
-                src={getExerciseImageUrl(images[activeImageIdx])}
-                alt={`${exercise.name} - phase ${activeImageIdx + 1}`}
-                loading="lazy"
-                style={{
-                  maxHeight: 280,
-                  maxWidth: "100%",
-                  objectFit: "contain",
-                  borderRadius: "var(--rf-radius-sm)",
-                  boxShadow: "0 8px 30px rgba(0,0,0,0.6)",
-                }}
-              />
+              {imageFailed ? (
+                <div className="rf-state-title" style={{ padding: 32 }}>
+                  Image unavailable
+                </div>
+              ) : (
+                <img
+                  src={getExerciseImageUrl(images[activeImageIdx])}
+                  alt={`${exercise.name} - position ${activeImageIdx + 1}`}
+                  loading="lazy"
+                  onError={() => setImageFailed(true)}
+                  style={{
+                    maxHeight: 280,
+                    maxWidth: "100%",
+                    objectFit: "contain",
+                    borderRadius: "var(--rf-radius-sm)",
+                    boxShadow: "0 8px 30px rgba(0,0,0,0.6)",
+                  }}
+                />
+              )}
             </div>
 
             {/* Phase Selector Tabs */}
@@ -164,7 +189,10 @@ export function ExerciseDetailModal({ exercise, open, onClose, onToggleFavorite 
                   <button
                     key={img}
                     type="button"
-                    onClick={() => setActiveImageIdx(idx)}
+                    onClick={() => {
+                      setImageFailed(false);
+                      setActiveImageIdx(idx);
+                    }}
                     className="rf-badge"
                     style={{
                       cursor: "pointer",
@@ -177,7 +205,7 @@ export function ExerciseDetailModal({ exercise, open, onClose, onToggleFavorite 
                       color: activeImageIdx === idx ? "var(--rf-cyan)" : "var(--rf-text-sub)",
                     }}
                   >
-                    Position {idx === 0 ? "A (Start)" : "B (Execution)"}
+                    Position {idx + 1}
                   </button>
                 ))}
               </div>
