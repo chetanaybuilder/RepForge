@@ -650,7 +650,7 @@ Keep unrelated formatting or refactoring separate from functional changes.
 
 **[chetanaybuilder](https://github.com/chetanaybuilder)**
 
-Software engineer and creator of RepForge.
+Future Founder.
 
 ---
 
