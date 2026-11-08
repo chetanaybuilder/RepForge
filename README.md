@@ -2,7 +2,7 @@
 
 <picture>
   <source media="(prefers-reduced-motion: reduce)" srcset="docs/media/repforge-banner-static.svg">
-  <img src="docs/media/repforge-banner.svg" width="920" alt="RepForge 3D animated training platform banner">
+  <img src="docs/media/repforge-banner.svg" width="100%" style="max-width:920px;height:auto;" alt="RepForge 3D animated training platform banner">
 </picture>
 
 ## A mobile-first strength training platform with intelligent coaching
