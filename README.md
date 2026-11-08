@@ -18,7 +18,7 @@ Log every set, see your progress, and ask a coach that knows your training histo
 
 <br />
 
-<img src="docs/screenshots/dashboard.png" width="920" alt="RepForge dashboard showing total training volume, current streak, and a volume progression chart" />
+<img src="docs/media/dashboard.png" width="920" alt="RepForge dashboard showing total training volume, current streak, and a volume progression chart" />
 
 <br />
 
@@ -86,26 +86,35 @@ RepForge puts session logging, an exercise library, progress analytics, goals, a
 
 ## Screenshots
 
+Product proof from the running RepForge app:
+
 <table>
   <tr>
     <td align="center" width="50%">
-      <img src="docs/screenshots/log-workout.png" alt="Workout log with an expanded session showing exercises and per-set weight and reps" />
-      <br /><sub><strong>Workout log</strong><br />Sessions grouped by day with per-set detail, edit, delete, and coach diagnostics.</sub>
+      <img src="docs/media/dashboard.png" alt="RepForge dashboard with training volume, streak, and progression chart" />
+      <br /><sub><strong>Dashboard</strong><br />Training volume, current streak, and volume progression at a glance.</sub>
     </td>
     <td align="center" width="50%">
-      <img src="docs/screenshots/coach.png" alt="AI coach conversation with a formatted, streamed reply" />
-      <br /><sub><strong>AI coach</strong><br />Streaming replies with formatted lists and copy-to-clipboard.</sub>
+      <img src="docs/media/log%20workout.png" alt="Workout log with a session showing exercises and per-set weight and reps" />
+      <br /><sub><strong>Workout log</strong><br />Sessions grouped by day with per-set detail, edit, delete, and coach diagnostics.</sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
-      <img src="docs/screenshots/exercises.png" alt="Exercise library with search, muscle and equipment filters, and exercise cards" />
-      <br /><sub><strong>Exercise library</strong><br />876 movements with search, muscle and equipment filters, and favorites.</sub>
+      <img src="docs/media/coach.png" alt="AI coach conversation with a formatted, streamed reply" />
+      <br /><sub><strong>AI coach</strong><br />Streaming replies with formatted lists and copy-to-clipboard.</sub>
     </td>
     <td align="center" width="50%">
-      <img src="docs/screenshots/progress.png" alt="Progress page with a progression chart and movement distribution donut chart" />
+      <img src="docs/media/Exercise.png" alt="Exercise library with search, muscle and equipment filters, and exercise cards" />
+      <br /><sub><strong>Exercise library</strong><br />876 movements with search, muscle and equipment filters, and favorites.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/media/Progress.png" alt="Progress page with a progression chart and movement distribution donut chart" />
       <br /><sub><strong>Progress</strong><br />Progression curves and movement distribution.</sub>
     </td>
+    <td align="center" width="50%"></td>
   </tr>
 </table>
 
