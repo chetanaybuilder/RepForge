@@ -27,37 +27,37 @@ RepForge has migrated completely away from legacy monolithic containers (such as
 
 ```mermaid
 graph TD
-    Client["Athlete Browser (React 18 + Three.js 3D)"]
+    Client["Athlete Browser"]
     
-    subgraph Cloudflare Global Edge Network
-        CFEdge["Cloudflare Edge Anycast Layer (300+ Cities)"]
+    subgraph EdgeNetwork["Cloudflare Global Edge Network"]
+        CFEdge["Cloudflare Anycast Edge"]
         
-        subgraph Static Assets
-            SPA["React Single Page Application (/dist)<br/>3D Models, Shaders, Web Fonts, Chunks"]
+        subgraph StaticAssets["Static assets"]
+            SPA["React SPA"]
         end
         
-        subgraph Edge Worker API (Hono)
-            Auth["/auth/*<br/>Google OAuth, Sessions, CSRF"]
-            Workouts["/api/workouts/*<br/>CRUD, Streaks, Volume, PRs, 1RM"]
-            Exercises["/api/exercises/*<br/>876 Taxonomy, Filters, Image Proxy"]
-            Coach["/api/coach/*<br/>Groq GPT-OSS-120B SSE Streaming"]
-            Goals["/api/goals/*<br/>Target Progression & Achievements"]
+        subgraph WorkerAPI["Cloudflare Worker API with Hono"]
+            Auth["Authentication and sessions"]
+            Workouts["Workouts and analytics"]
+            Exercises["Exercise library"]
+            Coach["AI coach streaming"]
+            Goals["Goals and achievements"]
         end
         
-        subgraph Storage & Upstream
-            D1[("Cloudflare D1 Database<br/>repforge-db (SQLite Edge)")]
-            Groq["Groq Cloud API<br/>openai/gpt-oss-120b"]
-            RawCDN["Exercise Image Upstream CDN<br/>(Cached for 1 Year Immutable)"]
+        subgraph Storage["Storage and upstream services"]
+            D1[("Cloudflare D1 SQLite")]
+            Groq["Groq Cloud API"]
+            RawCDN["Exercise image upstream"]
         end
     end
     
     Client -->|HTTPS / WSS| CFEdge
-    CFEdge -->|Routes / and /assets/*| SPA
-    CFEdge -->|Routes /api/* and /auth/*| Auth
-    CFEdge -->|Routes /api/* and /auth/*| Workouts
-    CFEdge -->|Routes /api/* and /auth/*| Exercises
-    CFEdge -->|Routes /api/* and /auth/*| Coach
-    CFEdge -->|Routes /api/* and /auth/*| Goals
+    CFEdge -->|Static routes| SPA
+    CFEdge -->|Auth routes| Auth
+    CFEdge -->|Workout routes| Workouts
+    CFEdge -->|Exercise routes| Exercises
+    CFEdge -->|Coach routes| Coach
+    CFEdge -->|Goal routes| Goals
     
     Workouts -->|Prepared SQL| D1
     Exercises -->|Filtered Queries| D1

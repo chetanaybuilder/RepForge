@@ -1,6 +1,9 @@
 <div align="center">
 
-# RepForge
+<picture>
+  <source media="(prefers-reduced-motion: reduce)" srcset="docs/media/repforge-banner-static.svg">
+  <img src="docs/media/repforge-banner.svg" width="920" alt="RepForge 3D animated training platform banner">
+</picture>
 
 ### A mobile-first strength training platform with intelligent coaching.
 
@@ -117,7 +120,17 @@ RepForge is designed around three engineering principles:
       <br>
       <sub>Long-term progression curves and movement distribution.</sub>
     </td>
-    <td align="center" width="50%"></td>
+    <td align="center" width="50%">
+      <div>
+        <strong>Goals &amp; Milestones</strong>
+        <br>
+        <sub>Target setting, achievement tracking, and training consistency.</sub>
+      </div>
+      <br><br>
+      <code>VIEW IN ACTIVE DEVELOPMENT</code>
+      <br><br>
+      <sub>Progress targets become visible milestones across strength, volume, and frequency.</sub>
+    </td>
   </tr>
 </table>
 </div>
@@ -140,7 +153,7 @@ RepForge is designed around three engineering principles:
 | Database | Cloudflare D1, SQLite | Relational athlete data at the network edge |
 | AI integration | Groq, OpenAI-compatible streaming API | Context-grounded coaching responses |
 | Authentication | Google OAuth 2.0 | Federated identity with server-managed sessions |
-| Legacy/alternative backend | Flask, PostgreSQL-compatible deployment | Reference HTTP backend implementation |
+| Reference local implementation | Flask, PostgreSQL-compatible deployment | Local/monolith fallback for testing and learning |
 | Testing | Pytest | Backend validation, authorization, and behavior tests |
 | CI/CD | GitHub Actions, Cloudflare Pages | Automated validation and edge deployment |
 | Deployment | Cloudflare Pages and Workers | Single-origin delivery and serverless execution |
@@ -153,6 +166,8 @@ RepForge is designed around three engineering principles:
 - HTML and CSS
 - Hono-compatible TypeScript execution
 - Shell and Node.js automation
+
+> **Production architecture:** RepForge is primarily and definitively a Cloudflare-native application. Cloudflare Workers + Hono handle the production API, and Cloudflare D1 (SQLite) is the production data store. The Flask/PostgreSQL implementation is retained as a **Reference Local/Monolith Fallback Implementation** for local experimentation, backend parity testing, and environments that require a conventional process-based deployment.
 
 ---
 
@@ -185,7 +200,29 @@ The primary deployment uses a unified Cloudflare delivery model:
 - The AI coach consumes telemetry selected from persisted workout history rather than an unstructured client-only prompt.
 - The frontend and API share an origin, reducing CORS complexity and supporting secure cookie-based sessions.
 
-A separate Flask implementation remains available as a conventional backend deployment path. This makes the repository understandable and runnable without requiring immediate edge-platform-specific knowledge while preserving the cloud-native architecture as the production target.
+A separate Flask/PostgreSQL implementation is maintained only as a **Reference Local/Monolith Fallback Implementation**. It is useful for conventional local development, backend contract validation, and learning, but it is not the production peer or deployment authority.
+
+### Engineering Decisions
+
+#### Single Origin and Transport
+
+RepForge serves the SPA and API behind the same Cloudflare origin. This eliminates unnecessary cross-origin trust, simplifies cookie delivery, and keeps authentication compatible with first-party browser navigation.
+
+#### Local Calendar, Not UTC-by-Default
+
+Training sessions are stored as local calendar dates. A UTC conversion would silently move a late-night workout into another day; a shared `YYYY-MM-DD` boundary keeps athlete intent stable across time zones.
+
+#### End-Time Rest Timers
+
+Rest timers derive remaining time from an absolute end timestamp, not interval ticks. Browser throttling, tab suspension, and delayed wake-up cannot turn a short rest period into an inaccurate countdown.
+
+#### Bounded and Stale-Response Safe State
+
+Data caches are size- and time-bounded. Screen loaders track request identity and mounted state, preventing a slow earlier response from overwriting newer athlete data.
+
+#### Capability-Aware Graphics
+
+Three.js is loaded only after capability and motion checks. WebGL limits on phones are handled explicitly, and reduced-motion or low-tier devices receive a complete non-WebGL fallback.
 
 ---
 
@@ -258,18 +295,13 @@ erDiagram
 
 ## Security
 
-| Concern | Implementation |
+| Security pillar | High-impact implementation |
 |---|---|
-| Session storage | HttpOnly, Secure, SameSite cookie session |
-| CSRF protection | Server-issued token plus double-submit request validation |
-| Authentication | Google OAuth with server-side state and redirect validation |
-| Authorization | Server-side ownership checks for athlete-specific resources |
-| Secret handling | Environment variables and Cloudflare secrets |
-| Request limits | Rate limits on general, authentication, and AI routes |
-| Input validation | Bounded numeric fields, normalized strings, and backend validation |
-| Prompt safety | Structured user prompts with coach-specific instruction boundaries |
-| CORS strategy | Single-origin Cloudflare deployment minimizes cross-origin trust |
-| Client storage | Authentication secrets and CSRF state are not persisted to browser storage |
+| **Identity & Auth** | Google OAuth with server-validated state, redirect checks, and server-side athlete ownership enforcement |
+| **Session Integrity** | HttpOnly, Secure, SameSite sessions with no raw session exposure to application JavaScript |
+| **CSRF & Mutation Defense** | Double-submit token validation for mutations, plus bounded numeric and normalized input validation |
+| **Rate Limiting** | Route-aware limits for general traffic, authentication attempts, and AI requests |
+| **Edge Isolation** | Cloudflare secrets and environment bindings isolate credentials; same-origin delivery minimizes browser trust boundaries |
 
 Production deployments must override development secrets, configure OAuth credentials, and use TLS. Never commit `.env`, session keys, OAuth secrets, API keys, or database credentials.
 
@@ -319,7 +351,7 @@ The complete application will be available on the local Wrangler URL, typically:
 http://localhost:8787
 ```
 
-### Option 3: Run the Flask reference backend
+### Option 3: Run the reference Flask/monolith fallback
 
 ```bash
 python -m venv .venv
@@ -480,6 +512,19 @@ No quantitative coverage percentage is published unless generated consistently f
 
 ## Performance and Scalability
 
+### Performance Budget
+
+| Surface | Engineering budget | Rationale |
+|---|---:|---|
+| Worker dispatch | `< 5 ms` warm isolate execution target | Avoids container cold-start behavior for API routing; excludes upstream network and provider latency |
+| Initial JavaScript | `< 120 KB` gzipped production bundle target | Keeps mobile startup economical while supporting charts, routing, and optional 3D |
+| Static assets | Immutable, edge-cached delivery | Frontend assets are served from Cloudflare's global edge rather than an origin server |
+| Coach response | First streaming chunk before full response completion | SSE avoids buffering a complete third-party response on the API |
+
+**Current build measurement:** Vite reports a 49.05 KB gzipped application entry and a 47.76 KB gzipped motion chunk; the 159.59 KB Recharts and 220.52 KB Three.js bundles are separate generated chunks. Lazy visualization assets are not charged as part of the base startup view.
+
+These are explicit engineering budgets for future CI measurements, not a replacement for device or production telemetry. A release should publish measured p50/p95 values with browser, region, cache state, payload, and provider conditions recorded alongside results.
+
 ### Frontend
 
 - Vite production chunks reduce development-tool overhead.
@@ -508,38 +553,6 @@ Cloudflare Workers and D1 provide operational simplicity and low-latency deploym
 - Exercising the full system against real traffic remains necessary before treating synthetic benchmarks as production guarantees.
 
 The current design is appropriate for a portfolio-scale or early-product workload where simplicity, cost control, and deployment speed are priorities.
-
----
-
-## Engineering Decisions
-
-### Single-Origin Architecture
-
-The frontend and API are deployed together when possible. This removes unnecessary CORS configuration and enables first-party session cookies.
-
-### HttpOnly Sessions
-
-The browser does not receive the raw session identifier. A server-controlled cookie identifies authenticated sessions, while application JavaScript retains only ephemeral request tokens.
-
-### Memory-Only CSRF State
-
-Mutating frontend requests carry CSRF state held in memory. The value is not persisted in local storage, reducing exposure from persistent browser compromise.
-
-### Local Calendar Dates
-
-Workout dates are represented as local calendar values rather than UTC timestamps. This prevents a log created near midnight from being assigned to the wrong day when the athlete crosses a timezone boundary.
-
-### End-Time Rest Timer
-
-The rest timer calculates remaining time from a timestamp instead of counting interval executions. This keeps it accurate when browser activity is throttled in a background tab.
-
-### Stale Response Protection
-
-Screen loaders track mounted state and request identity, preventing an outdated response from overwriting newer application state.
-
-### Adaptive Graphics
-
-WebGL capability, reduced-motion preferences, and device constraints determine whether richer graphics are loaded. The application remains usable on devices that cannot support 3D rendering.
 
 ---
 

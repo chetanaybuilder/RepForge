@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="220" viewBox="0 0 920 220" role="img" aria-labelledby="title desc">
+  <title id="title">RepForge animated banner</title>
+  <desc id="desc">A neon 3D RepForge training platform title</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#080d1a"/>
+      <stop offset="0.55" stop-color="#101a31"/>
+      <stop offset="1" stop-color="#07111f"/>
+    </linearGradient>
+    <linearGradient id="cyan" x1="0" y1="0" x2="1" y2="0">
+      <stop stop-color="#8be9ff"/>
+      <stop offset="0.45" stop-color="#19d3ff"/>
+      <stop offset="1" stop-color="#00a8ff"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-40%" width="160%" height="180%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <pattern id="grid" width="28" height="28" patternUnits="userSpaceOnUse">
+      <path d="M28 0H0V28" fill="none" stroke="#1d8fd0" stroke-opacity=".14" stroke-width="1"/>
+    </pattern>
+    <style>
+      @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
+      @keyframes scan { 0%{transform:translateX(-180px)} 100%{transform:translateX(1080px)} }
+      .title { animation: float 3.8s ease-in-out infinite; transform-origin:center; }
+      .scanner { animation:scan 4.5s linear infinite; }
+    </style>
+  </defs>
+  <rect width="920" height="220" rx="18" fill="url(#bg)"/>
+  <rect width="920" height="220" rx="18" fill="url(#grid)"/>
+  <path d="M0 174 C180 145 320 205 500 168 S760 134 920 178V220H0Z" fill="#0b1e37" fill-opacity=".72"/>
+  <circle cx="820" cy="46" r="70" fill="#00c8ff" fill-opacity=".07"/>
+  <circle cx="820" cy="46" r="38" fill="none" stroke="#21d4ff" stroke-opacity=".28"/>
+  <g class="scanner" opacity=".48">
+    <rect x="-150" y="24" width="110" height="172" fill="#8be9ff" opacity=".06"/>
+    <rect x="-43" y="24" width="2" height="172" fill="#9aeaff"/>
+  </g>
+  <g class="title" transform="translate(460 112)">
+    <text x="8" y="53" text-anchor="middle" font-family="Inter,Segoe UI,sans-serif" font-size="84" font-weight="900" fill="#071522" opacity=".9">REPFORGE</text>
+    <text x="0" y="44" text-anchor="middle" font-family="Inter,Segoe UI,sans-serif" font-size="84" font-weight="900" fill="#0b263b" stroke="#00b7ff" stroke-opacity=".55" stroke-width="3">REPFORGE</text>
+    <text x="-8" y="35" text-anchor="middle" font-family="Inter,Segoe UI,sans-serif" font-size="84" font-weight="900" fill="url(#cyan)" filter="url(#glow)">REPFORGE</text>
+  </g>
+  <text x="460" y="186" text-anchor="middle" font-family="ui-monospace,SFMono-Regular,Consolas,monospace" font-size="15" letter-spacing="5" fill="#8edcf4">TRAIN SMARTER  /  PROGRESS MEASURED</text>
+</svg>
