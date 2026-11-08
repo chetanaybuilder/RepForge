@@ -2,140 +2,157 @@
 
 # RepForge
 
-**A mobile-first workout tracker with an AI strength coach.**
+### A mobile-first strength training platform with intelligent coaching.
 
-Log every set, see your progress, and ask a coach that knows your training history.
+Log every set, measure progress, and receive training insights grounded in your own workout history.
 
-[![CI](https://github.com/chetanaybuilder/RepForge/actions/workflows/ci.yml/badge.svg)](https://github.com/chetanaybuilder/RepForge/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![React 18](https://img.shields.io/badge/React-18-149eca?logo=react&logoColor=white)](https://react.dev/)
-[![Vite](https://img.shields.io/badge/Vite-646cff?logo=vite&logoColor=white)](https://vite.dev/)
-[![Node >=18.18](https://img.shields.io/badge/Node-%3E%3D18.18-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
-[![Cloudflare](https://img.shields.io/badge/Deployed%20on-Cloudflare-f38020?logo=cloudflare&logoColor=white)](https://pages.cloudflare.com/)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#contributing)
+<p>
+  <a href="https://github.com/chetanaybuilder/RepForge/actions/workflows/ci.yml">
+    <img src="https://github.com/chetanaybuilder/RepForge/actions/workflows/ci.yml/badge.svg" alt="CI status">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT license">
+  </a>
+  <img src="https://img.shields.io/badge/version-1.0.0-00D2FF.svg" alt="Version 1.0.0">
+  <img src="https://img.shields.io/badge/node-%3E%3D18.18-brightgreen.svg" alt="Node.js 18.18 or newer">
+  <img src="https://img.shields.io/badge/deployed%20on-Cloudflare-F38020.svg" alt="Cloudflare deployment">
+  <img src="https://img.shields.io/badge/status-production-success.svg" alt="Production status">
+</p>
 
-[**Live Demo**]({{LIVE_DEMO_URL}}) · [Backend](backend/) · [Report a Bug](https://github.com/chetanaybuilder/RepForge/issues/new)
+<p>
+  <strong>
+    <a href="https://repforge-app.pages.dev">Live Application</a>
+    ·
+    <a href="DEPLOYMENT.md">Deployment Guide</a>
+    ·
+    <a href="#architecture">Architecture</a>
+    ·
+    <a href="#getting-started">Getting Started</a>
+  </strong>
+</p>
 
-<br />
-
-<img src="docs/media/dashboard.png" width="920" alt="RepForge dashboard showing total training volume, current streak, and a volume progression chart" />
-
-<br />
-
-**876** exercises &nbsp;·&nbsp; **6** core sections &nbsp;·&nbsp; **Streaming** AI coach &nbsp;·&nbsp; **Mobile + desktop** layouts
+<img src="docs/media/dashboard.png" width="920" alt="RepForge dashboard showing training volume, streak, and progression analytics">
 
 </div>
 
 ---
 
-## Table of contents
+## Why RepForge
 
-- [Why this project](#why-this-project)
-- [How it works](#how-it-works)
-- [Features](#features)
-- [Screenshots](#screenshots)
-- [Tech stack](#tech-stack)
-- [Architecture](#architecture)
-- [Getting started](#getting-started)
-- [Scripts](#scripts)
-- [Project structure](#project-structure)
-- [Engineering notes](#engineering-notes)
-- [Roadmap and known limitations](#roadmap-and-known-limitations)
-- [Contributing](#contributing)
-- [License](#license)
-- [Author](#author)
+Modern workout logging tools often separate the two activities that matter most to consistent training: recording the session and understanding what it means.
 
----
+RepForge combines a fast mobile logging workflow with durable training history, meaningful progress analytics, goal tracking, and an AI coaching layer. The result is a focused strength-training system that helps athletes answer questions such as:
 
-## Why this project
+- Am I increasing total training volume?
+- Which exercises are progressing?
+- How frequently am I training?
+- What should I adjust in the next session?
 
-Logging a workout on a phone has to be fast enough to keep your focus between sets. The history you build should also answer useful questions afterwards: am I getting stronger, which lifts have stalled, and what should I do next session?
+RepForge is designed around three engineering principles:
 
-RepForge puts session logging, an exercise library, progress analytics, goals, and an AI coach in one app. It is designed for small and large screens, and it degrades gracefully on low-power devices instead of breaking.
+1. **Fast athlete workflows:** Logging is optimized for repeated in-session use.
+2. **Traceable intelligence:** Coaching context is derived from structured workout data.
+3. **Small operational surface:** Static delivery, serverless compute, edge storage, and managed authentication reduce deployment overhead.
 
 ---
 
-## How it works
+## Product Highlights
 
-1. **Log**: record exercises, sets, weight, and reps. A built-in rest timer keeps you on pace.
-2. **Learn**: the dashboard and progress views turn your sets into volume trends, streaks, and personal records.
-3. **Level up**: ask the coach about your training, or run diagnostics on a finished session to get the next step.
-
----
-
-## Features
-
-| Feature | Benefit |
-| --- | --- |
-| Set-by-set workout logging | Record exercises, weight, reps, and multiple working sets in one session. |
-| Rest timer | Start and manage rest periods without leaving the workout flow. |
-| Session editing and deletion | Update or remove logged workouts after the fact. |
-| 876-movement exercise library | Search by name and filter by muscle group and equipment. |
-| Favorites | Keep frequently used exercises one tap away. |
-| Dashboard metrics | See total training volume, streaks, and recent sessions at a glance. |
-| Progress analytics | Compare volume over time, per-exercise progression, and movement distribution. |
-| Personal records | Surface milestones on the dashboard and analysis views. |
-| Goals and achievements | Set targets and track unlocked achievements. |
-| Streaming AI coach | Ask training questions and watch answers stream in through a secure backend. |
-| Session diagnostics | Generate a coach review of any logged session. |
-| Google sign-in | Server-managed OAuth with cookie-based sessions. |
-| Mobile bottom-sheet workflows | Touch-friendly modals for logging and editing. |
-| Adaptive graphics | Lightweight or WebGL visuals based on device capability and reduced-motion settings. |
+| Capability | What it enables |
+|---|---|
+| Set-by-set workout logging | Record exercises, working sets, weight, and repetitions with a touch-oriented interface. |
+| Progress analytics | Analyze training volume, streaks, progression curves, and movement distribution. |
+| 876-exercise library | Search and filter a curated exercise taxonomy by muscle group and equipment. |
+| Personal records | Surface milestones and historical achievements. |
+| Goal tracking | Define targets and monitor progress toward measurable outcomes. |
+| AI strength coach | Stream contextual coaching responses generated from verified workout data. |
+| Session diagnostics | Inspect a logged session and receive recommendations for the next step. |
+| Google OAuth | Authenticate through a server-managed OAuth flow with a secure cookie session. |
+| Mobile-first workflows | Use bottom sheets, fixed action areas, adaptive layouts, and keyboard-aware forms. |
+| Performance-aware graphics | Progressively enhance capable devices while retaining a lightweight non-WebGL fallback. |
 
 ---
 
 ## Screenshots
 
-Product proof from the running RepForge app:
-
+<div align="center">
 <table>
   <tr>
     <td align="center" width="50%">
-      <img src="docs/media/dashboard.png" alt="RepForge dashboard with training volume, streak, and progression chart" />
-      <br /><sub><strong>Dashboard</strong><br />Training volume, current streak, and volume progression at a glance.</sub>
+      <img src="docs/media/dashboard.png" alt="RepForge dashboard">
+      <br>
+      <strong>Training dashboard</strong>
+      <br>
+      <sub>Total volume, streaks, current workload, and progression at a glance.</sub>
     </td>
     <td align="center" width="50%">
-      <img src="docs/media/log%20workout.png" alt="Workout log with a session showing exercises and per-set weight and reps" />
-      <br /><sub><strong>Workout log</strong><br />Sessions grouped by day with per-set detail, edit, delete, and coach diagnostics.</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <img src="docs/media/coach.png" alt="AI coach conversation with a formatted, streamed reply" />
-      <br /><sub><strong>AI coach</strong><br />Streaming replies with formatted lists and copy-to-clipboard.</sub>
-    </td>
-    <td align="center" width="50%">
-      <img src="docs/media/Exercise.png" alt="Exercise library with search, muscle and equipment filters, and exercise cards" />
-      <br /><sub><strong>Exercise library</strong><br />876 movements with search, muscle and equipment filters, and favorites.</sub>
+      <img src="docs/media/log%20workout.png" alt="RepForge workout logging">
+      <br>
+      <strong>Workout logging</strong>
+      <br>
+      <sub>Fast session capture with exercises and per-set weight and repetitions.</sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
-      <img src="docs/media/Progress.png" alt="Progress page with a progression chart and movement distribution donut chart" />
-      <br /><sub><strong>Progress</strong><br />Progression curves and movement distribution.</sub>
+      <img src="docs/media/coach.png" alt="RepForge AI coach">
+      <br>
+      <strong>Strength coach</strong>
+      <br>
+      <sub>Structured, streamed guidance grounded in the athlete's training context.</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/media/Exercise.png" alt="RepForge exercise library">
+      <br>
+      <strong>Exercise library</strong>
+      <br>
+      <sub>Search, filtering, favorites, and detailed exercise information.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/media/Progress.png" alt="RepForge progress analytics">
+      <br>
+      <strong>Progress analytics</strong>
+      <br>
+      <sub>Long-term progression curves and movement distribution.</sub>
     </td>
     <td align="center" width="50%"></td>
   </tr>
 </table>
+</div>
 
 ---
 
-## Tech stack
+## Technology
 
-| Area | Technology | Why it is used |
-| --- | --- | --- |
-| Frontend | React 18 | Component-based UI with hooks for state and lifecycle behavior. |
-| Frontend | Vite | Fast local development and optimized production bundles. |
-| Frontend | React Router | Route-level navigation and protected pages. |
-| Frontend | Framer Motion | Interface transitions with reduced-motion handling. |
-| Frontend | Recharts | Volume, progression, and distribution charts. |
-| Frontend | Three.js / React Three Fiber | Optional 3D visuals, lazy-loaded with fallbacks. |
-| Backend | Flask API (`backend/`), Cloudflare Worker + D1 (`worker/`, `migrations/`) | REST API, sessions, and data storage. |
-| Tooling | ESLint, Prettier | Static checks and consistent formatting. |
-| Tooling | GitHub Actions | Automated lint, format, backend, and build checks. |
-| Integrations | Google OAuth | Server-handled sign-in redirect and identity exchange. |
-| Integrations | Groq-powered coach | Streaming coaching responses delivered through the backend. |
-| Dataset | free-exercise-db | Exercise movements and metadata. |
+### Application Stack
+
+| Layer | Technology | Engineering role |
+|---|---|---|
+| Interface | React 18, React Router 6 | Component-based navigation and state management |
+| Styling | CSS Modules and shared design tokens | Responsive, themeable presentation |
+| Visualization | Recharts | Charts for volume, progression, and distribution |
+| Motion | Framer Motion | Interface transitions and interaction feedback |
+| Graphics | Three.js, React Three Fiber | Optional, capability-aware visual enhancement |
+| Frontend build | Vite 6 | Fast development and optimized production bundles |
+| Edge API | Cloudflare Workers, Hono | Low-latency, serverless routing and application logic |
+| Database | Cloudflare D1, SQLite | Relational athlete data at the network edge |
+| AI integration | Groq, OpenAI-compatible streaming API | Context-grounded coaching responses |
+| Authentication | Google OAuth 2.0 | Federated identity with server-managed sessions |
+| Legacy/alternative backend | Flask, PostgreSQL-compatible deployment | Reference HTTP backend implementation |
+| Testing | Pytest | Backend validation, authorization, and behavior tests |
+| CI/CD | GitHub Actions, Cloudflare Pages | Automated validation and edge deployment |
+| Deployment | Cloudflare Pages and Workers | Single-origin delivery and serverless execution |
+
+### Supported Languages
+
+- JavaScript / JSX
+- Python
+- SQL
+- HTML and CSS
+- Hono-compatible TypeScript execution
+- Shell and Node.js automation
 
 ---
 
@@ -143,204 +160,483 @@ Product proof from the running RepForge app:
 
 ```mermaid
 flowchart LR
-    Browser["Browser<br/>React SPA"]
-    Client["API Client<br/>CSRF + cookie credentials"]
-    API["Backend REST API"]
-    DB[(Database)]
-    Groq["Groq API"]
-    Google["Google OAuth"]
-
-    Browser --> Client
-    Client --> API
-    API --> DB
-    API --> Groq
-    Browser -->|OAuth redirect| Google
-    Google -->|Authorization callback| API
+    User["Athlete browser"] --> Edge["Cloudflare global edge"]
+    Edge --> SPA["React single-page application"]
+    Edge --> API["Hono API routes"]
+    API --> Auth["OAuth and session services"]
+    API --> Workouts["Workout and analytics services"]
+    API --> Goals["Goals and achievements"]
+    API --> Coach["Coach and session diagnostics"]
+    Workouts --> D1[(Cloudflare D1 / SQLite)]
+    Goals --> D1
+    Auth --> D1
+    Coach --> Groq["Groq streaming API"]
+    Coach --> D1
 ```
 
-```mermaid
-flowchart LR
-    Pages["pages/"]
-    Hooks["hooks/ + context/"]
-    Services["services/api.js"]
-    Components["components/"]
+### System Design
 
-    Pages --> Hooks
-    Hooks --> Services
-    Pages --> Components
-    Hooks --> Components
-```
+The primary deployment uses a unified Cloudflare delivery model:
 
-**Key design decisions**
+- Cloudflare serves the compiled React application.
+- Workers route authenticated API requests.
+- Hono defines request boundaries for authentication, workouts, exercises, goals, coach interactions, and system endpoints.
+- D1 persists structured user, workout, exercise, goal, OAuth, and session data.
+- The AI coach consumes telemetry selected from persisted workout history rather than an unstructured client-only prompt.
+- The frontend and API share an origin, reducing CORS complexity and supporting secure cookie-based sessions.
 
-- **CSRF in memory only.** The token is never written to `localStorage`, which limits exposure if an XSS bug ever appears. Mutating requests carry it as a header.
-- **HttpOnly cookie sessions.** The frontend never sees or stores the session token.
-- **Security headers.** `public/_headers` ships a strict Content-Security-Policy, `X-Frame-Options: DENY`, `nosniff`, `Cross-Origin-Opener-Policy`, and a restrictive `Permissions-Policy`.
-- **Bounded caches.** Shared data caches have a maximum size and a TTL, which prevents stale data and unbounded memory growth.
-- **Lazy, adaptive 3D.** Three.js loads only on capable devices and falls back to CSS or 2D for low-tier hardware and reduced-motion users.
-- **Streamed coach replies.** Responses arrive as Server-Sent Events and update the chat incrementally.
-- **Safe modals.** Portal-based modals share a ref-counted scroll lock so stacked dialogs restore the page correctly.
-- **Local calendar dates.** Workout dates are handled as local `YYYY-MM-DD` values to avoid timezone day-shift bugs.
+A separate Flask implementation remains available as a conventional backend deployment path. This makes the repository understandable and runnable without requiring immediate edge-platform-specific knowledge while preserving the cloud-native architecture as the production target.
 
 ---
 
-## Getting started
+## Data Model
+
+The relational model separates athlete identity, calendar sessions, movements, sets, goals, and authentication state.
+
+```mermaid
+erDiagram
+    USERS ||--o{ WORKOUT_DAYS : owns
+    WORKOUT_DAYS ||--o{ WORKOUT_EXERCISES : contains
+    WORKOUT_EXERCISES ||--o{ WORKOUT_SETS : contains
+    USERS ||--o{ GOALS : defines
+    USERS ||--o{ USER_FAVORITE_EXERCISES : marks
+    EXERCISES ||--o{ WORKOUT_EXERCISES : references
+    EXERCISES ||--o{ USER_FAVORITE_EXERCISES : references
+
+    USERS {
+        text id PK
+        text google_sub
+        text email
+        text name
+        text avatar
+    }
+
+    WORKOUT_DAYS {
+        integer id PK
+        integer user_id FK
+        text workout_date
+    }
+
+    WORKOUT_EXERCISES {
+        integer id PK
+        integer workout_day_id FK
+        integer exercise_id FK
+    }
+
+    WORKOUT_SETS {
+        integer id PK
+        integer workout_exercise_id FK
+        real weight
+        integer reps
+    }
+
+    EXERCISES {
+        integer id PK
+        text name
+        text muscle_group
+        text equipment
+    }
+
+    GOALS {
+        integer id PK
+        integer user_id FK
+        text goal_type
+        real target_value
+    }
+```
+
+### Core Guarantees
+
+- Repetitions and weights are validated before persistence.
+- Workout ownership is checked through authenticated user identity.
+- Session identifiers remain server-controlled and are never exposed to application JavaScript.
+- OAuth state values are stored and consumed as part of a replay-resistant flow.
+- Mutation endpoints are protected against cross-site request forgery.
+- Sensitive configuration is supplied through environment variables or worker secrets.
+
+---
+
+## Security
+
+| Concern | Implementation |
+|---|---|
+| Session storage | HttpOnly, Secure, SameSite cookie session |
+| CSRF protection | Server-issued token plus double-submit request validation |
+| Authentication | Google OAuth with server-side state and redirect validation |
+| Authorization | Server-side ownership checks for athlete-specific resources |
+| Secret handling | Environment variables and Cloudflare secrets |
+| Request limits | Rate limits on general, authentication, and AI routes |
+| Input validation | Bounded numeric fields, normalized strings, and backend validation |
+| Prompt safety | Structured user prompts with coach-specific instruction boundaries |
+| CORS strategy | Single-origin Cloudflare deployment minimizes cross-origin trust |
+| Client storage | Authentication secrets and CSRF state are not persisted to browser storage |
+
+Production deployments must override development secrets, configure OAuth credentials, and use TLS. Never commit `.env`, session keys, OAuth secrets, API keys, or database credentials.
+
+---
+
+## Getting Started
 
 ### Prerequisites
 
-- Node.js `>=18.18.0` and npm
-- A running RepForge backend, connected to its database
-- Google OAuth and Groq credentials, only when testing those integrations
+- Node.js 18.18 or newer
+- npm 9 or newer
+- Python 3.10 or newer for the Flask backend
+- A Cloudflare account for edge deployment
+- Google OAuth credentials for sign-in
+- A Groq API key for the AI coach
 
-### Install and run
+Node.js 20 or newer is recommended for the Cloudflare toolchain.
+
+---
+
+### Option 1: Run the frontend locally
 
 ```bash
 git clone https://github.com/chetanaybuilder/RepForge.git
 cd RepForge
-npm ci
-cp frontend/.env.example frontend/.env
+npm install
 npm run dev
 ```
 
-The Vite dev server proxies `/api` and `/auth` to the configured backend target.
+Open:
 
-### Build and preview
-
-```bash
-npm run build
-npm run preview
+```text
+http://localhost:5173
 ```
 
-The frontend build writes to `../dist` by default. Set `CF_PAGES_OUTPUT_DIR` to override the output directory. The backend runs separately; see the [`backend/`](backend/) directory.
+### Option 2: Run the Cloudflare development stack
 
-### Environment variables
+```bash
+npm install
+npm run build
+npx wrangler dev --local
+```
 
-Create `frontend/.env` from the committed example file.
+The complete application will be available on the local Wrangler URL, typically:
 
-| Name | Required | Example | Purpose |
-| --- | --- | --- | --- |
-| `VITE_API_URL` | No for same-origin deployments | `http://localhost:5000` | Browser API origin for a separately hosted backend. |
-| `VITE_DEV_PROXY_TARGET` | No locally if using the default | `http://localhost:5000` | Backend target for the Vite dev proxy. |
+```text
+http://localhost:8787
+```
 
-Server-only values such as `SESSION_SECRET`, `GOOGLE_CLIENT_SECRET`, and `GROQ_API_KEY` belong in the backend environment, never in frontend variables.
+### Option 3: Run the Flask reference backend
 
----
+```bash
+python -m venv .venv
+```
 
-## Scripts
+Activate the virtual environment:
 
-### Root scripts
+**macOS / Linux**
 
-| Script | Description |
-| --- | --- |
-| `npm run dev` | Starts the frontend Vite development server. |
-| `npm run build` | Builds the frontend and packages the Cloudflare Worker. |
-| `npm run build:worker` | Builds the Worker output from the worker source. |
-| `npm run check:cloudflare` | Verifies the generated Cloudflare Pages artifact. |
-| `npm run preview` | Starts the frontend preview server. |
-| `npm run deploy` | Builds and deploys the Cloudflare Pages output. |
-| `npm run lint` | Runs frontend ESLint checks. |
-| `npm run format:check` | Checks formatting for repository configuration and scripts. |
-| `npm run format` | Formats frontend files through the frontend package. |
-| `npm run test:backend` | Runs the Python backend pytest suite. |
+```bash
+source .venv/bin/activate
+```
 
-### Frontend scripts
+**Windows PowerShell**
 
-| Script | Description |
-| --- | --- |
-| `npm run dev` | Starts Vite from the frontend workspace. |
-| `npm run build` | Creates the frontend production bundle. |
-| `npm run preview` | Serves the generated bundle locally. |
-| `npm run lint` | Runs ESLint against `src`. |
-| `npm run lint:fix` | Applies available ESLint fixes. |
-| `npm run format` | Applies Prettier formatting. |
-| `npm run format:check` | Verifies files match Prettier formatting. |
-| `npm run check` | Runs lint and the production build. |
+```powershell
+.venv\Scripts\Activate.ps1
+```
+
+Install dependencies and start the API:
+
+```bash
+pip install -r backend/requirements.txt
+python backend/app.py
+```
+
+The Flask backend defaults to port 5000.
 
 ---
 
-## Project structure
+## Configuration
+
+### Cloudflare Worker Variables
+
+Configure secrets locally or in the Cloudflare dashboard:
+
+```bash
+npx wrangler secret put GROQ_API_KEY
+npx wrangler secret put GOOGLE_CLIENT_ID
+npx wrangler secret put GOOGLE_CLIENT_SECRET
+```
+
+Optional environment settings are declared in `wrangler.toml`.
+
+### Flask Environment Variables
+
+Create the optional environment file at `backend/.env`:
+
+```dotenv
+FLASK_ENV=development
+SESSION_SECRET=replace-with-a-long-random-value
+SESSION_COOKIE_SAMESITE=Lax
+SESSION_LIFETIME_SECONDS=604800
+
+DATABASE_URL=postgresql://user:password@localhost:5432/repforge
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_REDIRECT_URI=http://localhost:5000/auth/google/callback
+
+GROQ_API_KEY=your-groq-api-key
+GROQ_MODEL=openai/gpt-oss-120b
+GROQ_TIMEOUT_SECONDS=25
+
+REDIS_URL=memory://
+RATELIMIT_DEFAULT=200 per hour
+RATELIMIT_AI=10 per hour
+RATELIMIT_AUTH=20 per hour
+CORS_ORIGINS=http://localhost:5173
+```
+
+### Google OAuth Redirects
+
+For local development, register the callback URL used by the selected backend:
+
+```text
+http://localhost:8787/auth/google/callback
+```
+
+Alternatively, for a local Flask backend:
+
+```text
+http://localhost:5000/auth/google/callback
+```
+
+Do not mix redirect URIs between environments. The exact OAuth redirect URI used by the application must match the Google OAuth client configuration.
+
+---
+
+## Development Commands
+
+Run commands from the repository root.
+
+### Frontend and build
+
+| Command | Purpose |
+|---|---|
+| `npm run dev` | Start the Vite development server |
+| `npm run build` | Build the frontend and Worker bundle |
+| `npm run preview` | Preview the production frontend |
+| `npm run lint` | Run frontend linting |
+| `npm run format:check` | Check repository formatting |
+| `npm run check:cloudflare` | Validate the Cloudflare build output |
+| `npm run deploy` | Build and deploy to Cloudflare Pages |
+
+### Backend
+
+| Command | Purpose |
+|---|---|
+| `pytest backend/tests` | Run the Flask backend test suite |
+| `npm run test:backend` | Run backend tests through npm |
+| `python backend/app.py` | Start the Flask development server |
+
+### Cloudflare
+
+```bash
+npx wrangler dev --local
+npx wrangler d1 migrations apply repforge-db --local
+npx wrangler d1 migrations apply repforge-db
+npx wrangler secret list
+```
+
+---
+
+## Testing Strategy
+
+The project separates verification into deterministic backend behavior and production build validation.
+
+### Backend Coverage Areas
+
+- Authentication and protected routes
+- Cross-site request forgery protection
+- OAuth state and session behavior
+- Authorization and insecure-direct-object-reference prevention
+- Workout creation, retrieval, editing, and deletion
+- Exercise filtering and favorites
+- Goal tracking
+- Request validation and numeric boundaries
+
+### Quality Gates
+
+```bash
+npm run lint
+npm run build
+npm run check:cloudflare
+npm run test:backend
+```
+
+A pull request should pass:
+
+1. Frontend static analysis.
+2. Frontend production compilation.
+3. Cloudflare output verification.
+4. Backend behavioral and authorization tests.
+
+No quantitative coverage percentage is published unless generated consistently from the current CI environment.
+
+---
+
+## Performance and Scalability
+
+### Frontend
+
+- Vite production chunks reduce development-tool overhead.
+- Route and 3D dependencies are separated where possible.
+- Three.js loads only for devices that pass capability checks.
+- Shared data caches are bounded and time-limited.
+- Non-WebGL devices retain a functional visual fallback.
+- Scroll locking, modal lifecycle handling, and stale-request protection preserve predictable interactions.
+
+### API and Data
+
+- Worker execution reduces cold-start latency compared with a traditional container model.
+- D1 provides server-side relational persistence close to Cloudflare edge execution.
+- Prepared SQL queries keep database access explicit.
+- Authentication and exercise reads can be served independently from coaching and analytics.
+- Coaching requests can stream output with Server-Sent Events rather than waiting for the complete response.
+
+### Scalability Trade-offs
+
+Cloudflare Workers and D1 provide operational simplicity and low-latency deployment, but introduce platform-level constraints:
+
+- D1 is not an unrestricted relational cluster.
+- Write-heavy workloads require query and schema review as usage grows.
+- A single edge database may eventually require regional or sharding strategy for international scale.
+- Streaming third-party AI responses depend on provider availability and latency.
+- Exercising the full system against real traffic remains necessary before treating synthetic benchmarks as production guarantees.
+
+The current design is appropriate for a portfolio-scale or early-product workload where simplicity, cost control, and deployment speed are priorities.
+
+---
+
+## Engineering Decisions
+
+### Single-Origin Architecture
+
+The frontend and API are deployed together when possible. This removes unnecessary CORS configuration and enables first-party session cookies.
+
+### HttpOnly Sessions
+
+The browser does not receive the raw session identifier. A server-controlled cookie identifies authenticated sessions, while application JavaScript retains only ephemeral request tokens.
+
+### Memory-Only CSRF State
+
+Mutating frontend requests carry CSRF state held in memory. The value is not persisted in local storage, reducing exposure from persistent browser compromise.
+
+### Local Calendar Dates
+
+Workout dates are represented as local calendar values rather than UTC timestamps. This prevents a log created near midnight from being assigned to the wrong day when the athlete crosses a timezone boundary.
+
+### End-Time Rest Timer
+
+The rest timer calculates remaining time from a timestamp instead of counting interval executions. This keeps it accurate when browser activity is throttled in a background tab.
+
+### Stale Response Protection
+
+Screen loaders track mounted state and request identity, preventing an outdated response from overwriting newer application state.
+
+### Adaptive Graphics
+
+WebGL capability, reduced-motion preferences, and device constraints determine whether richer graphics are loaded. The application remains usable on devices that cannot support 3D rendering.
+
+---
+
+## Project Structure
 
 ```text
 RepForge/
-├── backend/
-│   ├── auth/                 # OAuth and request authentication
-│   ├── database/             # Schemas, migrations, and exercise data
-│   ├── routes/               # Flask API routes
-│   ├── services/             # Backend integrations and business logic
-│   └── tests/                # Backend pytest coverage
 ├── frontend/
-│   ├── public/               # Headers, redirects, manifest, and icons
 │   ├── src/
-│   │   ├── components/       # Reusable UI and workout components
-│   │   ├── components/3d/    # WebGL scenes and 2D fallbacks
-│   │   ├── context/          # Auth, toast, and timer providers
-│   │   ├── hooks/            # Data fetching and modal behavior
-│   │   ├── pages/            # Route-level screens
-│   │   ├── services/         # API client and session handling
-│   │   ├── styles/           # Tokens and modular CSS
-│   │   └── utils/            # Date, formatting, and graphics helpers
-│   └── vite.config.js        # Dev proxy and production output
+│   │   ├── components/        # Forms, modals, navigation, timers, charts
+│   │   ├── context/           # Cross-screen application state
+│   │   ├── hooks/             # Request and lifecycle behavior
+│   │   ├── pages/             # Dashboard, workouts, exercises, coach, goals
+│   │   ├── services/          # API and CSRF transport
+│   │   └── utils/             # Shared browser-safe helpers
+│   └── package.json
 ├── worker/
-│   └── index.js              # Cloudflare Worker API implementation
+│   └── index.js               # Cloudflare/Hono edge application
+├── backend/
+│   ├── app.py                 # Flask application entry point
+│   ├── auth/                  # OAuth and session implementations
+│   ├── database/              # PostgreSQL and SQLite query utilities
+│   ├── routes/                # REST route handlers
+│   ├── services/              # Coach, statistics, and goal services
+│   └── tests/                 # Behavioral and security tests
+├── migrations/
+│   └── D1 migration history
 ├── scripts/
-│   └── build-worker.mjs      # Worker build and packaging
-├── migrations/               # D1 database migrations
+│   ├── build-worker.mjs       # Production Worker bundling
+│   └── verify-pages-build.mjs # Cloudflare build verification
+├── public/                    # Cloudflare static asset configuration
 ├── docs/
-│   ├── screenshots/          # README screenshots
-│   └── media/                # Additional repository media
-├── .github/workflows/        # Continuous integration
-├── LICENSE                   # MIT license
-└── package.json              # Workspace scripts and dependencies
+│   └── media/                 # README and product screenshots
+├── wrangler.toml              # Cloudflare bindings and environment variables
+└── package.json               # Monorepo scripts and tooling
 ```
-
-<details>
-<summary>Frontend source groups</summary>
-
-```text
-frontend/src/
-├── App.jsx                   # Providers and protected route composition
-├── main.jsx                  # React entry point
-├── pages/                    # Dashboard, workouts, coach, progress, goals
-├── components/               # Forms, modals, navigation, and charts
-├── context/                  # Cross-screen application state
-├── hooks/                    # Data request and UI lifecycle behavior
-├── services/                 # CSRF and authenticated API transport
-├── styles/                   # Theme, layout, forms, cards, and modals
-└── utils/                    # Shared browser-safe helpers
-```
-
-</details>
 
 ---
 
-## Engineering notes
+## Deployment
 
-**Mobile keyboard and bottom-sheet layout.** On Android, opening the keyboard shrinks the viewport and made the logging sheet cover half the screen. The editor is now a fixed-height sheet with a scrolling body and a pinned footer, no longer auto-focuses inputs, and keeps the rest timer clear of the action buttons.
+### Cloudflare Pages and Workers
 
-**WebGL context limits.** Phones allow only a handful of WebGL contexts. 3D views use capability detection, lazy bundles, a cap on live 3D badges, and non-WebGL fallbacks, so low-tier devices never download graphics code they cannot run.
+```bash
+npm install
+npm run build
+npm run deploy
+```
 
-**Timezone-safe dates.** Workout dates travel as local calendar values rather than UTC timestamps, and a shared helper validates `YYYY-MM-DD` before building display dates. This avoids wrong-day logging in timezones ahead of UTC.
+Configure secrets before deploying:
 
-**Accurate rest timer.** The countdown is derived from an end timestamp instead of counting interval ticks, so it stays correct after the browser throttles a background tab. Pause and resume restart the clock from the remaining time.
+```bash
+npx wrangler secret put GROQ_API_KEY
+npx wrangler secret put GOOGLE_CLIENT_ID
+npx wrangler secret put GOOGLE_CLIENT_SECRET
+```
 
-**Stale response protection.** Data loaders track mounted state and request IDs, so a slow earlier response can never overwrite newer results.
+Apply D1 migrations:
+
+```bash
+npx wrangler d1 migrations apply repforge-db
+```
+
+Complete deployment instructions, environment bindings, OAuth setup, database details, and rollback considerations are documented in [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
 ---
 
-## Roadmap and known limitations
+## Roadmap
 
-- [ ] Add a service worker and explicit offline mode.
-- [ ] Expand automated interaction, accessibility, and real-device visual regression coverage.
-- [ ] Add internationalization and locale-aware number and date preferences.
-- [ ] Add wearable and external fitness-platform imports.
-- [ ] Add shareable progress views and export formats.
-- [ ] Add Open Graph metadata and a social preview image.
+- Add a service worker and explicit offline logging mode.
+- Expand automated interaction and accessibility coverage.
+- Add real-device visual regression testing.
+- Add internationalization and locale-aware formatting.
+- Add wearable and external fitness-platform imports.
+- Add exportable training reports and shareable progress views.
+- Publish reproducible performance benchmarks with CI context.
+- Add Open Graph metadata and social preview assets.
+- Introduce richer coaching evaluation and response-grounding metrics.
 
 ---
 
 ## Contributing
 
-Fork the repository, create a focused branch, and run `npm run lint` and `npm run build` before opening a pull request. Keep unrelated cleanups separate from behavior changes.
+1. Fork the repository.
+2. Create a focused feature branch.
+3. Keep authentication, authorization, and data-model changes scoped.
+4. Add or update tests for behavior that could regress.
+5. Run the relevant quality gates before opening a pull request.
+
+```bash
+npm run lint
+npm run build
+npm run check:cloudflare
+npm run test:backend
+```
+
+Keep unrelated formatting or refactoring separate from functional changes.
 
 ---
 
@@ -350,12 +646,12 @@ RepForge is available under the [MIT License](LICENSE).
 
 ---
 
-## Author
+<div align="center">
 
-**{{chetanaybuilder}}**
+Built for athletes. Engineered for maintainability.
 
-{{future founder}}
+<a href="https://github.com/chetanaybuilder/RepForge">GitHub</a>
+·
+<a href="https://repforge-app.pages.dev">Live Demo</a>
 
-[GitHub](https://github.com/chetanaybuilder) · [LinkedIn]({{LINKEDIN_URL}}) · [Live demo]({{LIVE_DEMO_URL}})
-
-If RepForge is useful or interesting to you, feedback, issues, and stars are very welcome.
+</div>
