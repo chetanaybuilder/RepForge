@@ -5,7 +5,7 @@
   <img src="docs/media/repforge-banner.svg" width="920" alt="RepForge 3D animated training platform banner">
 </picture>
 
-### A mobile-first strength training platform with intelligent coaching.
+## A mobile-first strength training platform with intelligent coaching
 
 Log every set, measure progress, and receive training insights grounded in your own workout history.
 
@@ -113,23 +113,12 @@ RepForge is designed around three engineering principles:
     </td>
   </tr>
   <tr>
-    <td align="center" width="50%">
+    <td align="center" colspan="2">
       <img src="docs/media/Progress.png" alt="RepForge progress analytics">
       <br>
       <strong>Progress analytics</strong>
       <br>
       <sub>Long-term progression curves and movement distribution.</sub>
-    </td>
-    <td align="center" width="50%">
-      <div>
-        <strong>Goals &amp; Milestones</strong>
-        <br>
-        <sub>Target setting, achievement tracking, and training consistency.</sub>
-      </div>
-      <br><br>
-      <code>VIEW IN ACTIVE DEVELOPMENT</code>
-      <br><br>
-      <sub>Progress targets become visible milestones across strength, volume, and frequency.</sub>
     </td>
   </tr>
 </table>
@@ -650,6 +639,14 @@ npm run test:backend
 ```
 
 Keep unrelated formatting or refactoring separate from functional changes.
+
+---
+
+## Author
+
+**[chetanaybuilder](https://github.com/chetanaybuilder)**
+
+Software engineer and creator of RepForge.
 
 ---
 
