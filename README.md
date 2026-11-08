@@ -113,12 +113,19 @@ RepForge is designed around three engineering principles:
     </td>
   </tr>
   <tr>
-    <td align="center" colspan="2">
+    <td align="center" width="50%">
       <img src="docs/media/Progress.png" alt="RepForge progress analytics">
       <br>
       <strong>Progress analytics</strong>
       <br>
       <sub>Long-term progression curves and movement distribution.</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/media/Goals.png" alt="RepForge goals and achievements">
+      <br>
+      <strong>Goals &amp; Achievements</strong>
+      <br>
+      <sub>Weekly targets, active goals, personal records, and unlocked milestones.</sub>
     </td>
   </tr>
 </table>
